@@ -127,7 +127,17 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetailDTO |
   };
 }
 
-export async function getCustomerBookings(id: string) {
+export interface CustomerBookingSummary {
+  id: string;
+  bookingNumber: string;
+  eventDate: string;
+  status: string;
+  totalAmount: number;
+  balanceDue: number;
+  itemCount: number;
+}
+
+export async function getCustomerBookings(id: string): Promise<CustomerBookingSummary[]> {
   const bookings = await prisma.booking.findMany({
     where: { customerId: id },
     include: {
