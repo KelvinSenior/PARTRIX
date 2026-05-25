@@ -2,18 +2,6 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
-  "framework": "nextjs",
-  "env": [
-    "DATABASE_URL",
-    "JWT_SECRET",
-    "NODE_ENV",
-    "ALLOWED_ORIGIN",
-    "NEXT_PUBLIC_API_URL",
-    "RATE_LIMIT_WINDOW_SECONDS",
-    "RATE_LIMIT_MAX_REQUESTS",
-    "LOG_SECURITY_EVENTS",
-    "SESSION_TIMEOUT_MINUTES"
-  ],
   "regions": ["iad1"],
   "functions": {
     "api/**/*.ts": {
@@ -24,7 +12,5 @@
       "maxDuration": 30,
       "memory": 1024
     }
-  },
-  "public": true,
-  "buildOutputDirectory": ".next"
+  }
 }
