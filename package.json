@@ -2,6 +2,9 @@
   "name": "rentflow",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev --port 3001",
     "dev:webpack": "next dev --port 3001 --webpack",
