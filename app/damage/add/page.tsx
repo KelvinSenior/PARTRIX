@@ -3,6 +3,8 @@ import TopNav from '@/components/dashboard/TopNav';
 import DamageForm from '@/components/damage/DamageForm';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Page() {
   const items = await prisma.inventoryItem.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
 
