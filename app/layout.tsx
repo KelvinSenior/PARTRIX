@@ -4,6 +4,8 @@ import AuthProvider from "@/components/AuthProvider";
 import UiProvider from "@/components/ui/UiProvider";
 import BottomNavWrapper from "@/components/dashboard/BottomNavWrapper";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: "RENTFLOW",
   description: "Event rental management with secure authentication and role-based access.",
