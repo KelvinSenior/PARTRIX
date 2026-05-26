@@ -43,19 +43,19 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
 
             <FinanceCards totals={summary.totals} />
 
-            <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
               <div className="space-y-6">
                 <FinanceChart monthly={summary.monthly} />
 
-                <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold">Record Payment</h3>
+                <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+                  <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Record Payment</h3>
                   <div className="mt-4">
                     <PaymentForm />
                   </div>
                 </div>
 
-                <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold">Record Expense</h3>
+                <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+                  <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Record Expense</h3>
                   <div className="mt-4">
                     <ExpenseForm />
                   </div>

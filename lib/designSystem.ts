@@ -161,6 +161,12 @@ export const DesignSystem = {
 
 export const ButtonVariants = {
   primary: {
+    primary: {
+      bg: "bg-sky-600 dark:bg-sky-500",
+      hover: "hover:bg-sky-700 dark:hover:bg-sky-600",
+      text: "text-white",
+      disabled: "disabled:opacity-50 disabled:cursor-not-allowed",
+    },
     light: {
       bg: "bg-sky-600 dark:bg-sky-500",
       hover: "hover:bg-sky-700 dark:hover:bg-sky-600",

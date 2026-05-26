@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BookingItemPayload } from "@/types/booking";
 import type { InventoryItemDTO } from "@/types/inventory";
+import PremiumButton from "@/components/ui/PremiumButton";
+import PremiumCard from "@/components/ui/PremiumCard";
 
 const emptyItem = { inventoryItemId: "", quantity: 1, discount: 0, notes: "" };
 
@@ -119,11 +121,14 @@ export default function BookingForm() {
   }
 
   return (
-    <section className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/15">
-      <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <PremiumCard variant="elevated">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Booking system</p>
-          <h2 className="mt-2 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">Create a new rental booking</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-zinc-950 dark:text-zinc-50">Create a new rental booking</h2>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+            Build event rentals with smarter availability, inventory hold handling, and fee-aware totals.
+          </p>
         </div>
         <div className="rounded-3xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
           Date-based availability, inventory reduction, and partial returns supported.
@@ -282,13 +287,9 @@ export default function BookingForm() {
               <h3 className="text-base font-semibold text-zinc-950 dark:text-zinc-100">Inventory items</h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Add one or more items to the booking and validate availability for the selected dates.</p>
             </div>
-            <button
-              type="button"
-              onClick={addItem}
-              className="rounded-2xl bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-            >
+            <PremiumButton type="button" onClick={addItem} variant="secondary" size="md">
               Add item
-            </button>
+            </PremiumButton>
           </div>
 
           <div className="space-y-4">
@@ -341,13 +342,9 @@ export default function BookingForm() {
                       className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     />
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(index)}
-                    className="mt-2 rounded-2xl bg-rose-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-rose-600"
-                  >
+                  <PremiumButton type="button" onClick={() => removeItem(index)} variant="danger" size="sm">
                     Remove
-                  </button>
+                  </PremiumButton>
                 </div>
               </div>
             ))}
@@ -399,14 +396,10 @@ export default function BookingForm() {
           </div>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="w-full rounded-3xl bg-sky-600 px-6 py-4 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
+        <PremiumButton type="submit" isLoading={submitting} fullWidth>
           {submitting ? "Creating booking..." : "Create booking"}
-        </button>
+        </PremiumButton>
       </form>
-    </section>
+    </PremiumCard>
   );
 }

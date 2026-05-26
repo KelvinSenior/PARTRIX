@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Booking" ADD COLUMN     "deliveryFee" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "discount" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "setupFee" DECIMAL(12,2) NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "BookingItem" ADD COLUMN     "returnedQuantity" INTEGER NOT NULL DEFAULT 0;

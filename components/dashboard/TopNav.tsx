@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { SessionUser } from "@/types/auth";
 import { useState } from "react";
 import MobileSidebar from "./MobileSidebar";
@@ -36,12 +35,12 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
         <Link href="/profile" className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 touch-target">
           View profile
         </Link>
-        <motion.button
-          whileHover={{ y: -2 }}
-          className="rounded-2xl bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition touch-target"
+        <Link
+          href="/bookings"
+          className="rounded-2xl bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:opacity-95 touch-target"
         >
           Create booking
-        </motion.button>
+        </Link>
       </div>
 
       <MobileSidebar open={open} onClose={() => setOpen(false)} />
