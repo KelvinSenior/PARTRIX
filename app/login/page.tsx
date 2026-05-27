@@ -1,4 +1,5 @@
 import LoginForm from "@/components/auth/LoginForm";
+import AuthShell from "@/components/auth/AuthShell";
 import Link from "next/link";
 
 export default async function LoginPage({
@@ -9,22 +10,25 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-6 py-12 text-zinc-950 dark:bg-black dark:text-zinc-100">
-      <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <section className="space-y-3 text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500">Account access</p>
-          <h1 className="text-3xl font-semibold">Sign in to RENTFLOW</h1>
-          <p className="max-w-xl mx-auto text-zinc-600 dark:text-zinc-400">
-            Use your account credentials to access the dashboard and protected rental management tools.
-          </p>
-        </section>
-
+    <AuthShell
+      title="RENTFLOW"
+      subtitle="Smart Rental Management for Modern Event Businesses"
+      cardTitle="Welcome back"
+      cardSubtitle="Continue to your operational dashboard."
+      footer={
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 text-zinc-400">
+            <span className="h-px flex-1 bg-zinc-700/80" />
+            <span className="text-xs uppercase tracking-[0.2em]">New to RENTFLOW</span>
+            <span className="h-px flex-1 bg-zinc-700/80" />
+          </div>
+          <Link href="/signup" className="inline-flex w-full justify-center rounded-xl border border-cyan-200/20 bg-white/5 px-4 py-3 font-medium text-cyan-100 transition hover:bg-white/10">
+            Create account
+          </Link>
+        </div>
+      }
+    >
         <LoginForm initialError={params.error} />
-
-        <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-          New here? <Link href="/signup" className="font-semibold text-black dark:text-white">Create an account</Link>.
-        </p>
-      </div>
-    </main>
+    </AuthShell>
   );
 }

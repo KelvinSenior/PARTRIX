@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { Lock, Mail } from "lucide-react";
+import AuthInput from "@/components/auth/AuthInput";
+import AuthPrimaryButton from "@/components/auth/AuthPrimaryButton";
 
 export default function LoginForm({ initialError }: { initialError?: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,38 +18,49 @@ export default function LoginForm({ initialError }: { initialError?: string }) {
         setError(null);
         setIsSubmitting(true);
       }}
-      className="space-y-6 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm"
+      className="space-y-5"
     >
-      <h1 className="text-2xl font-semibold">Login</h1>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? (
+        <p className="rounded-xl border border-rose-300/35 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {error}
+        </p>
+      ) : null}
 
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
-        Email
-        <input
-          name="email"
-          type="email"
-          required
-          className="rounded-md border border-zinc-200 p-3 outline-none transition focus:border-black"
-        />
-      </label>
+      <AuthInput
+        label="Work email"
+        icon={Mail}
+        name="email"
+        type="email"
+        required
+        autoComplete="email"
+        placeholder="you@company.com"
+      />
 
-      <label className="flex flex-col gap-2 text-sm font-medium text-zinc-700">
-        Password
-        <input
-          name="password"
-          type="password"
-          required
-          className="rounded-md border border-zinc-200 p-3 outline-none transition focus:border-black"
-        />
-      </label>
+      <AuthInput
+        label="Password"
+        icon={Lock}
+        name="password"
+        type="password"
+        required
+        autoComplete="current-password"
+        placeholder="Enter password"
+      />
 
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="inline-flex h-12 w-full items-center justify-center rounded-md bg-black px-5 text-sm font-semibold text-white transition hover:bg-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-400"
-      >
-        {isSubmitting ? "Signing in..." : "Sign in"}
-      </button>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <label className="inline-flex items-center gap-2 text-zinc-300">
+          <input
+            type="checkbox"
+            name="remember"
+            className="h-4 w-4 rounded border-cyan-200/40 bg-slate-900 text-cyan-300 focus:ring-cyan-300/60"
+          />
+          Remember me
+        </label>
+        <Link href="/login" className="text-cyan-200 transition hover:text-cyan-100">
+          Forgot password?
+        </Link>
+      </div>
+
+      <AuthPrimaryButton isLoading={isSubmitting} label="Continue" loadingLabel="Signing in..." />
     </form>
   );
 }
