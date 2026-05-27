@@ -16,10 +16,12 @@ export default function DateFilter({ start: initialStart, end: initialEnd }: { s
   }
 
   return (
-    <div className="flex gap-2">
-      <input value={start} onChange={(e) => setStart(e.target.value)} type="date" className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-400" />
-      <input value={end} onChange={(e) => setEnd(e.target.value)} type="date" className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-zinc-950 placeholder-zinc-500 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-400" />
-      <button onClick={apply} className="rounded-md bg-sky-600 px-3 py-2 text-white hover:bg-sky-700 dark:bg-sky-700 dark:hover:bg-sky-600">Apply</button>
+    <div className="flex flex-wrap gap-2">
+      <input value={start} onChange={(e) => setStart(e.target.value)} type="date" className="field-input h-10 w-auto" />
+      <input value={end} onChange={(e) => setEnd(e.target.value)} type="date" className="field-input h-10 w-auto" />
+      <button type="button" onClick={apply} className="inline-flex h-10 items-center rounded-xl bg-cyan-400/15 px-4 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/25">
+        Apply
+      </button>
     </div>
   );
 }

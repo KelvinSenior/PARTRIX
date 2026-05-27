@@ -1,40 +1,52 @@
-import Sidebar from '@/components/dashboard/Sidebar';
-import TopNav from '@/components/dashboard/TopNav';
-import { listDamageReports } from '@/services/damage';
-import DamageCard from '@/components/damage/DamageCard';
-import { EmptyState } from '@/components/ui';
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { Plus } from "lucide-react";
+import AppShell from "@/components/layout/AppShell";
+import PageHeader from "@/components/layout/PageHeader";
+import { listDamageReports } from "@/services/damage";
+import DamageCard from "@/components/damage/DamageCard";
+import { EmptyState } from "@/components/ui";
+import { getCurrentUserFromToken } from "@/services/auth";
+import { getAuthCookie } from "@/lib/cookies";
+import { appBtnPrimary } from "@/lib/appStyles";
 
-export default async function Page() {
+export default async function DamagePage() {
+  const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
+  if (!user) redirect("/login");
+
   const items = await listDamageReports();
 
   return (
-    <div className="mx-auto grid min-h-screen max-w-[1200px] gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
-      <Sidebar />
-      <main>
-        <TopNav user={null as any} />
-        <div className="mt-6 grid grid-cols-1 gap-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold">Damage Reports</h1>
-            <a href="/damage/add" className="rounded-md bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700">
-              New Report
-            </a>
-          </div>
+    <AppShell user={user} fabHref="/damage/add" fabLabel="New report">
+      <PageHeader
+        eyebrow="Operations"
+        title="Damage reports"
+        description="Track damage incidents and keep inventory counts accurate."
+        actions={
+          <Link href="/damage/add" className={appBtnPrimary}>
+            <Plus className="h-4 w-4" aria-hidden />
+            New report
+          </Link>
+        }
+      />
 
-          {items.length === 0 ? (
-            <EmptyState
-              title="No damage reports"
-              description="Track damage incidents and keep inventory counts accurate."
-              action={<a href="/damage/add" className="inline-flex rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700">Add report</a>}
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {items.map((item) => (
-                <DamageCard key={item.id} d={item} />
-              ))}
-            </div>
-          )}
+      {items.length === 0 ? (
+        <EmptyState
+          title="No damage reports"
+          description="Track damage incidents and keep inventory counts accurate."
+          action={
+            <Link href="/damage/add" className={appBtnPrimary}>
+              Add report
+            </Link>
+          }
+        />
+      ) : (
+        <div className="grid gap-4">
+          {items.map((item) => (
+            <DamageCard key={item.id} d={item} />
+          ))}
         </div>
-      </main>
-    </div>
+      )}
+    </AppShell>
   );
 }

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import InventoryManager from "@/components/inventory/InventoryManager";
+import AppShell from "@/components/layout/AppShell";
 import { getAuthCookie } from "@/lib/cookies";
 import { getCurrentUserFromToken } from "@/services/auth";
 
@@ -11,9 +12,8 @@ export default async function InventoryPage() {
   }
 
   return (
-    <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-black dark:text-zinc-100">
+    <AppShell user={user} fabHref="/inventory" fabLabel="Add item">
       <InventoryManager user={user} />
-    </main>
+    </AppShell>
   );
 }
-

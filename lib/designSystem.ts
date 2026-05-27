@@ -203,14 +203,14 @@ export const ButtonVariants = {
 
 export const CardVariants = {
   default: {
-    container: "rounded-3xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/15",
-    header: "rounded-3xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-900",
+    container: "rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 shadow-[0_8px_32px_rgba(2,6,23,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-6",
+    header: "rounded-2xl border border-cyan-200/10 bg-slate-950/50 p-5 sm:rounded-3xl sm:p-6",
   },
   elevated: {
-    container: "rounded-3xl border border-zinc-200/60 bg-white/98 p-6 shadow-lg shadow-zinc-200/40 backdrop-blur-xl dark:border-zinc-800/60 dark:bg-zinc-950/95 dark:shadow-zinc-950/30",
+    container: "rounded-2xl border border-cyan-200/15 bg-white/[0.06] p-5 shadow-[0_12px_40px_rgba(2,6,23,0.45)] backdrop-blur-2xl sm:rounded-3xl sm:p-6",
   },
   glass: {
-    container: "rounded-3xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-black/20",
+    container: "rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 shadow-[0_8px_32px_rgba(2,6,23,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-6",
   },
 };
 

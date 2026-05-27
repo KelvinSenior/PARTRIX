@@ -6,10 +6,10 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-sky-600 text-white hover:bg-sky-700 dark:bg-sky-500 dark:hover:bg-sky-400",
-  secondary: "border border-zinc-200 bg-white text-zinc-950 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900",
-  ghost: "bg-transparent text-zinc-950 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-900",
-  danger: "bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-400",
+  primary: "bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 text-slate-950 hover:brightness-105",
+  secondary: "border border-cyan-200/20 bg-white/5 text-cyan-100 hover:bg-white/10",
+  ghost: "bg-transparent text-zinc-200 hover:bg-white/5",
+  danger: "bg-rose-500/90 text-white hover:bg-rose-500",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

@@ -1,35 +1,59 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { AlertCircle, Briefcase, DollarSign, Package, Receipt, Truck, TrendingUp, Wallet } from "lucide-react";
+import { appCard, appEyebrow } from "@/lib/appStyles";
 
 interface StatsCardProps {
   label: string;
   value: string;
   change: string;
-  icon: string;
+  icon: "briefcase" | "package" | "truck" | "wallet" | "dollarSign" | "receipt" | "trendingUp" | "alertCircle";
   highlight?: boolean;
 }
 
+const iconMap = {
+  briefcase: Briefcase,
+  package: Package,
+  truck: Truck,
+  wallet: Wallet,
+  dollarSign: DollarSign,
+  receipt: Receipt,
+  trendingUp: TrendingUp,
+  alertCircle: AlertCircle,
+};
+
 export default function StatsCard({ label, value, change, icon, highlight }: StatsCardProps) {
+  const isPositive = change.startsWith("+");
+  const Icon = iconMap[icon];
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 18 }}
+      initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className={`rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/15 ${
-        highlight ? "ring-1 ring-sky-400/20" : ""
-      }`}
+      transition={{ duration: 0.3 }}
+      className={`${appCard} ${highlight ? "ring-1 ring-cyan-400/25" : ""}`}
     >
-      <div className="flex items-center justify-between gap-4">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-zinc-100 text-2xl dark:bg-zinc-900">{icon}</span>
-        <span className="text-sm font-semibold uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">{label}</span>
+      <div className="flex items-start justify-between gap-3">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-200">
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+        <p className={appEyebrow}>{label}</p>
       </div>
-      <div className="mt-8 flex items-end justify-between gap-4">
+      <div className="mt-6 flex items-end justify-between gap-3">
         <div>
-          <p className="text-3xl font-semibold text-zinc-950 dark:text-zinc-50">{value}</p>
-          <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Compared to last week</p>
+          <p className="text-3xl font-semibold text-white">{value}</p>
+          <p className="mt-1 text-xs text-zinc-500">vs last week</p>
         </div>
-        <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">{change}</span>
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            isPositive
+              ? "bg-emerald-400/15 text-emerald-200"
+              : "bg-rose-400/15 text-rose-200"
+          }`}
+        >
+          {change}
+        </span>
       </div>
     </motion.div>
   );

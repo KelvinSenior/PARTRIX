@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "@/components/AuthProvider";
 import UiProvider from "@/components/ui/UiProvider";
 import BottomNavWrapper from "@/components/dashboard/BottomNavWrapper";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className={`${inter.className} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <UiProvider>

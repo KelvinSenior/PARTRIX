@@ -2,39 +2,59 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { CalendarPlus, PackagePlus, Receipt } from "lucide-react";
+import { appCard, appEyebrow, appTitle } from "@/lib/appStyles";
 
 const actions = [
-  { label: "New booking", description: "Create a new event booking", tone: "from-sky-500 to-violet-500", href: "/bookings" },
-  { label: "Add inventory", description: "Update stock counts quickly", tone: "from-emerald-500 to-teal-500", href: "/inventory" },
-  { label: "Send invoice", description: "Generate and send invoices", tone: "from-amber-500 to-orange-500", href: "/dashboard#reports" },
+  {
+    label: "New booking",
+    description: "Create an event rental",
+    href: "/bookings",
+    tone: "from-cyan-500 to-blue-600",
+    icon: CalendarPlus,
+  },
+  {
+    label: "Add inventory",
+    description: "Update stock levels",
+    href: "/inventory",
+    tone: "from-emerald-500 to-teal-600",
+    icon: PackagePlus,
+  },
+  {
+    label: "Record payment",
+    description: "Log customer payment",
+    href: "/finance",
+    tone: "from-violet-500 to-indigo-600",
+    icon: Receipt,
+  },
 ];
 
 export default function QuickActions() {
   return (
-    <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/15">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Quick actions</p>
-          <h2 className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-50">Get moving fast</h2>
-        </div>
-        <button className="rounded-2xl bg-zinc-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200">
-          Explore actions
-        </button>
-      </div>
+    <div className={appCard}>
+      <p className={appEyebrow}>Quick actions</p>
+      <h2 className={`${appTitle} mt-2 text-xl`}>Move faster</h2>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        {actions.map((action) => (
-          <motion.div
-            key={action.label}
-            whileHover={{ y: -2 }}
-            className={`rounded-3xl bg-gradient-to-br ${action.tone} px-5 py-4 text-left text-white shadow-lg shadow-slate-900/10 transition`}
-          >
-            <Link href={action.href} className="block">
-              <span className="block text-sm font-semibold">{action.label}</span>
-              <span className="mt-2 block text-xs opacity-90">{action.description}</span>
-            </Link>
-          </motion.div>
-        ))}
+      <div className="mt-5 grid gap-3">
+        {actions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <motion.div key={action.label} whileHover={{ y: -2 }} whileTap={{ scale: 0.99 }}>
+              <Link
+                href={action.href}
+                className={`flex items-center gap-3 rounded-2xl bg-gradient-to-r ${action.tone} px-4 py-3.5 text-white shadow-lg`}
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                  <Icon className="h-4 w-4" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">{action.label}</span>
+                  <span className="block text-xs text-white/80">{action.description}</span>
+                </span>
+              </Link>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

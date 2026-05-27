@@ -4,7 +4,12 @@ const mergeClasses = (...classes: Array<string | undefined>) => classes.filter(B
 
 export default function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={mergeClasses("rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/20", className)}>
+    <div
+      className={mergeClasses(
+        "rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 shadow-[0_8px_32px_rgba(2,6,23,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-6",
+        className,
+      )}
+    >
       {children}
     </div>
   );

@@ -3,64 +3,56 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-
-const navItems = [
-  { label: "Overview", href: "/dashboard" },
-  { label: "Bookings", href: "/bookings" },
-  { label: "Deliveries", href: "/deliveries" },
-  { label: "Inventory", href: "/inventory" },
-  { label: "Customers", href: "/customers" },
-  { label: "Finance", href: "/finance" },
-  { label: "Reports", href: "/dashboard#reports" },
-  { label: "Settings", href: "/dashboard#settings" },
-];
+import { primaryNavItems, isNavActive } from "@/lib/navConfig";
+import { appCard } from "@/lib/appStyles";
 
 export default function Sidebar() {
   const pathname = usePathname() || "/";
 
   return (
-    <aside className="hidden md:flex md:w-20 lg:w-[320px] shrink-0 flex-col rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-lg shadow-zinc-200/40 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/95 dark:shadow-zinc-950/20">
+    <aside className={`hidden shrink-0 flex-col lg:flex ${appCard} lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)]`}>
       <div className="mb-8 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">RENTFLOW</p>
-          <h2 className="mt-3 text-xl font-semibold text-zinc-950 dark:text-zinc-50">Dashboard</h2>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/75">RENTFLOW</p>
+          <h2 className="mt-2 text-lg font-semibold text-white">Operations</h2>
         </div>
         <motion.div
-          animate={{ rotate: [0, 15, -15, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-          className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-500 text-white"
+          animate={{ rotate: [0, 8, -8, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-sky-400 to-blue-600 text-sm font-bold text-slate-950 shadow-[0_8px_20px_rgba(14,165,233,0.35)]"
         >
           RF
         </motion.div>
       </div>
 
-      <div className="flex flex-col gap-3">
-        {navItems.map((item) => {
-          const isActive = item.href !== "/dashboard#reports" && item.href !== "/dashboard#settings" && pathname.startsWith(item.href.replace(/#.*/, ""));
+      <nav className="flex flex-1 flex-col gap-1.5" aria-label="Sidebar">
+        {primaryNavItems.map((item) => {
+          const active = isNavActive(pathname, item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={
-                `rounded-3xl px-4 py-3 text-sm font-medium transition flex items-center justify-between touch-target ` +
-                (isActive
-                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/60 dark:text-white"
-                  : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white")
-              }
+              className={`flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition touch-target ${
+                active
+                  ? "bg-cyan-400/15 text-cyan-100"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-zinc-100"
+              }`}
             >
-              <span>{item.label}</span>
-              {isActive ? <span className="ml-2 inline-flex h-2 w-2 rounded-full bg-indigo-600" /> : null}
+              <Icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan-300" : "text-zinc-500"}`} aria-hidden />
+              <span className="flex-1">{item.label}</span>
+              {active ? <span className="h-1.5 w-1.5 rounded-full bg-cyan-300" /> : null}
             </Link>
           );
         })}
-      </div>
+      </nav>
 
-      <div className="mt-auto rounded-3xl border border-zinc-200/80 bg-zinc-50 p-5 dark:border-zinc-800/80 dark:bg-zinc-900/80">
-        <p className="text-xs uppercase tracking-[0.25em] text-zinc-500 dark:text-zinc-400">Live alerts</p>
-        <div className="mt-4 space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
-          <p>• 12 bookings need confirmation</p>
-          <p>• 8 inventory items low stock</p>
-          <p>• 3 deliveries scheduled today</p>
+      <div className="mt-6 rounded-2xl border border-cyan-200/10 bg-slate-950/50 p-4">
+        <p className="text-xs uppercase tracking-[0.22em] text-zinc-500">Live alerts</p>
+        <div className="mt-3 space-y-2 text-sm text-zinc-300">
+          <p>• Confirm pending bookings</p>
+          <p>• Review low stock items</p>
+          <p>• Track today&apos;s deliveries</p>
         </div>
       </div>
     </aside>

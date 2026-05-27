@@ -45,8 +45,8 @@ export default function CustomerList({ customers, total, currentPage, query }: C
       header: "Customer",
       cell: (customer: CustomerDTO) => (
         <div className="space-y-1">
-          <div className="font-semibold text-zinc-950 dark:text-zinc-50">{customer.firstName} {customer.lastName}</div>
-          <div className="text-sm text-zinc-500 dark:text-zinc-400">{customer.company || "No company"}</div>
+          <div className="font-semibold text-white">{customer.firstName} {customer.lastName}</div>
+          <div className="text-sm text-zinc-400">{customer.company || "No company"}</div>
         </div>
       ),
       className: "min-w-[220px]",

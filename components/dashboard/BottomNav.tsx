@@ -2,30 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { mobileBottomNavItems, isNavActive } from "@/lib/navConfig";
 
 export default function BottomNav() {
   const pathname = usePathname() || "/";
 
-  const items = [
-    { label: 'Home', href: '/dashboard', icon: 'M3 12h18' },
-    { label: 'Bookings', href: '/bookings', icon: 'M3 6h18 M3 18h18' },
-    { label: 'Deliveries', href: '/deliveries', icon: 'M3 12h18' },
-    { label: 'Inventory', href: '/inventory', icon: 'M3 12h18' },
-    { label: 'Customers', href: '/customers', icon: 'M3 12h18' },
-  ];
-
   return (
-    <nav className="bottom-nav">
-      <div className="mx-auto max-w-3xl px-4">
-        <div className="backdrop-blur-sm rounded-t-xl border-t border-zinc-200/80 bg-white/90 dark:bg-zinc-950/90 flex items-center justify-between shadow-lg p-2">
-          {items.map((it) => {
-            const active = pathname.startsWith(it.href);
+    <nav className="bottom-nav" aria-label="Main navigation">
+      <div className="mx-auto max-w-lg px-3 pb-2 pt-1">
+        <div className="flex items-stretch justify-between gap-1 rounded-2xl border border-cyan-200/15 bg-[#0c1528]/95 p-1.5 shadow-[0_-8px_32px_rgba(2,6,23,0.6)] backdrop-blur-xl">
+          {mobileBottomNavItems.map((item) => {
+            const active = isNavActive(pathname, item.href);
+            const Icon = item.icon;
             return (
-              <Link key={it.href} href={it.href} className={`touch-target flex-1 text-center text-sm ${active ? 'text-indigo-600' : 'text-zinc-700'}`}>
-                <div className="mx-auto h-6 w-6" aria-hidden>
-                  <svg className="h-6 w-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                </div>
-                <div className="text-xs">{it.label}</div>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`touch-target flex flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition ${
+                  active
+                    ? "bg-cyan-400/15 text-cyan-200"
+                    : "text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+                }`}
+              >
+                <Icon className={`h-5 w-5 ${active ? "text-cyan-300" : ""}`} aria-hidden />
+                <span className="text-[10px] font-medium leading-none sm:text-xs">{item.label}</span>
               </Link>
             );
           })}

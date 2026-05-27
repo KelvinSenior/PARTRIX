@@ -385,16 +385,16 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <section className="flex flex-col gap-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 lg:flex-row lg:items-end lg:justify-between">
+    <div className="flex w-full flex-col gap-5">
+      <section className="flex flex-col gap-5 rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 shadow-[0_8px_32px_rgba(2,6,23,0.35)] backdrop-blur-xl sm:rounded-3xl sm:p-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-500">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
             Inventory
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-zinc-950 dark:text-zinc-50">
+          <h1 className="mt-3 text-3xl font-semibold text-white">
             Stock control
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
             Signed in as {user.name ?? user.email}. Track rental stock,
             availability, pricing, images, and damage exposure from one place.
           </p>
@@ -403,7 +403,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
           type="button"
           onClick={openCreateEditor}
           data-testid="inventory-add-button"
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 text-sm font-semibold text-slate-950 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-4 w-4" />
           Add item
@@ -440,7 +440,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         ].map((metric) => (
           <div
             key={metric.label}
-            className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+            className="rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -455,7 +455,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         ))}
       </section>
 
-      <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl sm:rounded-3xl">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_190px_170px]">
           <label className="relative block">
             <span className="sr-only">Search inventory</span>
