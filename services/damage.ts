@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
 import type { DamageReportDTO, CreateDamagePayload, ResolveDamagePayload } from "@/types/damage";
 
 function serialize(dr: any): DamageReportDTO {
@@ -20,18 +21,22 @@ function serialize(dr: any): DamageReportDTO {
 }
 
 export async function listDamageReports() {
-  const rows = await prisma.damageReport.findMany({ include: { inventoryItem: true } });
+  const user = await requireOrganizationContext();
+  const rows = await prisma.damageReport.findMany({ where: { organizationId: user.organizationId! }, include: { inventoryItem: true } });
   return rows.map(serialize);
 }
 
 export async function getDamageReport(id: string) {
-  const row = await prisma.damageReport.findUnique({ where: { id }, include: { inventoryItem: true } });
+  const user = await requireOrganizationContext();
+  const row = await prisma.damageReport.findFirst({ where: { id, organizationId: user.organizationId! }, include: { inventoryItem: true } });
   return row ? serialize(row) : null;
 }
 
 export async function createDamageReport(payload: CreateDamagePayload, reportedById?: string | null) {
+  const user = await requireOrganizationContext();
+
   // adjust inventory quantities
-  const item = await prisma.inventoryItem.findUnique({ where: { id: payload.inventoryItemId } });
+  const item = await prisma.inventoryItem.findFirst({ where: { id: payload.inventoryItemId, organizationId: user.organizationId! } });
   if (!item) throw new Error("Inventory item not found");
 
   const quantity = payload.quantity ?? 1;
@@ -53,6 +58,7 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
   if (payload.customerCharge != null) notesExtra.customerCharge = payload.customerCharge;
 
   const dr = await prisma.damageReport.create({ data: {
+    organizationId: user.organizationId!,
     bookingId: payload.bookingId ?? null,
     inventoryItemId: payload.inventoryItemId,
     reportedById: reportedById ?? null,
@@ -64,6 +70,7 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
   // if customer charge provided and booking exists, create a Payment record as a charge
   if (payload.customerCharge && payload.bookingId) {
     await prisma.payment.create({ data: {
+      organizationId: user.organizationId!,
       bookingId: payload.bookingId,
       amount: payload.customerCharge as any,
       method: 'CASH',
@@ -76,10 +83,11 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
 }
 
 export async function resolveDamageReport(id: string, payload: ResolveDamagePayload) {
-  const dr = await prisma.damageReport.findUnique({ where: { id } });
+  const user = await requireOrganizationContext();
+  const dr = await prisma.damageReport.findFirst({ where: { id, organizationId: user.organizationId! } });
   if (!dr) return null;
 
-  const item = await prisma.inventoryItem.findUnique({ where: { id: dr.inventoryItemId } });
+  const item = await prisma.inventoryItem.findFirst({ where: { id: dr.inventoryItemId, organizationId: user.organizationId! } });
   if (!item) throw new Error("Inventory item not found");
 
   // actions: repair -> move damaged -> available; mark_lost -> decrement total & damaged
@@ -104,6 +112,7 @@ export async function resolveDamageReport(id: string, payload: ResolveDamagePayl
   // optionally create a payment charge referenced to booking
   if (payload.customerCharge && dr.bookingId) {
     await prisma.payment.create({ data: {
+      organizationId: user.organizationId!,
       bookingId: dr.bookingId,
       amount: payload.customerCharge as any,
       method: 'CASH',

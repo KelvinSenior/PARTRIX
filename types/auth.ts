@@ -4,6 +4,7 @@ export interface JwtTokenPayload {
   sub: string;
   email: string;
   role: UserRole;
+  organizationId?: string | null;
 }
 
 export interface JwtPayload extends JwtTokenPayload {
@@ -16,6 +17,7 @@ export interface SessionUser {
   email: string;
   name: string | null;
   role: UserRole;
+  organizationId: string | null;
 }
 
 export interface AuthContextValue {

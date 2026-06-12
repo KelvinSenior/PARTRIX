@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
 import type { PaymentPayload, PaymentDTO, ExpensePayload, ExpenseDTO, FinanceSummary } from "@/types/finance";
 
 function decimalToNumber(value: any): number {
@@ -10,11 +11,14 @@ function decimalToNumber(value: any): number {
 }
 
 export async function recordPayment(payload: PaymentPayload, processedById?: string | null): Promise<PaymentDTO> {
+  const user = await requireOrganizationContext();
+
   return prisma.$transaction(async (tx) => {
     const now = new Date();
 
     const payment = await tx.payment.create({
       data: {
+        organizationId: user.organizationId!,
         bookingId: payload.bookingId ?? null,
         amount: payload.amount.toString(),
         method: payload.method as any,
@@ -52,7 +56,8 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
 }
 
 export async function listPayments(start?: Date, end?: Date) {
-  const where: any = {};
+  const user = await requireOrganizationContext();
+  const where: any = { organizationId: user.organizationId! };
   if (start || end) where.processedAt = {};
   if (start) where.processedAt.gte = start;
   if (end) where.processedAt.lte = end;
@@ -74,8 +79,10 @@ export async function listPayments(start?: Date, end?: Date) {
 }
 
 export async function recordExpense(payload: ExpensePayload, createdById?: string | null): Promise<ExpenseDTO> {
+  const user = await requireOrganizationContext();
   const expense = await prisma.expense.create({
     data: {
+      organizationId: user.organizationId!,
       category: payload.category as any,
       amount: payload.amount.toString(),
       incurredAt: new Date(payload.incurredAt),
@@ -102,7 +109,8 @@ export async function recordExpense(payload: ExpensePayload, createdById?: strin
 }
 
 export async function listExpenses(start?: Date, end?: Date) {
-  const where: any = {};
+  const user = await requireOrganizationContext();
+  const where: any = { organizationId: user.organizationId! };
   if (start || end) where.incurredAt = {};
   if (start) where.incurredAt.gte = start;
   if (end) where.incurredAt.lte = end;
@@ -124,15 +132,17 @@ export async function listExpenses(start?: Date, end?: Date) {
 }
 
 export async function getFinanceSummary(start?: Date, end?: Date): Promise<FinanceSummary> {
-  const payments = await prisma.payment.findMany({ where: { status: "COMPLETED", processedAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
-  const expenses = await prisma.expense.findMany({ where: { incurredAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
+  const user = await requireOrganizationContext();
+  const where = { organizationId: user.organizationId! };
+  const payments = await prisma.payment.findMany({ where: { ...where, status: "COMPLETED", processedAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
+  const expenses = await prisma.expense.findMany({ where: { ...where, incurredAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
 
   const revenue = payments.reduce((s, p) => s + decimalToNumber(p.amount), 0);
   const expenseTotal = expenses.reduce((s, e) => s + decimalToNumber(e.amount), 0);
   const profit = revenue - expenseTotal;
 
   // outstanding - sum of booking.balanceDue > 0
-  const outstandingBookings = await prisma.booking.findMany({ where: { balanceDue: { gt: 0 } as any } as any, select: { balanceDue: true } as any });
+  const outstandingBookings = await prisma.booking.findMany({ where: { ...where, balanceDue: { gt: 0 } as any } as any, select: { balanceDue: true } as any });
   const outstanding = outstandingBookings.reduce((s, b) => s + decimalToNumber(b.balanceDue), 0);
 
   // monthly analytics: naive grouping by YYYY-MM
@@ -161,7 +171,8 @@ export async function getFinanceSummary(start?: Date, end?: Date): Promise<Finan
 }
 
 export async function getCustomerDebts(): Promise<Array<{ customerId: string; customerName: string; email: string | null; outstanding: number }>> {
-  const bookings = await prisma.booking.findMany({ where: { balanceDue: { gt: 0 } as any }, include: { customer: true } as any }) as any[];
+  const user = await requireOrganizationContext();
+  const bookings = await prisma.booking.findMany({ where: { organizationId: user.organizationId!, balanceDue: { gt: 0 } as any }, include: { customer: true } as any }) as any[];
   const map: Record<string, { customerId: string; customerName: string; email: string | null; outstanding: number }> = {};
 
   for (const b of bookings) {

@@ -5,6 +5,29 @@ import { SessionUser, UserRole } from "@/types/auth";
 
 const SALT_ROUNDS = 12;
 
+async function ensureOrganizationForUser(user: { id: string; email: string; name: string | null; role: UserRole; organizationId: string | null }) {
+  if (user.organizationId) {
+    return user;
+  }
+
+  const organization = await prisma.organization.create({
+    data: {
+      name: `${user.name || user.email.split("@")[0]} Workspace`,
+      slug: `${user.email.split("@")[0]}-${Date.now().toString(36)}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    },
+  });
+
+  const updatedUser = await prisma.user.update({
+    where: { id: user.id },
+    data: { organizationId: organization.id },
+  });
+
+  return {
+    ...user,
+    organizationId: updatedUser.organizationId,
+  };
+}
+
 /**
  * Hash password with bcryptjs
  * Using 12 rounds provides strong security (bcryptjs is slower than bcrypt for added security)
@@ -50,6 +73,13 @@ export async function registerUser(options: {
   // Hash password with strong parameters
   const passwordHash = await hashPassword(options.password);
 
+  const organization = await prisma.organization.create({
+    data: {
+      name: `${options.name.trim()}'s Workspace`,
+      slug: `${normalizedEmail.split("@")[0]}-${Date.now().toString(36)}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
+    },
+  });
+
   // Create user with ACTIVE status
   const user = await prisma.user.create({
     data: {
@@ -58,6 +88,7 @@ export async function registerUser(options: {
       name: options.name.trim(),
       role: options.role ?? "STAFF",
       status: "ACTIVE",
+      organizationId: organization.id,
     },
   });
 
@@ -117,11 +148,20 @@ export async function getCurrentUserFromToken(token: string) {
     return null;
   }
 
-  return {
+  const sessionUser = await ensureOrganizationForUser({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role as UserRole,
+    organizationId: user.organizationId,
+  });
+
+  return {
+    id: sessionUser.id,
+    email: sessionUser.email,
+    name: sessionUser.name,
+    role: sessionUser.role,
+    organizationId: sessionUser.organizationId,
   } as SessionUser;
 }
 
@@ -133,11 +173,13 @@ export function buildSessionUser(user: {
   email: string;
   name: string | null;
   role: UserRole;
+  organizationId?: string | null;
 }): SessionUser {
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    organizationId: user.organizationId ?? null,
   };
 }

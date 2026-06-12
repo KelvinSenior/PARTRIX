@@ -10,29 +10,55 @@ datasource db {
   provider = "postgresql"
 }
 
+model Organization {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String
+  slug           String          @unique
+  ownerId        String?         @db.Uuid
+  users          User[]
+  customers      Customer[]
+  inventoryItems InventoryItem[]
+  bookings       Booking[]
+  bookingItems   BookingItem[]
+  payments       Payment[]
+  expenses       Expense[]
+  deliveries     Delivery[]
+  damageReports  DamageReport[]
+  activityLogs   ActivityLog[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([slug])
+}
+
 model User {
-  id           String        @id @default(uuid()) @db.Uuid
-  email        String        @unique
-  password     String
-  name         String?
-  role         UserRole      @default(STAFF)
-  status       UserStatus    @default(ACTIVE)
-  bookings     Booking[]     @relation("UserCreatedBookings")
-  payments     Payment[]     @relation("PaymentProcessedBy")
-  expenses     Expense[]     @relation("ExpenseCreatedBy")
+  id            String        @id @default(uuid()) @db.Uuid
+  email         String        @unique
+  password      String
+  name          String?
+  role          UserRole      @default(STAFF)
+  status        UserStatus    @default(ACTIVE)
+  organization  Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  organizationId String?      @db.Uuid
+  bookings      Booking[]     @relation("UserCreatedBookings")
+  payments      Payment[]     @relation("PaymentProcessedBy")
+  expenses      Expense[]     @relation("ExpenseCreatedBy")
   damageReports DamageReport[]
-  activityLogs ActivityLog[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  activityLogs  ActivityLog[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([email])
+  @@index([organizationId])
 }
 
 model Customer {
   id             String     @id @default(uuid()) @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String     @db.Uuid
   firstName      String
   lastName       String
-  email          String?    @unique
+  email          String?
   phone          String?
   company        String?
   address        String?
@@ -41,11 +67,15 @@ model Customer {
   deliveries     Delivery[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+
+  @@index([organizationId])
 }
 
 model InventoryItem {
   id                String          @id @default(uuid()) @db.Uuid
-  sku               String          @unique
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId    String          @db.Uuid
+  sku               String
   name              String
   description       String?
   category          String?
@@ -65,11 +95,15 @@ model InventoryItem {
   updatedAt         DateTime        @updatedAt
 
   @@index([sku])
+  @@index([organizationId])
+  @@unique([organizationId, sku])
 }
 
 model Booking {
   id             String         @id @default(uuid()) @db.Uuid
-  bookingNumber  String         @unique
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String         @db.Uuid
+  bookingNumber  String
   customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId     String         @db.Uuid
   eventDate      DateTime
@@ -95,12 +129,16 @@ model Booking {
   updatedAt      DateTime       @updatedAt
 
   @@index([bookingNumber])
+  @@index([organizationId])
   @@index([customerId])
+  @@unique([organizationId, bookingNumber])
   @@index([eventDate, status])
 }
 
 model BookingItem {
   id              String          @id @default(uuid()) @db.Uuid
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String          @db.Uuid
   booking         Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId       String          @db.Uuid
   inventoryItem   InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
@@ -116,16 +154,19 @@ model BookingItem {
 
   @@index([bookingId])
   @@index([inventoryItemId])
+  @@index([organizationId])
 }
 
 model Payment {
   id                  String         @id @default(uuid()) @db.Uuid
+  organization        Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId      String         @db.Uuid
   booking             Booking?       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId           String?        @db.Uuid
   amount              Decimal        @db.Decimal(12, 2)
   method              PaymentMethod
   status              PaymentStatus  @default(PENDING)
-  transactionReference String?       @unique
+  transactionReference String?
   processedBy         User?          @relation("PaymentProcessedBy", fields: [processedById], references: [id], onDelete: SetNull)
   processedById       String?        @db.Uuid
   processedAt         DateTime?
@@ -134,11 +175,15 @@ model Payment {
   updatedAt           DateTime       @updatedAt
 
   @@index([bookingId])
+  @@index([organizationId])
   @@index([status])
+  @@unique([organizationId, transactionReference])
 }
 
 model Expense {
   id           String          @id @default(uuid()) @db.Uuid
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String        @db.Uuid
   category     ExpenseCategory
   amount       Decimal         @db.Decimal(12, 2)
   incurredAt   DateTime
@@ -153,11 +198,14 @@ model Expense {
   updatedAt    DateTime        @updatedAt
 
   @@index([incurredAt])
+  @@index([organizationId])
   @@index([category])
 }
 
 model Delivery {
   id           String         @id @default(uuid()) @db.Uuid
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String       @db.Uuid
   booking      Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId    String         @db.Uuid @unique
   customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -175,11 +223,14 @@ model Delivery {
 
   @@index([bookingId])
   @@index([customerId])
+  @@index([organizationId])
   @@index([scheduledAt])
 }
 
 model DamageReport {
   id              String          @id @default(uuid()) @db.Uuid
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId  String          @db.Uuid
   booking         Booking?        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId       String?         @db.Uuid
   inventoryItem   InventoryItem   @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
@@ -195,14 +246,17 @@ model DamageReport {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
+  @@index([organizationId])
   @@index([inventoryItemId])
   @@index([bookingId])
   @@index([resolved])
 }
 
 model ActivityLog {
-  id         String        @id @default(uuid()) @db.Uuid
-  user       User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id             String        @id @default(uuid()) @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String        @db.Uuid
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   userId     String?       @db.Uuid
   booking    Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   bookingId  String?       @db.Uuid
@@ -213,6 +267,7 @@ model ActivityLog {
   level      ActivityLevel @default(INFO)
   createdAt  DateTime      @default(now())
 
+  @@index([organizationId])
   @@index([userId])
   @@index([bookingId])
 }

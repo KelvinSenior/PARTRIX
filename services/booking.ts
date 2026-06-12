@@ -1,5 +1,6 @@
 import type { BookingPayload, BookingDTO, BookingListResponse, BookingReturnPayload } from "@/types/booking";
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
 
 const activeBookingStatuses: string[] = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
 
@@ -72,16 +73,17 @@ function formatBookingNumber() {
   return `RF-${timestamp}-${randomSuffix}`;
 }
 
-async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: any) {
+async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: any, organizationId: string) {
   // If email provided, try to connect to existing customer by email
   if (customer.email) {
-    const existingCustomer = await tx.customer.findUnique({ where: { email: customer.email } });
+    const existingCustomer = await tx.customer.findFirst({ where: { email: customer.email, organizationId } });
     if (existingCustomer) return { connect: { id: existingCustomer.id } };
   }
 
   // Otherwise, always create a new customer record (email may be null)
   return {
     create: {
+      organizationId,
       firstName: customer.firstName,
       lastName: customer.lastName,
       email: customer.email ?? null,
@@ -145,13 +147,15 @@ async function computeBookingTotals(payload: BookingPayload, inventoryData: Arra
 }
 
 export async function createBooking(payload: BookingPayload): Promise<BookingDTO> {
+  const user = await requireOrganizationContext();
+
   return prisma.$transaction(async (tx) => {
     const eventDate = new Date(payload.eventDate);
     const returnDate = payload.returnDate ? new Date(payload.returnDate) : eventDate;
     const itemIds = payload.items.map((item) => item.inventoryItemId);
 
     const inventoryItems = await tx.inventoryItem.findMany({
-      where: { id: { in: itemIds } },
+      where: { id: { in: itemIds }, organizationId: user.organizationId! },
     });
 
     if (inventoryItems.length !== payload.items.length) {
@@ -193,8 +197,9 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
 
     const booking = await tx.booking.create({
       data: {
+        organizationId: user.organizationId!,
         bookingNumber: formatBookingNumber(),
-        customer: await findOrCreateCustomer(payload.customer, tx),
+        customer: await findOrCreateCustomer(payload.customer, tx, user.organizationId!),
         eventDate,
         deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : null,
         returnDate: payload.returnDate ? new Date(payload.returnDate) : null,
@@ -235,7 +240,9 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
 }
 
 export async function listBookings(): Promise<BookingListResponse> {
+  const user = await requireOrganizationContext();
   const bookings = await prisma.booking.findMany({
+    where: { organizationId: user.organizationId! },
     orderBy: { createdAt: "desc" },
     include: {
       customer: true,
@@ -250,8 +257,9 @@ export async function listBookings(): Promise<BookingListResponse> {
 }
 
 export async function getBooking(id: string): Promise<BookingDTO | null> {
-  const booking = await prisma.booking.findUnique({
-    where: { id },
+  const user = await requireOrganizationContext();
+  const booking = await prisma.booking.findFirst({
+    where: { id, organizationId: user.organizationId! },
     include: {
       customer: true,
       bookingItems: { include: { inventoryItem: true } },
@@ -265,9 +273,11 @@ export async function returnBookingItems(
   bookingId: string,
   payload: BookingReturnPayload,
 ): Promise<BookingDTO> {
+  const user = await requireOrganizationContext();
+
   return prisma.$transaction(async (tx) => {
-    const booking = await tx.booking.findUnique({
-      where: { id: bookingId },
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, organizationId: user.organizationId! },
       include: { bookingItems: true },
     });
 
@@ -348,9 +358,11 @@ export async function returnBookingItems(
 }
 
 export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
+  const user = await requireOrganizationContext();
+
   return prisma.$transaction(async (tx) => {
-    const booking = await tx.booking.findUnique({
-      where: { id: bookingId },
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, organizationId: user.organizationId! },
       include: { bookingItems: true },
     });
 

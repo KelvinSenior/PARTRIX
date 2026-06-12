@@ -1,5 +1,6 @@
 import type { InventoryItem, Prisma } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
 import type { InventoryItemPayload } from "@/lib/inventoryValidation";
 import type {
   InventoryItemDTO,
@@ -191,14 +192,17 @@ function toPrismaData(data: InventoryItemPayload) {
 export async function listInventoryItems(
   filters: InventoryListFilters,
 ): Promise<InventoryListResponse> {
+  const user = await requireOrganizationContext();
+  const tenantWhere = { organizationId: user.organizationId!, ...buildWhere(filters) };
+
   const [records, categoryRows] = await Promise.all([
     prisma.inventoryItem.findMany({
-      where: buildWhere(filters),
+      where: tenantWhere,
       orderBy: getOrderBy(filters.sort),
     }),
     prisma.inventoryItem.findMany({
       distinct: ["category"],
-      where: { category: { not: null } },
+      where: { organizationId: user.organizationId!, category: { not: null } },
       select: { category: true },
       orderBy: { category: "asc" },
     }),
@@ -218,13 +222,15 @@ export async function listInventoryItems(
 }
 
 export async function getInventoryItem(id: string) {
-  const item = await prisma.inventoryItem.findUnique({ where: { id } });
+  const user = await requireOrganizationContext();
+  const item = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
   return item ? serializeInventoryItem(item) : null;
 }
 
 export async function createInventoryItem(data: InventoryItemPayload) {
+  const user = await requireOrganizationContext();
   const item = await prisma.inventoryItem.create({
-    data: toPrismaData(data),
+    data: { organizationId: user.organizationId!, ...toPrismaData(data) },
   });
 
   return serializeInventoryItem(item);
@@ -234,6 +240,12 @@ export async function updateInventoryItem(
   id: string,
   data: InventoryItemPayload,
 ) {
+  const user = await requireOrganizationContext();
+  const existing = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
+  if (!existing) {
+    throw new Error("Inventory item not found in this workspace.");
+  }
+
   const item = await prisma.inventoryItem.update({
     where: { id },
     data: toPrismaData(data),
@@ -243,6 +255,12 @@ export async function updateInventoryItem(
 }
 
 export async function deleteInventoryItem(id: string) {
+  const user = await requireOrganizationContext();
+  const existing = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
+  if (!existing) {
+    return;
+  }
+
   await prisma.inventoryItem.delete({ where: { id } });
 }
 

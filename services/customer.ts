@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
 import type { CustomerPayload, CustomerDTO, CustomerDetailDTO, CustomerSearchParams } from "@/types/customer";
 
 function decimalToNumber(value: any): number {
@@ -25,8 +26,11 @@ function serializeCustomer(customer: any): CustomerDTO {
 }
 
 export async function createCustomer(payload: CustomerPayload): Promise<CustomerDTO> {
+  const user = await requireOrganizationContext();
+
   const customer = await prisma.customer.create({
     data: {
+      organizationId: user.organizationId!,
       firstName: payload.firstName,
       lastName: payload.lastName,
       email: payload.email ?? null,
@@ -41,11 +45,18 @@ export async function createCustomer(payload: CustomerPayload): Promise<Customer
 }
 
 export async function getCustomer(id: string): Promise<CustomerDTO | null> {
-  const customer = await prisma.customer.findUnique({ where: { id } });
+  const user = await requireOrganizationContext();
+  const customer = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
   return customer ? serializeCustomer(customer) : null;
 }
 
 export async function updateCustomer(id: string, payload: CustomerPayload): Promise<CustomerDTO> {
+  const user = await requireOrganizationContext();
+  const existing = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
+  if (!existing) {
+    throw new Error("Customer not found in this workspace.");
+  }
+
   const customer = await prisma.customer.update({
     where: { id },
     data: {
@@ -64,6 +75,12 @@ export async function updateCustomer(id: string, payload: CustomerPayload): Prom
 
 export async function deleteCustomer(id: string): Promise<boolean> {
   try {
+    const user = await requireOrganizationContext();
+    const existing = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
+    if (!existing) {
+      return false;
+    }
+
     await prisma.customer.delete({ where: { id } });
     return true;
   } catch {
@@ -72,9 +89,10 @@ export async function deleteCustomer(id: string): Promise<boolean> {
 }
 
 export async function listCustomers(params: CustomerSearchParams = {}): Promise<{ customers: CustomerDTO[]; total: number }> {
+  const user = await requireOrganizationContext();
   const { query, sortBy = "createdAt", order = "desc", limit = 20, offset = 0 } = params;
 
-  const where: any = {};
+  const where: any = { organizationId: user.organizationId! };
   if (query) {
     where.OR = [
       { firstName: { contains: query, mode: "insensitive" } },
@@ -100,8 +118,9 @@ export async function listCustomers(params: CustomerSearchParams = {}): Promise<
 }
 
 export async function getCustomerDetail(id: string): Promise<CustomerDetailDTO | null> {
-  const customer = await prisma.customer.findUnique({
-    where: { id },
+  const user = await requireOrganizationContext();
+  const customer = await prisma.customer.findFirst({
+    where: { id, organizationId: user.organizationId! },
     include: {
       bookings: {
         include: {
@@ -138,8 +157,9 @@ export interface CustomerBookingSummary {
 }
 
 export async function getCustomerBookings(id: string): Promise<CustomerBookingSummary[]> {
+  const user = await requireOrganizationContext();
   const bookings = await prisma.booking.findMany({
-    where: { customerId: id },
+    where: { customerId: id, organizationId: user.organizationId! },
     include: {
       bookingItems: {
         include: { inventoryItem: true },
@@ -160,8 +180,9 @@ export async function getCustomerBookings(id: string): Promise<CustomerBookingSu
 }
 
 export async function getCustomerAnalytics(id: string) {
+  const user = await requireOrganizationContext();
   const bookings = await prisma.booking.findMany({
-    where: { customerId: id },
+    where: { customerId: id, organizationId: user.organizationId! },
     include: { payments: true },
   });
 
