@@ -1,4 +1,4 @@
-# RENTFLOW Production Deployment Guide
+# Partrix Production Deployment Guide
 
 ## Complete Step-by-Step Production Deployment
 
@@ -6,7 +6,7 @@
 
 #### Step 1: Initialize Git Repository
 ```bash
-cd c:\Users\Hp Users\Desktop\SKS\SKS LABS\RENTFLOW\rentflow
+cd c:\Users\Hp Users\Desktop\SKS\SKS LABS\Partrix\partrix
 
 # Initialize git
 git init
@@ -15,12 +15,12 @@ git init
 git add .
 
 # Create initial commit
-git commit -m "Initial commit: RENTFLOW rental management system with production security"
+git commit -m "Initial commit: Partrix rental management system with production security"
 ```
 
 #### Step 2: Create GitHub Repository
 1. Go to https://github.com/new
-2. Repository name: `RENTFLOW`
+2. Repository name: `Partrix`
 3. Description: `Enterprise rental management system with booking, inventory, and finance management`
 4. Choose: Public or Private
 5. Click "Create repository"
@@ -28,7 +28,7 @@ git commit -m "Initial commit: RENTFLOW rental management system with production
 #### Step 3: Push to GitHub
 ```bash
 # Add remote repository (replace YOUR_USERNAME with your GitHub username)
-git remote add origin https://github.com/YOUR_USERNAME/RENTFLOW.git
+git remote add origin https://github.com/YOUR_USERNAME/Partrix.git
 
 # Rename branch to main if needed
 git branch -M main
@@ -43,12 +43,12 @@ git push -u origin main
 
 #### Step 1: Vercel Environment Configuration
 1. Go to https://vercel.com/dashboard
-2. New Project → Import Git Repository → Select RENTFLOW
+2. New Project → Import Git Repository → Select Partrix
 3. Click "Deploy"
 
 #### Step 2: After Vercel Project Created
 1. Go to your Vercel dashboard
-2. Select RENTFLOW project
+2. Select Partrix project
 3. Settings → Environment Variables
 4. Add each variable with values from your local `.env` file:
 
@@ -56,8 +56,8 @@ git push -u origin main
 DATABASE_URL=postgresql://user:password@host:port/database
 JWT_SECRET=your-64-character-random-string
 NODE_ENV=production
-ALLOWED_ORIGIN=https://rentflow-xxxx.vercel.app
-NEXT_PUBLIC_API_URL=https://rentflow-xxxx.vercel.app
+ALLOWED_ORIGIN=https://partrix-xxxx.vercel.app
+NEXT_PUBLIC_API_URL=https://partrix-xxxx.vercel.app
 RATE_LIMIT_WINDOW_SECONDS=60
 RATE_LIMIT_MAX_REQUESTS=10
 LOG_SECURITY_EVENTS=true
@@ -82,7 +82,7 @@ Copy the output and use it as `JWT_SECRET` in Vercel.
 
 #### Option A: Using Vercel PostgreSQL (Recommended)
 1. Go to Vercel dashboard
-2. Select RENTFLOW project
+2. Select Partrix project
 3. Storage tab → Create Database → PostgreSQL
 4. Click "Create" and approve
 5. Vercel automatically adds `DATABASE_URL` to environment variables
@@ -90,7 +90,7 @@ Copy the output and use it as `JWT_SECRET` in Vercel.
 #### Option B: Using Supabase
 1. Go to https://supabase.com/dashboard
 2. New Project
-3. Project name: `rentflow`
+3. Project name: `partrix`
 4. Region: Choose closest to you
 5. Password: Generate strong password
 6. Create project
@@ -101,7 +101,7 @@ Copy the output and use it as `JWT_SECRET` in Vercel.
 #### Option C: Using Neon
 1. Go to https://console.neon.tech
 2. New Project
-3. Name: `rentflow`
+3. Name: `partrix`
 4. Create database
 5. Copy connection string
 6. Add as `DATABASE_URL` in Vercel Environment Variables

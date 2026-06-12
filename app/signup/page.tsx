@@ -11,10 +11,10 @@ export default async function SignupPage({
 
   return (
     <AuthShell
-      title="RENTFLOW"
-      subtitle="Smart Rental Management for Modern Event Businesses"
+      title="Welcome to Partrix"
+      subtitle="The Operating System for Rental Businesses"
       cardTitle="Create your workspace"
-      cardSubtitle="Complete the steps to launch your premium rental operations console."
+      cardSubtitle="Complete the steps to launch your premium rental operations workspace."
       footer={
         <p className="text-zinc-300">
           Already registered?{" "}

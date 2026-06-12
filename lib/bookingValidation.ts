@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { BookingStatus } from "@/types/booking";
 
 export const bookingItemSchema = z.object({
   inventoryItemId: z.string().uuid({ message: "Select a valid inventory item." }),

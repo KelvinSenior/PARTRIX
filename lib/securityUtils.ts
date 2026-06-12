@@ -1,5 +1,5 @@
 /**
- * Security utilities for RENTFLOW
+ * Security utilities for Partrix
  * Production-grade security functions for authentication, validation, and protection
  */
 
@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
  * Restricts API access to same-origin requests
  */
 export const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": process.env.NODE_ENV === "production" ? process.env.ALLOWED_ORIGIN || "https://rentflow.app" : "http://localhost:3001",
+  "Access-Control-Allow-Origin": process.env.NODE_ENV === "production" ? process.env.ALLOWED_ORIGIN || "https://partrix.app" : "http://localhost:3001",
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Allow-Credentials": "true",
@@ -35,7 +35,7 @@ export function handleCORS(request: NextRequest) {
 export function validateOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   const allowedOrigins = process.env.NODE_ENV === "production" 
-    ? [process.env.ALLOWED_ORIGIN || "https://rentflow.app"]
+    ? [process.env.ALLOWED_ORIGIN || "https://partrix.app"]
     : ["http://localhost:3001", "http://localhost:3000"];
 
   if (!origin) return true; // Allow same-site requests

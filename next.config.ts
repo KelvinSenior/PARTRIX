@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 import { env } from "./lib/env";
 
-// Turbopack walks up for a lockfile; with the app in RENTFLOW/rentflow it can pick the wrong root.
+// Turbopack walks up for a lockfile; keep the project root pinned to the Partrix workspace.
 const projectRoot = path.resolve(__dirname);
 
 const nextConfig: NextConfig = {

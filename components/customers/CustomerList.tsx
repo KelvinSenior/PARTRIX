@@ -129,7 +129,7 @@ export default function CustomerList({ customers, total, currentPage, query }: C
           </div>
         }
       >
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">This action permanently removes the customer record from RentFlow.</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">This action permanently removes the customer record from Partrix.</p>
       </Modal>
     </div>
   );

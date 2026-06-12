@@ -1,5 +1,5 @@
 /**
- * RENTFLOW CORS Configuration
+ * Partrix CORS Configuration
  * Implements production-grade CORS security
  */
 

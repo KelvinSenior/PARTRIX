@@ -1,8 +1,8 @@
-# RENTFLOW Security Implementation Guide
+# Partrix Security Implementation Guide
 
 ## Production-Level Security Features
 
-This document outlines the security measures implemented in RENTFLOW to protect against common vulnerabilities.
+This document outlines the security measures implemented in Partrix to protect against common vulnerabilities.
 
 ---
 
@@ -25,8 +25,8 @@ This document outlines the security measures implemented in RENTFLOW to protect 
 ### JWT Token Management
 - **Algorithm**: HS256 with 32-character minimum secret
 - **Expiration**: 7 days (consider reducing to 24 hours in production)
-- **Issuer Validation**: All tokens validated against `rentflow` issuer
-- **Algorithm Verification**: Tokens must have `issuer: "rentflow"`
+- **Issuer Validation**: All tokens validated against the legacy-compatible `rentflow` issuer
+- **Algorithm Verification**: Tokens must have `issuer: "rentflow"` to preserve existing session compatibility
 
 ### Session Management
 - **HTTP-Only Cookies**: Prevents XSS token theft
@@ -150,7 +150,7 @@ X-Permitted-Cross-Domain-Policies: none
 ### AUTH_COOKIE_OPTIONS
 ```typescript
 {
-  name: "rentflow_token",
+  name: "rentflow_token", // legacy-compatible cookie name
   httpOnly: true,      // ✅ Prevents XSS theft
   secure: true,        // ✅ HTTPS only (production)
   sameSite: "strict",  // ✅ Prevents CSRF
@@ -411,7 +411,7 @@ await logSecurityEvent("LOGIN_ATTEMPT", userId, {
 ## 17. Contact & Reporting
 
 ### Security Issues
-If you discover a security vulnerability, please email security@rentflow.app instead of using the issue tracker.
+If you discover a security vulnerability, please email security@partrix.app instead of using the issue tracker.
 
 Include:
 - Description of the vulnerability

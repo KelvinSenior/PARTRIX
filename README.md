@@ -1,10 +1,10 @@
-# RentFlow
+# Partrix
 
-RentFlow is a full-stack rental management application built with Next.js, React, Prisma, PostgreSQL, and TypeScript. It is designed to manage rental inventory, event bookings, customer records, finance tracking, deliveries, damage reports, and user authentication.
+Partrix is the operating system for rental businesses. It is a full-stack rental management application built with Next.js, React, Prisma, PostgreSQL, and TypeScript, designed to manage rental inventory, bookings, customer records, logistics, payments, finance tracking, deliveries, damage reports, and user authentication from one centralized platform.
 
 ## Overview
 
-RentFlow provides a complete workflow for rental businesses, including:
+Partrix provides a complete workflow for rental businesses, including:
 - secure signup, login, logout, and session handling
 - user role support for `ADMIN`, `MANAGER`, and `STAFF`
 - customer and booking management
@@ -188,7 +188,7 @@ public/               # static assets and uploads
 Create a `.env` file with the required values:
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/rentflow
+DATABASE_URL=postgresql://user:password@localhost:5432/partrix
 JWT_SECRET=your-very-secret-string-with-at-least-32-chars
 NODE_ENV=development
 RATE_LIMIT_WINDOW_SECONDS=60
@@ -268,4 +268,4 @@ Suggested improvements:
 
 ---
 
-RentFlow is ready to be used as a rental operations and booking management starter app with a modern Next.js + Prisma architecture.
+Partrix is ready to be used as a rental operations and booking management platform with a modern Next.js + Prisma architecture.

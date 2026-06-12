@@ -1,6 +1,6 @@
 /**
- * RENTFLOW Design System
- * Premium Modern Mobile-First SaaS Operational Dashboard
+ * Partrix Design System
+ * Premium modern rental business operating system dashboard
  * 
  * Inspired by: Linear, Stripe, Notion, Uber Driver, Bolt
  */
@@ -8,20 +8,20 @@
 export const DesignSystem = {
   // === COLOR PALETTE ===
   colors: {
-    // Primary - Deep Navy & Charcoal
+    // Primary - Deep Navy & Near Black
     primary: {
-      950: "#0F172A", // Darkest navy (backgrounds)
-      900: "#0F1729", // Deep navy
+      950: "#050816", // Near black
+      900: "#0B1020", // Deep navy
       800: "#1E293B", // Charcoal
       700: "#334155", // Slate
       600: "#475569", // Medium slate
     },
     
-    // Accent - Cyan/Electric Blue
+    // Accent - Electric Cyan
     accent: {
-      600: "#06B6D4", // Cyan
-      500: "#0ea5e9", // Electric blue
-      400: "#38BDF8", // Light cyan
+      600: "#0891B2", // Deep cyan
+      500: "#22D3EE", // Electric cyan
+      400: "#67E8F9", // Light cyan
       300: "#67E8F9", // Very light cyan
     },
     

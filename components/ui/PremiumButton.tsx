@@ -22,9 +22,16 @@ const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonProps>(
     },
     ref
   ) => {
-    const variantStyle = ButtonVariants.primary[variant] ?? ButtonVariants.primary.primary;
+    const variantStyle = (ButtonVariants.primary[variant] ?? ButtonVariants.primary.primary) as {
+      bg: string;
+      hover: string;
+      text: string;
+      border?: string;
+      disabled: string;
+    };
     const sizeStyle = ButtonVariants.size[size];
     const widthClass = fullWidth ? "w-full" : "";
+    const borderClass = variantStyle.border ?? "";
 
     const baseClasses = `
       inline-flex items-center justify-center gap-2
@@ -35,7 +42,7 @@ const PremiumButton = React.forwardRef<HTMLButtonElement, PremiumButtonProps>(
       ${variantStyle.bg}
       ${variantStyle.hover}
       ${variantStyle.text}
-      ${variantStyle.border || ""}
+      ${borderClass}
       ${variantStyle.disabled}
       ${className}
     `;

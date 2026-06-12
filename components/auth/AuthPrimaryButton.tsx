@@ -16,7 +16,7 @@ export default function AuthPrimaryButton({ isLoading, label, loadingLabel }: Au
       disabled={isLoading}
       whileTap={{ scale: 0.985 }}
       whileHover={{ y: -1 }}
-      className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-5 text-base font-semibold text-slate-950 shadow-[0_8px_28px_rgba(14,165,233,0.45)] transition disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#22D3EE] px-5 text-base font-semibold text-[#050816] shadow-[0_8px_28px_rgba(34,211,238,0.35)] transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
     >
       {isLoading ? (
         <>

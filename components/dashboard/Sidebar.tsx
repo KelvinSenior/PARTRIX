@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { primaryNavItems, isNavActive } from "@/lib/navConfig";
 import { appCard } from "@/lib/appStyles";
+import PartrixLogo from "@/components/brand/PartrixLogo";
 
 export default function Sidebar() {
   const pathname = usePathname() || "/";
@@ -13,15 +14,15 @@ export default function Sidebar() {
     <aside className={`hidden shrink-0 flex-col lg:flex ${appCard} lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)]`}>
       <div className="mb-8 flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/75">RENTFLOW</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-200/75">Partrix</p>
           <h2 className="mt-2 text-lg font-semibold text-white">Operations</h2>
         </div>
         <motion.div
           animate={{ rotate: [0, 8, -8, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 via-sky-400 to-blue-600 text-sm font-bold text-slate-950 shadow-[0_8px_20px_rgba(14,165,233,0.35)]"
+          className="inline-flex"
         >
-          RF
+          <PartrixLogo size={44} showWordmark={false} />
         </motion.div>
       </div>
 

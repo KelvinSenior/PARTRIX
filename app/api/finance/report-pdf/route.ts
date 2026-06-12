@@ -22,10 +22,9 @@ export async function GET(request: Request) {
     let puppeteer: any;
     try {
       // Use runtime require via eval to avoid static module resolution at compile time
-       
       const runtimeRequire: any = eval("require");
       puppeteer = runtimeRequire('puppeteer');
-    } catch (e) {
+    } catch {
       puppeteer = null;
     }
 

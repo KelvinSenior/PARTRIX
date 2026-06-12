@@ -13,12 +13,10 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
   const { user } = useAuth();
   const [initialData, setInitialData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [customerId, setCustomerId] = useState<string>("");
+  const customerId = params.id;
 
   useEffect(() => {
-    const { id } = params;
-    setCustomerId(id);
-    fetch(`/api/customers/${id}`)
+    fetch(`/api/customers/${customerId}`)
       .then((res) => res.json())
       .then((data) => {
         const { customer } = data;
@@ -32,7 +30,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
           notes: customer.notes || "",
         });
       });
-  }, [params]);
+  }, [customerId]);
 
   async function handleSubmit(data: any) {
     setIsLoading(true);
@@ -61,7 +59,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="mx-auto grid min-h-screen max-w-[1800px] gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
+      <div className="mx-auto grid min-h-screen max-w-450 gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
         <Sidebar />
 
         <section className="space-y-6">
@@ -73,7 +71,7 @@ export default function EditCustomerPage({ params }: { params: { id: string } })
               <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Update customer information</p>
             </div>
 
-            <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/90">
+            <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/90">
               <CustomerForm initialData={initialData} onSubmit={handleSubmit} isLoading={isLoading} />
             </div>
           </div>

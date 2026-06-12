@@ -22,7 +22,7 @@ export default async function BookingsPage() {
       <PageHeader
         eyebrow="Booking management"
         title="Bookings"
-        description="Create and manage event rentals with availability checks, fees, and returns."
+        description="Create and manage rental bookings with availability checks, fees, and returns."
       />
 
       <div className={appCard}>

@@ -49,8 +49,8 @@ export default function RevenueChart({ financeSummary }: { financeSummary?: Fina
         <svg viewBox="0 0 340 110" className="h-48 w-full overflow-visible">
           <defs>
             <linearGradient id="revenueGradient" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#38bdf8" />
-              <stop offset="100%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="#22D3EE" />
+              <stop offset="100%" stopColor="#0B1020" />
             </linearGradient>
           </defs>
           <path

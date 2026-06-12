@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError, validationError } from "@/lib/apiErrors";
+import { apiError } from "@/lib/apiErrors";
 import { recordExpense, listExpenses } from "@/services/finance";
 
 export async function GET(request: Request) {

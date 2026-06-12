@@ -45,7 +45,7 @@ export default function BookingChart({ bookings }: { bookings: BookingDTO[] }) {
               initial={{ height: 0 }}
               animate={{ height: `${(bar.value / Math.max(maxValue, 1)) * 100}%` }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              className="inline-flex h-32 w-full max-w-[40px] items-end rounded-3xl bg-gradient-to-t from-sky-500 to-sky-300"
+              className="inline-flex h-32 w-full max-w-[40px] items-end rounded-3xl bg-gradient-to-t from-[#0B1020] to-[#22D3EE]"
             >
               <span className="sr-only">{bar.value} bookings</span>
             </motion.div>

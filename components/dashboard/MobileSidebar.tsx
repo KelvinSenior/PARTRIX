@@ -31,7 +31,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
           >
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/75">RENTFLOW</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/75">Partrix</p>
                 <h3 className="mt-1 text-lg font-semibold text-white">Menu</h3>
               </div>
               <button

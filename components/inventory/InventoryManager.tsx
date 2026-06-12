@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError, prismaErrorCode, validationError } from "@/lib/apiErrors";
+import { apiError, validationError } from "@/lib/apiErrors";
 import { bookingPayloadSchema } from "@/lib/bookingValidation";
 import { createBooking, listBookings } from "@/services/booking";
 
-export async function GET(request: Request) {
+export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) {
     return apiError("You must be signed in to manage bookings.", 401);

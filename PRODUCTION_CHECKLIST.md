@@ -1,4 +1,4 @@
-# RENTFLOW Production Deployment Checklist
+# Partrix Production Deployment Checklist
 
 ## Pre-Deployment (Local)
 
@@ -37,14 +37,14 @@
 
 ### Repository Setup
 - [ ] Git initialized: `git init`
-- [ ] Remote added: `git remote add origin https://github.com/YOUR_USERNAME/RENTFLOW.git`
+- [ ] Remote added: `git remote add origin https://github.com/YOUR_USERNAME/Partrix.git`
 - [ ] Main branch created: `git branch -M main`
 - [ ] `.gitignore` properly configured
 - [ ] No `.env` files committed (check with `git check-ignore .env`)
 
 ### Initial Commit
 - [ ] All production files staged: `git add .`
-- [ ] Clear commit message: `git commit -m "Initial commit: RENTFLOW rental management system"`
+- [ ] Clear commit message: `git commit -m "Initial commit: Partrix rental management system"`
 - [ ] Commit ready to push
 
 ---
@@ -69,7 +69,7 @@ git log --oneline | head -5
 ### Create Vercel Project
 - [ ] Vercel account created at https://vercel.com
 - [ ] GitHub connected to Vercel
-- [ ] RENTFLOW repository imported
+- [ ] Partrix repository imported
 - [ ] Deployment initiated automatically
 
 ### Environment Variables in Vercel

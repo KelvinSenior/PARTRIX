@@ -19,7 +19,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
           <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">Welcome back</p>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-xl font-semibold text-white sm:text-2xl">
-              {user ? `Hi, ${greeting}` : "RENTFLOW"}
+              {user ? `Hi, ${greeting}` : "Partrix"}
             </h1>
             {user ? (
               <span className="inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">

@@ -1,8 +1,8 @@
-# RENTFLOW Security Checklist
+# Partrix Security Checklist
 
 ## Pre-Deployment Security Audit
 
-Use this checklist before deploying RENTFLOW to production.
+Use this checklist before deploying Partrix to production.
 
 ### Environment & Configuration
 
@@ -235,7 +235,7 @@ Use this checklist before deploying RENTFLOW to production.
 
 ## Security Contact
 
-For security issues, email: security@rentflow.app
+For security issues, email: security@partrix.app
 
 ---
 

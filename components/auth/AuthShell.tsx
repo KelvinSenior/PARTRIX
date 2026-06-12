@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
+import PartrixLogo from "@/components/brand/PartrixLogo";
 
 type AuthShellProps = {
   title: string;
@@ -14,18 +15,18 @@ type AuthShellProps = {
 
 export default function AuthShell({ title, subtitle, cardTitle, cardSubtitle, footer, children }: AuthShellProps) {
   return (
-    <main className="relative -mx-4 min-h-[100dvh] overflow-hidden bg-[#070d1b] px-4 pb-8 pt-6 text-zinc-100 md:-mx-6 md:px-6 md:pt-10 lg:-mx-8 lg:px-8">
+    <main className="relative -mx-4 min-h-[100dvh] overflow-hidden bg-[#0B1020] px-4 pb-8 pt-6 text-zinc-100 md:-mx-6 md:px-6 md:pt-10 lg:-mx-8 lg:px-8">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.18),transparent_45%),radial-gradient(circle_at_80%_25%,rgba(99,102,241,0.18),transparent_40%),linear-gradient(135deg,#040912_0%,#0a1324_40%,#090f1a_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_45%),linear-gradient(135deg,#050816_0%,#0B1020_48%,#050816_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:28px_28px] opacity-25" />
       </div>
 
       <div className="relative mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-center">
         <section className="hidden h-full rounded-3xl border border-cyan-200/10 bg-white/5 p-8 backdrop-blur-2xl lg:block">
           <p className="text-xs uppercase tracking-[0.28em] text-cyan-200/75">Operational intelligence</p>
-          <h2 className="mt-4 text-3xl font-semibold text-white">Run rentals with confidence</h2>
+          <h2 className="mt-4 text-3xl font-semibold text-white">Run rental operations with confidence</h2>
           <p className="mt-3 text-sm text-zinc-300">
-            Real-time dispatch, inventory intelligence, and finance visibility in one operational command center.
+            Inventory, bookings, logistics, and finance visibility in one enterprise-ready command center.
           </p>
           <div className="mt-8 space-y-4">
             <div className="rounded-2xl border border-cyan-200/15 bg-slate-950/40 p-4">
@@ -53,10 +54,7 @@ export default function AuthShell({ title, subtitle, cardTitle, cardSubtitle, fo
         >
           <header className="space-y-3 text-center lg:text-left">
             <div className="inline-flex items-center gap-3 rounded-full border border-cyan-200/20 bg-white/5 px-4 py-2 backdrop-blur">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-300 to-blue-500 text-sm font-bold text-slate-950">
-                RF
-              </span>
-              <span className="text-sm tracking-[0.18em] text-cyan-100">RENTFLOW</span>
+              <PartrixLogo size={32} />
             </div>
             <h1 className="text-3xl font-semibold leading-tight text-white md:text-4xl">{title}</h1>
             <p className="text-sm text-zinc-300 md:text-base">{subtitle}</p>

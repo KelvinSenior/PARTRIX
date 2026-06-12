@@ -8,7 +8,7 @@ import { appCard, appEyebrow, appTitle } from "@/lib/appStyles";
 const actions = [
   {
     label: "New booking",
-    description: "Create an event rental",
+    description: "Create a rental booking",
     href: "/bookings",
     tone: "from-cyan-500 to-blue-600",
     icon: CalendarPlus,

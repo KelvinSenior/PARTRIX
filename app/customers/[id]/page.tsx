@@ -19,7 +19,7 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
-      <div className="mx-auto grid min-h-screen max-w-[1800px] gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
+      <div className="mx-auto grid min-h-screen max-w-450 gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
         <Sidebar />
 
         <section className="space-y-6">
@@ -39,14 +39,14 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
             </div>
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <StatsCard icon="📦" label="Total Bookings" value={analytics.totalBookings.toString()} change="+0%" />
-              <StatsCard icon="💰" label="Total Spent" value={`$${analytics.totalRevenue.toLocaleString()}`} change="+0%" highlight />
-              <StatsCard icon="💳" label="Total Paid" value={`$${analytics.totalPaid.toLocaleString()}`} change="+0%" />
-              <StatsCard icon="📨" label="Outstanding" value={`$${analytics.totalOutstanding.toLocaleString()}`} change="+0%" />
+              <StatsCard icon="package" label="Total Bookings" value={analytics.totalBookings.toString()} change="+0%" />
+              <StatsCard icon="dollarSign" label="Total Spent" value={`$${analytics.totalRevenue.toLocaleString()}`} change="+0%" highlight />
+              <StatsCard icon="wallet" label="Total Paid" value={`$${analytics.totalPaid.toLocaleString()}`} change="+0%" />
+              <StatsCard icon="receipt" label="Outstanding" value={`$${analytics.totalOutstanding.toLocaleString()}`} change="+0%" />
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
-              <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+              <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
                 <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Contact Information</h3>
                 <div className="mt-4 space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
                   {customer.email && (
@@ -70,7 +70,7 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
                 </div>
               </div>
 
-              <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+              <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
                 <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Analytics</h3>
                 <div className="mt-4 space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
                   <div>
@@ -85,7 +85,7 @@ export default async function CustomerDetailsPage({ params }: { params: { id: st
               </div>
             </div>
 
-            <div className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+            <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
               <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Booking History</h3>
               <div className="mt-4 overflow-x-auto">
                 {bookings.length === 0 ? (

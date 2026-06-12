@@ -182,7 +182,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
               />
               <h3 className="mt-4 text-xl font-semibold text-cyan-100">Account details ready</h3>
               <p className="mt-2 text-sm text-zinc-300">
-                You are one tap away from activating your RENTFLOW workspace.
+                You are one tap away from activating your Partrix workspace.
               </p>
             </div>
           ) : null}

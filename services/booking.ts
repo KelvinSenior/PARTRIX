@@ -72,10 +72,6 @@ function formatBookingNumber() {
   return `RF-${timestamp}-${randomSuffix}`;
 }
 
-function isBookingActiveStatus(status: string) {
-  return activeBookingStatuses.includes(status as typeof activeBookingStatuses[number]);
-}
-
 async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: any) {
   // If email provided, try to connect to existing customer by email
   if (customer.email) {

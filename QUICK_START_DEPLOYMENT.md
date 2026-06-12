@@ -1,17 +1,17 @@
-# RENTFLOW Production Deployment - QUICK REFERENCE
+# Partrix Production Deployment - QUICK REFERENCE
 
 ## Part 1: GitHub Initial Commit & Push (Windows PowerShell)
 
 ### Prerequisites
 - [ ] Git installed and configured
 - [ ] GitHub account created
-- [ ] RENTFLOW repository created on GitHub
+- [ ] Partrix repository created on GitHub
 
 ### Exact Commands (Copy & Paste)
 
 ```powershell
 # Navigate to project folder
-cd "c:\Users\Hp Users\Desktop\SKS\SKS LABS\RENTFLOW\rentflow"
+cd "c:\Users\Hp Users\Desktop\SKS\SKS LABS\Partrix\partrix"
 
 # Initialize git repository
 git init
@@ -24,13 +24,13 @@ git config --global user.email "your.email@example.com"
 git add .
 
 # Create initial commit
-git commit -m "Initial commit: RENTFLOW rental management system with production security"
+git commit -m "Initial commit: Partrix rental management system with production security"
 
 # Show commit log to verify
 git log --oneline
 
 # Add remote repository (replace YOUR_USERNAME)
-git remote add origin "https://github.com/YOUR_USERNAME/RENTFLOW.git"
+git remote add origin "https://github.com/YOUR_USERNAME/Partrix.git"
 
 # Rename branch to main (if needed)
 git branch -M main
@@ -62,7 +62,7 @@ notepad .env.production.local
 
 **Content to add:**
 ```
-DATABASE_URL=postgresql://user:password@host:port/rentflow_prod
+DATABASE_URL=postgresql://user:password@host:port/partrix_prod
 JWT_SECRET=your-64-character-random-secret-here
 NODE_ENV=production
 ALLOWED_ORIGIN=https://yourdomain.vercel.app
@@ -97,7 +97,7 @@ npm run start
 ### Option A: Vercel PostgreSQL (Easiest)
 ```
 1. Go to https://vercel.com/dashboard
-2. Select RENTFLOW project
+2. Select Partrix project
 3. Storage → Create Database → PostgreSQL
 4. Click Create → Approve
 5. DATABASE_URL automatically added
@@ -107,7 +107,7 @@ npm run start
 ```
 1. Go to https://supabase.com/dashboard
 2. New Project
-3. Name: rentflow, Password: [generate], Create
+3. Name: partrix, Password: [generate], Create
 4. Settings → Database → Copy connection string
 5. Use as DATABASE_URL in Vercel
 ```
@@ -115,7 +115,7 @@ npm run start
 ### Option C: Neon
 ```
 1. Go to https://console.neon.tech
-2. New Project → Name: rentflow → Create
+2. New Project → Name: partrix → Create
 3. Copy connection string
 4. Use as DATABASE_URL in Vercel
 ```
@@ -129,13 +129,13 @@ npm run start
 1. Go to https://vercel.com/import
 2. Select GitHub
 3. Authorize Vercel to access your GitHub
-4. Select RENTFLOW repository
+4. Select Partrix repository
 5. Click Import
 ```
 
 ### Step 2: Configure Environment Variables in Vercel
 ```
-1. Vercel Dashboard → RENTFLOW Project
+1. Vercel Dashboard → Partrix Project
 2. Settings → Environment Variables
 3. Add each variable:
 ```
@@ -145,8 +145,8 @@ npm run start
 | `DATABASE_URL` | Your PostgreSQL connection string |
 | `JWT_SECRET` | 64-character random string |
 | `NODE_ENV` | `production` |
-| `ALLOWED_ORIGIN` | `https://rentflow-xxxx.vercel.app` |
-| `NEXT_PUBLIC_API_URL` | `https://rentflow-xxxx.vercel.app` |
+| `ALLOWED_ORIGIN` | `https://partrix-xxxx.vercel.app` |
+| `NEXT_PUBLIC_API_URL` | `https://partrix-xxxx.vercel.app` |
 | `RATE_LIMIT_WINDOW_SECONDS` | `60` |
 | `RATE_LIMIT_MAX_REQUESTS` | `10` |
 | `LOG_SECURITY_EVENTS` | `true` |
@@ -184,7 +184,7 @@ npm run prisma:migrate:dev
 ### Test Production URL
 ```powershell
 # Visit your production URL
-# https://rentflow-xxxx.vercel.app
+# https://partrix-xxxx.vercel.app
 
 # Test these:
 ✅ Homepage loads
@@ -199,7 +199,7 @@ npm run prisma:migrate:dev
 ### Check Security Headers
 ```powershell
 # Use this command to check headers:
-Invoke-WebRequest -Uri "https://rentflow-xxxx.vercel.app" -Headers @{} | ForEach-Object {$_.Headers}
+Invoke-WebRequest -Uri "https://partrix-xxxx.vercel.app" -Headers @{} | ForEach-Object {$_.Headers}
 
 # Should see:
 # - strict-transport-security
@@ -298,7 +298,7 @@ git push origin main
 
 ### Method 2: Vercel Dashboard Rollback
 ```
-1. Vercel Dashboard → RENTFLOW
+1. Vercel Dashboard → Partrix
 2. Deployments tab
 3. Find working deployment
 4. Click "..." menu
