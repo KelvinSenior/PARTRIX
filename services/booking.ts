@@ -184,7 +184,8 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       }
 
       return {
-        inventoryItemId: inventoryItem.id,
+        organization: { connect: { id: user.organizationId! } },
+        inventoryItem: { connect: { id: inventoryItem.id } },
         quantity: item.quantity,
         unitPrice: inventoryItem.unitPrice.toString(),
         discount: item.discount.toString(),
@@ -197,7 +198,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
 
     const booking = await tx.booking.create({
       data: {
-        organizationId: user.organizationId!,
+        organization: { connect: { id: user.organizationId! } },
         bookingNumber: formatBookingNumber(),
         customer: await findOrCreateCustomer(payload.customer, tx, user.organizationId!),
         eventDate,
