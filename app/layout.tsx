@@ -8,47 +8,60 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://partrix.app"),
-  title: "Partrix — The Operating System for Rental Businesses",
-  applicationName: "Partrix",
+  title: "PARTRIX by SKS Labs | Rental Business Operating System",
+  applicationName: "PARTRIX",
   description:
-    "Partrix helps rental businesses manage inventory, bookings, customers, logistics, payments, and daily operations from one centralized platform.",
+    "PARTRIX is a modern operating system for rental businesses, built by SKS Labs. It helps teams manage inventory, bookings, customers, deliveries, payments, and operations from one platform.",
   keywords: [
+    "PARTRIX",
     "rental business software",
     "rental inventory management",
     "booking management",
     "rental operations platform",
-    "Partrix",
+    "rental business operating system",
+    "SKS Labs",
+    "Kelvin Senior Sarfo",
+    "rental management software",
+    "equipment rental software",
+    "property rental management",
+    "vehicle rental software",
+    "rental platform",
   ],
-  creator: "Partrix",
-  publisher: "Partrix",
+  creator: "Kelvin Senior Sarfo",
+  publisher: "SKS Labs",
+  authors: [{ name: "Kelvin Senior Sarfo", url: "https://www.skslabs.dev/" }],
+  alternates: {
+    canonical: "https://partrix.app",
+  },
   openGraph: {
-    title: "Partrix — The Operating System for Rental Businesses",
+    title: "PARTRIX by SKS Labs | Rental Business Operating System",
     description:
-      "Partrix helps rental businesses manage inventory, bookings, customers, logistics, payments, and daily operations from one centralized platform.",
-    siteName: "Partrix",
+      "PARTRIX is a modern operating system for rental businesses, built by SKS Labs. It helps teams manage inventory, bookings, customers, deliveries, payments, and operations from one platform.",
+    siteName: "PARTRIX",
+    url: "https://partrix.app",
     images: [
       {
-        url: "/brand/partrix-logo-light.png",
-        width: 746,
-        height: 559,
-        alt: "Partrix logo",
+        url: "/brand/Partrix_Logo_icon-only-no_background.png",
+        width: 512,
+        height: 512,
+        alt: "PARTRIX logo by SKS Labs",
       },
     ],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Partrix — The Operating System for Rental Businesses",
+    title: "PARTRIX by SKS Labs | Rental Business Operating System",
     description:
-      "Partrix helps rental businesses manage inventory, bookings, customers, logistics, payments, and daily operations from one centralized platform.",
-    images: ["/brand/partrix-logo-light.png"],
+      "PARTRIX is a modern operating system for rental businesses, built by SKS Labs. It helps teams manage inventory, bookings, customers, deliveries, payments, and operations from one platform.",
+    images: ["/brand/Partrix_Logo_icon-only-no_background.png"],
   },
   icons: {
     icon: [
-      { url: "/brand/partrix-icon.png", type: "image/png" },
+      { url: "/brand/Partrix_Logo_icon-only-no_background.png", type: "image/png" },
     ],
     apple: [
-      { url: "/brand/partrix-icon.png", type: "image/png" },
+      { url: "/brand/Partrix_Logo_icon-only-no_background.png", type: "image/png" },
     ],
   },
 };
