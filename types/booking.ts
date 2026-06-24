@@ -14,12 +14,13 @@ export interface BookingItemPayload {
 }
 
 export interface BookingCustomerPayload {
-  firstName: string;
-  lastName: string;
+  id?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   email?: string | null;
-  phone?: string;
-  company?: string;
-  address?: string;
+  phone?: string | null;
+  company?: string | null;
+  address?: string | null;
 }
 
 export interface BookingPayload {

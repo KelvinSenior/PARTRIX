@@ -8,6 +8,7 @@ import { getAuthCookie } from "@/lib/cookies";
 import { redirect } from "next/navigation";
 import { appBtnPrimary } from "@/lib/appStyles";
 import { Plus } from "lucide-react";
+import { EmptyState } from "@/components/ui";
 
 export default async function DeliveriesPage() {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -28,11 +29,24 @@ export default async function DeliveriesPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {deliveries.map((d) => (
-          <DeliveryCard key={d.id} delivery={d} />
-        ))}
-      </div>
+      {deliveries.length === 0 ? (
+        <EmptyState
+          title="No deliveries scheduled"
+          description="Schedule and track pickups, drop-offs, and field operations."
+          action={
+            <Link href="/deliveries/add" className={appBtnPrimary}>
+              New delivery
+            </Link>
+          }
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {deliveries.map((d) => (
+            <DeliveryCard key={d.id} delivery={d} />
+          ))}
+        </div>
+      )}
     </AppShell>
   );
 }
+

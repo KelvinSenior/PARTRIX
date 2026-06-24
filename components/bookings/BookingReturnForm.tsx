@@ -1,9 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { BookingDTO } from "@/types/booking";
+import { appCard, appCardInner, appBtnPrimary, appInput, appEyebrow } from "@/lib/appStyles";
+import { RefreshCcw } from "lucide-react";
 
 export default function BookingReturnForm({ booking }: { booking: BookingDTO }) {
+  const router = useRouter();
   const [returnQuantities, setReturnQuantities] = useState<Record<string, number>>(
     booking.bookingItems.reduce((acc, item) => {
       acc[item.id] = 0;
@@ -41,106 +45,107 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
     setMessage(null);
     setLoading(true);
 
-    const response = await fetch(`/api/bookings/${booking.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "return", returnItems }),
-    });
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "return", returnItems }),
+      });
 
-    const result = await response.json();
-    setLoading(false);
+      const result = await response.json();
 
-    if (!response.ok) {
-      setError(result?.message ?? "Unable to process return.");
-      return;
+      if (!response.ok) {
+        throw new Error(result?.message ?? "Unable to process return.");
+      }
+
+      setMessage("Return processed successfully.");
+      setReturnQuantities(
+        booking.bookingItems.reduce((acc, item) => {
+          acc[item.id] = 0;
+          return acc;
+        }, {} as Record<string, number>),
+      );
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to process return.");
+    } finally {
+      setLoading(false);
     }
-
-    setMessage("Return processed successfully.");
   }
 
-  async function handleCancel() {
-    setError(null);
-    setMessage(null);
-    setLoading(true);
-
-    const response = await fetch(`/api/bookings/${booking.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancel" }),
-    });
-
-    const result = await response.json();
-    setLoading(false);
-
-    if (!response.ok) {
-      setError(result?.message ?? "Unable to cancel booking.");
-      return;
-    }
-
-    setMessage("Booking cancelled successfully.");
-  }
+  const allReturned = booking.bookingItems.every(i => i.returnedQuantity >= i.quantity);
 
   return (
-    <section className="rounded-[32px] border border-zinc-200/80 bg-white/95 p-6 shadow-sm shadow-zinc-200/30 backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-zinc-950/15">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Partial returns</p>
-          <h3 className="text-xl font-semibold text-zinc-950 dark:text-zinc-50">Return items for this booking</h3>
-        </div>
-        <button
-          type="button"
-          onClick={handleCancel}
-          disabled={loading || booking.status === "CANCELLED" || booking.status === "COMPLETED"}
-          className="rounded-2xl bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Cancel booking
-        </button>
+    <section className={`${appCard} border border-zinc-800/80`}>
+      <div className="mb-6">
+        <p className={appEyebrow}>Returns Management</p>
+        <h3 className="text-xl font-semibold text-white mt-1">Return items for this booking</h3>
       </div>
 
       <form onSubmit={handleReturn} className="space-y-4">
         {booking.bookingItems.map((item) => {
           const availableToReturn = item.quantity - item.returnedQuantity;
+          if (availableToReturn <= 0) return null;
+
           return (
-            <div key={item.id} className="grid gap-4 rounded-3xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900 sm:grid-cols-[1fr_200px_200px]">
+            <div key={item.id} className={`${appCardInner} border border-zinc-800/60 bg-zinc-900/50 p-4 rounded-xl space-y-3`}>
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-zinc-100">{item.inventoryItemName}</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Booked {item.quantity} unit(s); returned {item.returnedQuantity}</p>
+                <p className="font-semibold text-white">{item.inventoryItemName}</p>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Booked: <span className="text-zinc-200">{item.quantity}</span> &middot; Returned: <span className="text-zinc-200">{item.returnedQuantity}</span>
+                </p>
               </div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Return quantity
-                <input
-                  type="number"
-                  min="0"
-                  max={availableToReturn}
-                  value={returnQuantities[item.id] ?? 0}
-                  onChange={(event) => updateQuantity(item.id, Number(event.target.value))}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
-              <div className="rounded-3xl bg-zinc-100 p-4 text-sm text-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-                <p>Available to return</p>
-                <p className="mt-2 text-lg font-semibold">{availableToReturn}</p>
+              <div className="grid gap-3 grid-cols-2">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1">
+                    Return quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={availableToReturn}
+                    value={returnQuantities[item.id] ?? 0}
+                    onChange={(event) => updateQuantity(item.id, Number(event.target.value))}
+                    className={`${appInput} py-1.5 px-3 text-sm`}
+                  />
+                </div>
+                <div className="rounded-xl bg-zinc-950 p-3 text-xs text-zinc-400 border border-zinc-900 flex flex-col justify-between">
+                  <span>Available to return</span>
+                  <span className="text-lg font-bold text-white mt-1">{availableToReturn}</span>
+                </div>
               </div>
             </div>
           );
         })}
 
-        {message ? (
-          <div className="rounded-3xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">{message}</div>
-        ) : null}
+        {message && (
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            {message}
+          </div>
+        )}
 
-        {error ? (
-          <div className="rounded-3xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100">{error}</div>
-        ) : null}
+        {error && (
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+            {error}
+          </div>
+        )}
 
-        <button
-          type="submit"
-          disabled={!canReturn || loading}
-          className="rounded-3xl bg-sky-600 px-6 py-4 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Processing return..." : "Process partial return"}
-        </button>
+        {allReturned ? (
+          <p className="text-sm text-emerald-400 font-medium text-center py-2">
+            All items have been fully returned.
+          </p>
+        ) : (
+          <button
+            type="submit"
+            disabled={!canReturn || loading}
+            className={`${appBtnPrimary} w-full gap-2`}
+          >
+            <RefreshCcw className="h-4 w-4" />
+            {loading ? "Processing return..." : "Process return"}
+          </button>
+        )}
       </form>
     </section>
   );
 }
+

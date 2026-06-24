@@ -49,7 +49,7 @@ const features = [
 const metrics = [
   { label: "Active bookings", value: "124", detail: "+18 this week" },
   { label: "Inventory health", value: "96%", detail: "live availability" },
-  { label: "Payments captured", value: "$18.4k", detail: "today" },
+  { label: "Payments captured", value: "GHC18.4k", detail: "today" },
 ];
 
 const fadeUp = {

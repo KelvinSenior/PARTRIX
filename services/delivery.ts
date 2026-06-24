@@ -1,64 +1,136 @@
-import { DeliveryDTO, DeliveryStatus } from "@/types/delivery";
+import { prisma } from "@/lib/prisma";
+import { requireOrganizationContext } from "@/lib/tenant";
+import type { DeliveryDTO, DeliveryPayload, DeliveryStatus } from "@/types/delivery";
 
-function generateId() {
-  return 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
-}
-
-const store: Map<string, DeliveryDTO> = new Map();
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-export async function createDelivery(payload: any) {
-  const id = generateId();
-  const dto: DeliveryDTO = {
-    id,
-    pickupAddress: payload.pickupAddress,
-    dropoffAddress: payload.dropoffAddress,
-    scheduledAt: payload.scheduledAt ?? null,
-    packageDetails: payload.packageDetails ?? null,
-    assignedDriverId: payload.assignedDriverId ?? null,
-    vehicleId: payload.vehicleId ?? null,
-    status: 'PENDING' as DeliveryStatus,
-    notes: [],
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
+function serialize(d: any): DeliveryDTO {
+  return {
+    id: d.id,
+    bookingId: d.bookingId,
+    bookingNumber: d.booking?.bookingNumber ?? null,
+    customerId: d.customerId,
+    customerName: d.customer
+      ? `${d.customer.firstName} ${d.customer.lastName}`
+      : null,
+    address: d.address,
+    scheduledAt: d.scheduledAt.toISOString(),
+    deliveredAt: d.deliveredAt ? d.deliveredAt.toISOString() : null,
+    pickupAt: d.pickupAt ? d.pickupAt.toISOString() : null,
+    driver: d.driver ?? null,
+    vehicle: d.vehicle ?? null,
+    instructions: d.instructions ?? null,
+    status: d.status as DeliveryStatus,
+    createdAt: d.createdAt.toISOString(),
+    updatedAt: d.updatedAt.toISOString(),
   };
-  store.set(id, dto);
-  return dto;
 }
 
-export async function listDeliveries() {
-  return Array.from(store.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+const include = {
+  booking: { select: { bookingNumber: true } },
+  customer: { select: { firstName: true, lastName: true } },
+};
+
+export async function createDelivery(payload: DeliveryPayload): Promise<DeliveryDTO> {
+  const user = await requireOrganizationContext();
+
+  // Verify the booking belongs to this org
+  const booking = await prisma.booking.findFirst({
+    where: { id: payload.bookingId, organizationId: user.organizationId! },
+  });
+  if (!booking) throw new Error("Booking not found.");
+
+  const delivery = await prisma.delivery.create({
+    data: {
+      organizationId: user.organizationId!,
+      bookingId: payload.bookingId,
+      customerId: payload.customerId,
+      address: payload.address,
+      scheduledAt: new Date(payload.scheduledAt),
+      driver: payload.driver ?? null,
+      vehicle: payload.vehicle ?? null,
+      instructions: payload.instructions ?? null,
+      status: "SCHEDULED",
+    },
+    include,
+  });
+
+  return serialize(delivery);
 }
 
-export async function getDelivery(id: string) {
-  return store.get(id) ?? null;
+export async function listDeliveries(): Promise<DeliveryDTO[]> {
+  const user = await requireOrganizationContext();
+
+  const deliveries = await prisma.delivery.findMany({
+    where: { organizationId: user.organizationId! },
+    orderBy: { scheduledAt: "desc" },
+    include,
+  });
+
+  return deliveries.map(serialize);
 }
 
-export async function updateDelivery(id: string, patch: Partial<DeliveryDTO>) {
-  const existing = store.get(id);
-  if (!existing) return null;
-  const updated = { ...existing, ...patch, updatedAt: nowIso() };
-  store.set(id, updated);
-  return updated;
+export async function getDelivery(id: string): Promise<DeliveryDTO | null> {
+  const user = await requireOrganizationContext();
+
+  const delivery = await prisma.delivery.findFirst({
+    where: { id, organizationId: user.organizationId! },
+    include,
+  });
+
+  return delivery ? serialize(delivery) : null;
 }
 
-export async function updateStatus(id: string, status: DeliveryStatus) {
-  const d = store.get(id);
-  if (!d) return null;
-  d.status = status;
-  d.updatedAt = nowIso();
-  store.set(id, d);
-  return d;
+export async function updateDeliveryStatus(
+  id: string,
+  status: DeliveryStatus,
+): Promise<DeliveryDTO> {
+  const user = await requireOrganizationContext();
+
+  const existing = await prisma.delivery.findFirst({
+    where: { id, organizationId: user.organizationId! },
+  });
+  if (!existing) throw new Error("Delivery not found.");
+
+  const data: any = { status };
+  if (status === "DELIVERED") data.deliveredAt = new Date();
+  if (status === "COMPLETED") data.pickupAt = new Date();
+
+  const updated = await prisma.delivery.update({
+    where: { id },
+    data,
+    include,
+  });
+
+  return serialize(updated);
 }
 
-export async function addNote(id: string, note: string) {
-  const d = store.get(id);
-  if (!d) return null;
-  d.notes.push(note);
-  d.updatedAt = nowIso();
-  store.set(id, d);
-  return d;
+export async function updateDelivery(
+  id: string,
+  patch: Partial<DeliveryPayload & { status: DeliveryStatus }>,
+): Promise<DeliveryDTO> {
+  const user = await requireOrganizationContext();
+
+  const existing = await prisma.delivery.findFirst({
+    where: { id, organizationId: user.organizationId! },
+  });
+  if (!existing) throw new Error("Delivery not found.");
+
+  const data: any = {};
+  if (patch.address) data.address = patch.address;
+  if (patch.scheduledAt) data.scheduledAt = new Date(patch.scheduledAt);
+  if (patch.driver !== undefined) data.driver = patch.driver;
+  if (patch.vehicle !== undefined) data.vehicle = patch.vehicle;
+  if (patch.instructions !== undefined) data.instructions = patch.instructions;
+  if (patch.status) {
+    data.status = patch.status;
+    if (patch.status === "DELIVERED") data.deliveredAt = new Date();
+    if (patch.status === "COMPLETED") data.pickupAt = new Date();
+  }
+
+  const updated = await prisma.delivery.update({
+    where: { id },
+    data,
+    include,
+  });
+
+  return serialize(updated);
 }

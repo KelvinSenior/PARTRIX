@@ -14,12 +14,13 @@ export const bookingItemSchema = z.object({
 });
 
 export const bookingCustomerSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required."),
-  lastName: z.string().trim().min(1, "Last name is required."),
-  email: z.string().trim().email("Enter a valid email address.").optional().nullable(),
-  phone: z.string().trim().optional(),
-  company: z.string().trim().optional(),
-  address: z.string().trim().optional(),
+  id: z.string().uuid().optional().nullable(),
+  firstName: z.string().trim().optional().nullable(),
+  lastName: z.string().trim().optional().nullable(),
+  email: z.string().trim().email("Enter a valid email address.").optional().nullable().or(z.literal("")),
+  phone: z.string().trim().optional().nullable(),
+  company: z.string().trim().optional().nullable(),
+  address: z.string().trim().optional().nullable(),
 });
 
 export const bookingPayloadSchema = z

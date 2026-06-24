@@ -1,41 +1,44 @@
 import { NextResponse } from "next/server";
-import { getDelivery, updateDelivery, updateStatus, addNote } from "@/services/delivery";
+import { getAuthenticatedUser } from "@/lib/apiAuth";
+import { apiError, validationError } from "@/lib/apiErrors";
+import { deliveryUpdateSchema } from "@/lib/deliveryValidation";
+import { getDelivery, updateDelivery } from "@/services/delivery";
+import { z } from "zod";
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const d = await getDelivery(id);
-  if (!d) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ delivery: d });
+const idSchema = z.string().uuid({ message: "Invalid delivery ID." });
+
+type RouteContext = { params: Promise<{ id: string }> };
+
+export async function GET(_request: Request, context: RouteContext) {
+  const user = await getAuthenticatedUser();
+  if (!user) return apiError("Authentication required.", 401);
+
+  const { id } = await context.params;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return apiError(parsedId.error.issues[0].message, 400);
+
+  const delivery = await getDelivery(parsedId.data);
+  if (!delivery) return apiError("Delivery not found.", 404);
+
+  return NextResponse.json({ delivery });
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export async function PATCH(request: Request, context: RouteContext) {
+  const user = await getAuthenticatedUser();
+  if (!user) return apiError("Authentication required.", 401);
+
+  const { id } = await context.params;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return apiError(parsedId.error.issues[0].message, 400);
+
   const body = await request.json().catch(() => null);
-  if (!body) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+  const parsed = deliveryUpdateSchema.safeParse(body);
+  if (!parsed.success) return validationError(parsed.error);
 
-  if (body.status) {
-    const updated = await updateStatus(id, body.status);
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  try {
+    const updated = await updateDelivery(parsedId.data, parsed.data as any);
     return NextResponse.json({ delivery: updated });
+  } catch (err: any) {
+    return apiError(err.message ?? "Failed to update delivery.", 500);
   }
-
-  if (body.note) {
-    const updated = await addNote(id, body.note);
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json({ delivery: updated });
-  }
-
-  const updated = await updateDelivery(id, body);
-  if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json({ delivery: updated });
-}
-
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  // soft delete not implemented; just return success if exists
-  const d = await getDelivery(id);
-  if (!d) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  // remove by setting status
-  await updateStatus(id, 'CANCELLED');
-  return NextResponse.json({ success: true });
 }

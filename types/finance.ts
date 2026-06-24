@@ -11,6 +11,7 @@ export interface PaymentPayload {
 export interface PaymentDTO {
   id: string;
   bookingId: string | null;
+  bookingNumber?: string | null;
   amount: number;
   method: PaymentMethod;
   status: string;

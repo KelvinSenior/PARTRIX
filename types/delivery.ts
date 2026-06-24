@@ -1,18 +1,34 @@
-export type DeliveryStatus = 'PENDING' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNED' | 'CANCELLED';
+export type DeliveryStatus =
+  | "SCHEDULED"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export interface DeliveryPayload {
-  pickupAddress: string;
-  dropoffAddress: string;
-  scheduledAt?: string | null;
-  packageDetails?: string;
-  assignedDriverId?: string | null;
-  vehicleId?: string | null;
+  bookingId: string;
+  customerId: string;
+  address: string;
+  scheduledAt: string;
+  driver?: string | null;
+  vehicle?: string | null;
+  instructions?: string | null;
 }
 
-export interface DeliveryDTO extends DeliveryPayload {
+export interface DeliveryDTO {
   id: string;
+  bookingId: string;
+  bookingNumber?: string | null;
+  customerId: string;
+  customerName?: string | null;
+  address: string;
+  scheduledAt: string;
+  deliveredAt?: string | null;
+  pickupAt?: string | null;
+  driver?: string | null;
+  vehicle?: string | null;
+  instructions?: string | null;
   status: DeliveryStatus;
-  notes: string[];
   createdAt: string;
   updatedAt: string;
 }

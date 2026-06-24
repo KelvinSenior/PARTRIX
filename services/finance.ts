@@ -28,6 +28,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
         processedAt: now,
         notes: payload.notes ?? null,
       } as any,
+      include: { booking: true },
     });
 
     // If this payment is tied to a booking, reduce its balanceDue
@@ -43,6 +44,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
     return {
       id: payment.id,
       bookingId: payment.bookingId ?? null,
+      bookingNumber: (payment as any).booking?.bookingNumber ?? null,
       amount: decimalToNumber(payment.amount),
       method: payment.method as any,
       status: payment.status,
@@ -62,11 +64,17 @@ export async function listPayments(start?: Date, end?: Date) {
   if (start) where.processedAt.gte = start;
   if (end) where.processedAt.lte = end;
 
-  const payments = await prisma.payment.findMany({ where, orderBy: { processedAt: "desc" }, take: 200 });
+  const payments = await prisma.payment.findMany({
+    where,
+    orderBy: { processedAt: "desc" },
+    take: 200,
+    include: { booking: true },
+  });
 
   return payments.map((p) => ({
     id: p.id,
     bookingId: p.bookingId ?? null,
+    bookingNumber: p.booking?.bookingNumber ?? null,
     amount: decimalToNumber(p.amount),
     method: p.method as any,
     status: p.status,

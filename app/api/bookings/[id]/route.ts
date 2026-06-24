@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError, validationError } from "@/lib/apiErrors";
-import { getBooking, returnBookingItems, cancelBooking } from "@/services/booking";
+import { getBooking, returnBookingItems, cancelBooking, updateBookingStatus } from "@/services/booking";
 
 const bookingUpdateSchema = z.object({
-  action: z.enum(["return", "cancel"]),
+  action: z.enum(["return", "cancel", "updateStatus"]),
   returnItems: z
     .array(
       z.object({
@@ -16,6 +16,9 @@ const bookingUpdateSchema = z.object({
           .positive({ message: "Return quantity must be at least 1." }),
       }),
     )
+    .optional(),
+  status: z
+    .enum(["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"])
     .optional(),
 });
 
@@ -73,6 +76,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if (payload.data.action === "cancel") {
       const booking = await cancelBooking(parsedId.data);
+      return NextResponse.json({ booking });
+    }
+
+    if (payload.data.action === "updateStatus") {
+      if (!payload.data.status) {
+        return apiError("Status is required for updateStatus action.", 400);
+      }
+      const booking = await updateBookingStatus(parsedId.data, payload.data.status);
       return NextResponse.json({ booking });
     }
 

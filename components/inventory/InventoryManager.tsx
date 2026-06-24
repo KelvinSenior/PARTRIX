@@ -110,9 +110,13 @@ const stockStateStyles = {
 };
 
 const moneyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
+
+function formatCurrency(value: number) {
+  return `GHC${moneyFormatter.format(value)}`;
+}
 
 function toFormState(item: InventoryItemDTO): FormState {
   return {
@@ -656,13 +660,13 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                     <div>
                       <p className="text-zinc-500">Rental</p>
                       <p className="font-semibold text-zinc-950 dark:text-zinc-50">
-                        {moneyFormatter.format(item.rentalPrice)}
+                        {formatCurrency(item.rentalPrice)}
                       </p>
                     </div>
                     <div>
                       <p className="text-zinc-500">Damage fee</p>
                       <p className="font-semibold text-zinc-950 dark:text-zinc-50">
-                        {moneyFormatter.format(item.damageFee)}
+                        {formatCurrency(item.damageFee)}
                       </p>
                     </div>
                     <div>

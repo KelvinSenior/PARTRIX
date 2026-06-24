@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { BookingItemPayload } from "@/types/booking";
 import type { InventoryItemDTO } from "@/types/inventory";
 import PremiumButton from "@/components/ui/PremiumButton";
@@ -9,14 +10,21 @@ import PremiumCard from "@/components/ui/PremiumCard";
 const emptyItem = { inventoryItemId: "", quantity: 1, discount: 0, notes: "" };
 
 export default function BookingForm() {
+  const router = useRouter();
   const [inventory, setInventory] = useState<InventoryItemDTO[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [items, setItems] = useState<BookingItemPayload[]>([emptyItem]);
+
+  const [customerMode, setCustomerMode] = useState<"new" | "existing">("new");
+  const [selectedCustomerId, setSelectedCustomerId] = useState("");
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [company, setCompany] = useState("");
   const [address, setAddress] = useState("");
+
   const [eventDate, setEventDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -34,6 +42,11 @@ export default function BookingForm() {
       .then((response) => response.json())
       .then((data) => setInventory(data.items ?? []))
       .catch(() => setInventory([]));
+
+    fetch("/api/customers?limit=100")
+      .then((response) => response.json())
+      .then((data) => setCustomers(data.customers ?? []))
+      .catch(() => setCustomers([]));
   }, []);
 
   const itemOptions = useMemo(() => inventory.map((item) => ({
@@ -77,8 +90,12 @@ export default function BookingForm() {
     setSuccess(null);
     setSubmitting(true);
 
+    const customerPayload = customerMode === "existing"
+      ? { id: selectedCustomerId }
+      : { firstName, lastName, email: email || null, phone, company, address };
+
     const payload = {
-      customer: { firstName, lastName, email, phone, company, address },
+      customer: customerPayload,
       eventDate,
       deliveryDate: deliveryDate || null,
       returnDate: returnDate || null,
@@ -111,6 +128,13 @@ export default function BookingForm() {
 
     setSuccess("Booking created successfully.");
     setItems([emptyItem]);
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setCompany("");
+    setAddress("");
+    setSelectedCustomerId("");
     setEventDate("");
     setDeliveryDate("");
     setReturnDate("");
@@ -118,6 +142,7 @@ export default function BookingForm() {
     setSetupFee("0.00");
     setDiscount("0.00");
     setNotes("");
+    router.refresh();
   }
 
   return (
@@ -138,68 +163,113 @@ export default function BookingForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="space-y-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="text-base font-semibold text-zinc-950 dark:text-zinc-100">Customer details</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-zinc-950 dark:text-zinc-100">Customer details</h3>
+            </div>
+            
+            {/* Customer toggle mode */}
+            <div className="flex rounded-xl bg-zinc-200 dark:bg-zinc-950 p-1 border border-zinc-300 dark:border-zinc-850">
+              <button
+                type="button"
+                onClick={() => setCustomerMode("new")}
+                className={`flex-1 rounded-lg py-1 text-xs font-semibold transition ${
+                  customerMode === "new" ? "bg-cyan-500/10 text-cyan-200 border border-cyan-500/20" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                New
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomerMode("existing")}
+                className={`flex-1 rounded-lg py-1 text-xs font-semibold transition ${
+                  customerMode === "existing" ? "bg-cyan-500/10 text-cyan-200 border border-cyan-500/20" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                Existing
+              </button>
+            </div>
+
             <div className="space-y-4">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                First name
-                <input
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                  required
-                />
-              </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Last name
-                <input
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                  required
-                />
-              </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Email
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                  required
-                />
-              </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Phone
-                <input
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Company
-                <input
-                  value={company}
-                  onChange={(event) => setCompany(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Address
-                <input
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                />
-              </label>
+              {customerMode === "existing" ? (
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Select Customer <span className="text-rose-400">*</span>
+                  <select
+                    required
+                    value={selectedCustomerId}
+                    onChange={(event) => setSelectedCustomerId(event.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                  >
+                    <option value="">Select customer...</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName} {c.company ? `(${c.company})` : ""} {c.email ? `— ${c.email}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    First name <span className="text-rose-400">*</span>
+                    <input
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Last name <span className="text-rose-400">*</span>
+                    <input
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                      required
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Email
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Phone
+                    <input
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Company
+                    <input
+                      value={company}
+                      onChange={(event) => setCompany(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Address
+                    <input
+                      value={address}
+                      onChange={(event) => setAddress(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                  </label>
+                </>
+              )}
             </div>
           </div>
 
           <div className="space-y-3 rounded-3xl border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <h3 className="text-base font-semibold text-zinc-950 dark:text-zinc-100">Booking details</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Event date
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 col-span-2">
+                Event date <span className="text-rose-400">*</span>
                 <input
                   type="date"
                   value={eventDate}
@@ -226,7 +296,7 @@ export default function BookingForm() {
                   className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-sky-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </label>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 col-span-2">
                 Status
                 <select
                   value={status}
@@ -367,19 +437,19 @@ export default function BookingForm() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Items subtotal</p>
-              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">${bookingTotals.subtotal.toFixed(2)}</p>
+              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">GHC{bookingTotals.subtotal.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Fees</p>
-              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">${(Number(deliveryFee) + Number(setupFee)).toFixed(2)}</p>
+              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">GHC{(Number(deliveryFee) + Number(setupFee)).toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Deposit</p>
-              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">${bookingTotals.deposit.toFixed(2)}</p>
+              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">GHC{bookingTotals.deposit.toFixed(2)}</p>
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Total due</p>
-              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">${bookingTotals.total.toFixed(2)}</p>
+              <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">GHC{bookingTotals.total.toFixed(2)}</p>
             </div>
           </div>
         </div>

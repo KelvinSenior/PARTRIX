@@ -74,19 +74,25 @@ function formatBookingNumber() {
 }
 
 async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: any, organizationId: string) {
+  // If customer id is explicitly provided, connect to it directly
+  if (customer.id) {
+    const existing = await tx.customer.findFirst({ where: { id: customer.id, organizationId } });
+    if (existing) return { connect: { id: existing.id } };
+  }
+
   // If email provided, try to connect to existing customer by email
   if (customer.email) {
     const existingCustomer = await tx.customer.findFirst({ where: { email: customer.email, organizationId } });
     if (existingCustomer) return { connect: { id: existingCustomer.id } };
   }
 
-  // Otherwise, always create a new customer record (email may be null)
+  // Otherwise, create a new customer record
   return {
     create: {
       organizationId,
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      email: customer.email ?? null,
+      firstName: customer.firstName ?? "",
+      lastName: customer.lastName ?? "",
+      email: customer.email || null,
       phone: customer.phone ?? null,
       company: customer.company ?? null,
       address: customer.address ?? null,
@@ -240,16 +246,35 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
   });
 }
 
-export async function listBookings(): Promise<BookingListResponse> {
+export async function listBookings(opts?: {
+  search?: string;
+  status?: string;
+}): Promise<BookingListResponse> {
   const user = await requireOrganizationContext();
+
+  const where: any = { organizationId: user.organizationId! };
+
+  if (opts?.status && opts.status !== "all") {
+    where.status = opts.status;
+  }
+
+  if (opts?.search) {
+    where.OR = [
+      { bookingNumber: { contains: opts.search, mode: "insensitive" } },
+      { customer: { firstName: { contains: opts.search, mode: "insensitive" } } },
+      { customer: { lastName: { contains: opts.search, mode: "insensitive" } } },
+      { customer: { email: { contains: opts.search, mode: "insensitive" } } },
+    ];
+  }
+
   const bookings = await prisma.booking.findMany({
-    where: { organizationId: user.organizationId! },
+    where,
     orderBy: { createdAt: "desc" },
     include: {
       customer: true,
       bookingItems: { include: { inventoryItem: true } },
     },
-    take: 20,
+    take: 200,
   });
 
   return {
@@ -402,5 +427,91 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
     });
 
     return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
+  });
+}
+
+export async function updateBookingStatus(
+  bookingId: string,
+  newStatus: string,
+): Promise<BookingDTO> {
+  const user = await requireOrganizationContext();
+
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, organizationId: user.organizationId! },
+    include: { bookingItems: true },
+  });
+
+  if (!booking) {
+    throw new Error("Booking not found.");
+  }
+
+  if (booking.status === newStatus) {
+    return serializeBooking(booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
+  }
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Transitioning to a state where items are returned / cancelled
+    if (newStatus === "COMPLETED" || newStatus === "CANCELLED") {
+      // Restore inventory for any outstanding rented items
+      for (const item of booking.bookingItems) {
+        const outstanding = item.quantity - item.returnedQuantity;
+        if (outstanding > 0) {
+          // If completing, mark all items as fully returned
+          if (newStatus === "COMPLETED") {
+            await tx.bookingItem.update({
+              where: { id: item.id },
+              data: { returnedQuantity: item.quantity },
+            });
+          }
+
+          // Restore available and decrement rented quantity
+          await tx.inventoryItem.update({
+            where: { id: item.inventoryItemId },
+            data: {
+              availableQuantity: { increment: outstanding },
+              rentedQuantity: { decrement: outstanding },
+            },
+          });
+        }
+      }
+    }
+    // 2. Transitioning FROM a returned/cancelled state BACK to an active state
+    else if (
+      (booking.status === "COMPLETED" || booking.status === "CANCELLED") &&
+      (newStatus === "PENDING" || newStatus === "CONFIRMED" || newStatus === "IN_PROGRESS")
+    ) {
+      // Re-reserve items: check availability and decrement availableQuantity / increment rentedQuantity
+      for (const item of booking.bookingItems) {
+        const outstanding = item.quantity - item.returnedQuantity;
+        
+        // If moving back from COMPLETED, reset returned quantities
+        if (booking.status === "COMPLETED") {
+          await tx.bookingItem.update({
+            where: { id: item.id },
+            data: { returnedQuantity: 0 },
+          });
+        }
+
+        // Decrement available and increment rented quantity (representing holding items again)
+        await tx.inventoryItem.update({
+          where: { id: item.inventoryItemId },
+          data: {
+            availableQuantity: { decrement: item.quantity },
+            rentedQuantity: { increment: item.quantity },
+          },
+        });
+      }
+    }
+
+    const updated = await tx.booking.update({
+      where: { id: bookingId },
+      data: { status: newStatus as any },
+      include: {
+        customer: true,
+        bookingItems: { include: { inventoryItem: true } },
+      },
+    });
+
+    return serializeBooking(updated as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
   });
 }

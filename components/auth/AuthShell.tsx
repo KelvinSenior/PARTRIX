@@ -31,7 +31,7 @@ export default function AuthShell({ title, subtitle, cardTitle, cardSubtitle, fo
           <div className="mt-8 space-y-4">
             <div className="rounded-2xl border border-cyan-200/15 bg-slate-950/40 p-4">
               <p className="text-xs text-zinc-400">Today revenue</p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-200">$18,420</p>
+              <p className="mt-2 text-2xl font-semibold text-cyan-200">GHC18,420</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-zinc-700/70 bg-slate-950/45 p-4">

@@ -27,7 +27,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="absolute right-0 top-0 flex h-full w-[min(100%,320px)] flex-col border-l border-cyan-200/15 bg-[#0a1324]/98 p-5 shadow-2xl backdrop-blur-2xl"
+            className="absolute right-0 top-0 flex h-full w-[min(100%,320px)] flex-col border-l border-zinc-800 bg-[#050816] p-5 shadow-2xl z-[80]"
           >
             <div className="mb-6 flex items-center justify-between">
               <div>

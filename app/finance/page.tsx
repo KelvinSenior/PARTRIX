@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUserFromToken } from "@/services/auth";
 import { getAuthCookie } from "@/lib/cookies";
 import AppShell from "@/components/layout/AppShell";
@@ -74,16 +75,22 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
           <div className={appCard}>
             <h3 className="text-lg font-semibold text-white">Recent payments</h3>
             <div className="mt-4 space-y-3 text-sm">
-              {payments.slice(0, 8).map((p: { id: string; amount: number; method: string; processedAt?: string | null; createdAt: string | Date; bookingId?: string | null }) => (
+              {payments.slice(0, 8).map((p: any) => (
                 <div key={p.id} className={`${appCardInner} flex items-center justify-between gap-3`}>
                   <div>
-                    <div className="font-medium text-white">${p.amount.toFixed(2)}</div>
+                    <div className="font-medium text-white">GHC{p.amount.toFixed(2)}</div>
                     <div className="text-xs text-zinc-500">
                       {p.method} • {p.processedAt ?? new Date(p.createdAt).toLocaleString()}
                     </div>
                   </div>
                   <div className="text-xs text-zinc-400">
-                    {p.bookingId ? `Booking ${p.bookingId.slice(0, 8)}` : "Unlinked"}
+                    {p.bookingId ? (
+                      <Link href={`/bookings/${p.bookingId}`} className="text-cyan-400 hover:underline font-mono">
+                        {p.bookingNumber ?? `Booking ${p.bookingId.slice(0, 8)}`}
+                      </Link>
+                    ) : (
+                      "Unlinked"
+                    )}
                   </div>
                 </div>
               ))}
@@ -96,7 +103,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
               {expenses.slice(0, 8).map((e: { id: string; amount: number; category: string; incurredAt: string | Date; vendor?: string | null }) => (
                 <div key={e.id} className={`${appCardInner} flex items-center justify-between gap-3`}>
                   <div>
-                    <div className="font-medium text-white">${e.amount.toFixed(2)}</div>
+                    <div className="font-medium text-white">GHC{e.amount.toFixed(2)}</div>
                     <div className="text-xs text-zinc-500">
                       {e.category} • {new Date(e.incurredAt).toLocaleDateString()}
                     </div>
@@ -129,7 +136,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                     <tr key={d.customerId} className="border-b border-white/5">
                       <td className="py-2.5 pr-4 text-white">{d.customerName}</td>
                       <td className="py-2.5 pr-4 text-zinc-400">{d.email ?? "—"}</td>
-                      <td className="py-2.5 font-medium text-cyan-100">${d.outstanding.toFixed(2)}</td>
+                      <td className="py-2.5 font-medium text-cyan-100">GHC{d.outstanding.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
