@@ -1,18 +1,24 @@
-export type PaymentMethod = "CASH" | "CREDIT_CARD" | "BANK_TRANSFER" | "CHECK" | "MOBILE_WALLET";
+export type PaymentMethod =
+  "CASH" | "CREDIT_CARD" | "BANK_TRANSFER" | "CHECK" | "MOBILE_WALLET";
 
 export interface PaymentPayload {
   bookingId?: string | null;
   amount: number;
   method: PaymentMethod;
+  type?: PaymentType;
   notes?: string;
   transactionReference?: string;
 }
+
+export type PaymentType = "RENTAL" | "SECURITY_DEPOSIT" | "REFUND";
 
 export interface PaymentDTO {
   id: string;
   bookingId: string | null;
   bookingNumber?: string | null;
+  customerName?: string | null;
   amount: number;
+  type: PaymentType;
   method: PaymentMethod;
   status: string;
   transactionReference: string | null;

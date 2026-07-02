@@ -70,6 +70,17 @@ export interface BookingDTO {
   discount: number;
   totalAmount: number;
   depositAmount: number;
+  depositPaid: number;
+  depositRefunded: number;
+  depositOutstanding: number;
+  depositStatus:
+    | "PENDING"
+    | "PAID"
+    | "HELD"
+    | "REFUNDED"
+    | "PARTIALLY_REFUNDED"
+    | "FORFEITED";
+  refundStatus: "NONE" | "REQUESTED" | "APPROVED" | "PARTIAL" | "FORFEITED";
   balanceDue: number;
   bookingItems: BookingItemDTO[];
   createdAt: string;

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
+import { logActivity } from "@/services/audit";
 import type { PaymentPayload, PaymentDTO, ExpensePayload, ExpenseDTO, FinanceSummary } from "@/types/finance";
 
 function decimalToNumber(value: any): number {
@@ -16,29 +17,81 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
   return prisma.$transaction(async (tx) => {
     const now = new Date();
 
+    const paymentType = payload.type ?? "RENTAL";
     const payment = await tx.payment.create({
       data: {
         organizationId: user.organizationId!,
         bookingId: payload.bookingId ?? null,
         amount: payload.amount.toString(),
         method: payload.method as any,
-        status: "COMPLETED",
+        type: paymentType as any,
+        status: paymentType === "REFUND" ? "REFUNDED" : "COMPLETED",
         transactionReference: payload.transactionReference ?? null,
         processedById: processedById ?? null,
         processedAt: now,
         notes: payload.notes ?? null,
       } as any,
-      include: { booking: true },
+      include: { booking: { include: { customer: true } } },
     });
 
-    // If this payment is tied to a booking, reduce its balanceDue
+    // If this payment is tied to a booking, update booking financial fields.
     if (payment.bookingId) {
       const booking = await tx.booking.findUnique({ where: { id: payment.bookingId } });
       if (booking) {
-        const current = decimalToNumber(booking.balanceDue);
-        const next = Math.max(0, current - decimalToNumber(payment.amount));
-        await tx.booking.update({ where: { id: booking.id }, data: { balanceDue: next.toFixed(2) } as any });
+        const amount = decimalToNumber(payment.amount);
+        if (payment.type === "SECURITY_DEPOSIT") {
+          const paid = Math.min(
+            decimalToNumber(booking.depositAmount) - decimalToNumber(booking.depositPaid),
+            amount,
+          );
+          const nextDepositPaid = decimalToNumber(booking.depositPaid) + paid;
+          const depositStatus = nextDepositPaid >= decimalToNumber(booking.depositAmount) ? "PAID" : "PENDING";
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              depositPaid: nextDepositPaid.toFixed(2),
+              depositStatus,
+              balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - amount).toFixed(2),
+            } as any,
+          });
+        } else if (payment.type === "REFUND") {
+          const refunded = Math.min(
+            decimalToNumber(booking.depositPaid) - decimalToNumber(booking.depositRefunded),
+            amount,
+          );
+          const nextDepositRefunded = decimalToNumber(booking.depositRefunded) + refunded;
+          const refundStatus = nextDepositRefunded >= decimalToNumber(booking.depositAmount) ? "FORFEITED" : "PARTIAL";
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              depositRefunded: nextDepositRefunded.toFixed(2),
+              refundStatus,
+              balanceDue: (decimalToNumber(booking.balanceDue) + amount).toFixed(2),
+            } as any,
+          });
+        } else {
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: { balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - amount).toFixed(2) } as any,
+          });
+        }
       }
+
+      await logActivity({
+        organizationId: user.organizationId!,
+        userId: processedById ?? null,
+        bookingId: payment.bookingId,
+        action: "Record payment",
+        entity: "Payment",
+        entityId: payment.id,
+        details: {
+          amount: decimalToNumber(payment.amount),
+          type: payment.type,
+          method: payment.method,
+          bookingId: payment.bookingId,
+        },
+        level: "INFO",
+      });
     }
 
     return {
@@ -46,6 +99,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
       bookingId: payment.bookingId ?? null,
       bookingNumber: (payment as any).booking?.bookingNumber ?? null,
       amount: decimalToNumber(payment.amount),
+      type: payment.type as any,
       method: payment.method as any,
       status: payment.status,
       transactionReference: payment.transactionReference ?? null,
@@ -68,14 +122,16 @@ export async function listPayments(start?: Date, end?: Date) {
     where,
     orderBy: { processedAt: "desc" },
     take: 200,
-    include: { booking: true },
+    include: { booking: { include: { customer: true } } },
   });
 
   return payments.map((p) => ({
     id: p.id,
     bookingId: p.bookingId ?? null,
     bookingNumber: p.booking?.bookingNumber ?? null,
+    customerName: p.booking?.customer ? `${p.booking.customer.firstName} ${p.booking.customer.lastName}` : null,
     amount: decimalToNumber(p.amount),
+    type: p.type as any,
     method: p.method as any,
     status: p.status,
     transactionReference: p.transactionReference ?? null,
@@ -100,6 +156,22 @@ export async function recordExpense(payload: ExpensePayload, createdById?: strin
       createdById: createdById ?? null,
       notes: payload.notes ?? null,
     } as any,
+  });
+
+  await logActivity({
+    organizationId: user.organizationId!,
+    userId: createdById ?? null,
+    bookingId: payload.bookingId ?? null,
+    action: "Record expense",
+    entity: "Expense",
+    entityId: expense.id,
+    details: {
+      category: expense.category,
+      amount: decimalToNumber(expense.amount),
+      vendor: expense.vendor,
+      bookingId: expense.bookingId,
+    },
+    level: "INFO",
   });
 
   return {

@@ -76,21 +76,35 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
             <h3 className="text-lg font-semibold text-white">Recent payments</h3>
             <div className="mt-4 space-y-3 text-sm">
               {payments.slice(0, 8).map((p: any) => (
-                <div key={p.id} className={`${appCardInner} flex items-center justify-between gap-3`}>
-                  <div>
-                    <div className="font-medium text-white">GHC{p.amount.toFixed(2)}</div>
-                    <div className="text-xs text-zinc-500">
-                      {p.method} • {p.processedAt ?? new Date(p.createdAt).toLocaleString()}
+                <div key={p.id} className={`${appCardInner} space-y-2`}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="font-medium text-white">GHC{p.amount.toFixed(2)}</div>
+                      <div className="text-xs text-zinc-500">
+                        {p.customerName ? `${p.customerName} · ` : ""}
+                        {p.type.replace(/_/g, " ")} · {p.method.replace(/_/g, " ")}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full bg-zinc-900/80 px-3 py-1 text-zinc-300">
+                        {p.status}
+                      </span>
+                      <span className="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-200">
+                        {p.processedAt ? new Date(p.processedAt).toLocaleDateString() : new Date(p.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
-                  <div className="text-xs text-zinc-400">
-                    {p.bookingId ? (
-                      <Link href={`/bookings/${p.bookingId}`} className="text-cyan-400 hover:underline font-mono">
-                        {p.bookingNumber ?? `Booking ${p.bookingId.slice(0, 8)}`}
-                      </Link>
-                    ) : (
-                      "Unlinked"
-                    )}
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+                    <div>
+                      {p.bookingId ? (
+                        <Link href={`/bookings/${p.bookingId}`} className="text-cyan-400 hover:underline font-mono">
+                          {p.bookingNumber ?? `Booking ${p.bookingId.slice(0, 8)}`}
+                        </Link>
+                      ) : (
+                        "Unlinked"
+                      )}
+                    </div>
+                    {p.transactionReference ? <div>Ref: {p.transactionReference}</div> : null}
                   </div>
                 </div>
               ))}

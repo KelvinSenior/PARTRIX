@@ -1,8 +1,16 @@
 import type { BookingPayload, BookingDTO, BookingListResponse, BookingReturnPayload } from "@/types/booking";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
+import { getOrganizationSettings } from "@/services/settings";
+import { logActivity } from "@/services/audit";
 
 const activeBookingStatuses: string[] = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
+
+function formatBookingNumber(): string {
+  const timestamp = new Date().toISOString().replace(/[-:TZ.]/g, "");
+  const suffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `BKG-${timestamp}-${suffix}`;
+}
 
 function decimalToNumber(value: unknown): number {
   if (value === null || value === undefined) {
@@ -60,6 +68,14 @@ function serializeBooking(booking: any): BookingDTO {
     discount: decimalToNumber(booking.discount),
     totalAmount: decimalToNumber(booking.totalAmount),
     depositAmount: decimalToNumber(booking.depositAmount),
+    depositPaid: decimalToNumber(booking.depositPaid),
+    depositRefunded: decimalToNumber(booking.depositRefunded),
+    depositOutstanding: Math.max(
+      0,
+      decimalToNumber(booking.depositAmount) - decimalToNumber(booking.depositPaid),
+    ),
+    depositStatus: booking.depositStatus,
+    refundStatus: booking.refundStatus,
     balanceDue: decimalToNumber(booking.balanceDue),
     bookingItems: booking.bookingItems.map(serializeBookingItem),
     createdAt: booking.createdAt.toISOString(),
@@ -67,26 +83,21 @@ function serializeBooking(booking: any): BookingDTO {
   };
 }
 
-function formatBookingNumber() {
-  const timestamp = Date.now().toString().slice(-6);
-  const randomSuffix = Math.floor(Math.random() * 9000 + 1000);
-  return `RF-${timestamp}-${randomSuffix}`;
-}
-
 async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: any, organizationId: string) {
-  // If customer id is explicitly provided, connect to it directly
   if (customer.id) {
     const existing = await tx.customer.findFirst({ where: { id: customer.id, organizationId } });
-    if (existing) return { connect: { id: existing.id } };
+    if (existing) {
+      return { connect: { id: existing.id } };
+    }
   }
 
-  // If email provided, try to connect to existing customer by email
   if (customer.email) {
     const existingCustomer = await tx.customer.findFirst({ where: { email: customer.email, organizationId } });
-    if (existingCustomer) return { connect: { id: existingCustomer.id } };
+    if (existingCustomer) {
+      return { connect: { id: existingCustomer.id } };
+    }
   }
 
-  // Otherwise, create a new customer record
   return {
     create: {
       organizationId,
@@ -130,7 +141,11 @@ async function getOverlappingReservedQuantities(
   }, {} as Record<string, number>);
 }
 
-async function computeBookingTotals(payload: BookingPayload, inventoryData: Array<{ id: string; unitPrice: string }>) {
+async function computeBookingTotals(
+  payload: BookingPayload,
+  inventoryData: Array<{ id: string; unitPrice: string }>,
+  depositPercent: number,
+) {
   const itemTotals = payload.items.map((item) => {
     const inventory = inventoryData.find((record) => record.id === item.inventoryItemId);
     const unitPrice = inventory ? Number(inventory.unitPrice) : 0;
@@ -146,14 +161,16 @@ async function computeBookingTotals(payload: BookingPayload, inventoryData: Arra
   const total = Number(
     (itemSum + payload.deliveryFee + payload.setupFee - payload.discount).toFixed(2),
   );
-  const deposit = Number((total * 0.25).toFixed(2));
-  const balance = Number((total - deposit).toFixed(2));
+  const deposit = Number(((total * depositPercent) / 100).toFixed(2));
+  const balance = total;
 
   return { itemTotals, total, deposit, balance };
 }
 
 export async function createBooking(payload: BookingPayload): Promise<BookingDTO> {
   const user = await requireOrganizationContext();
+  const settings = await getOrganizationSettings();
+  const depositPercent = settings.deposit.requiredDepositPercent;
 
   return prisma.$transaction(async (tx) => {
     const eventDate = new Date(payload.eventDate);
@@ -200,7 +217,11 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       };
     });
 
-    const totals = await computeBookingTotals(payload, inventoryItems.map((item) => ({ id: item.id, unitPrice: item.unitPrice.toString() })));
+    const totals = await computeBookingTotals(
+      payload,
+      inventoryItems.map((item) => ({ id: item.id, unitPrice: item.unitPrice.toString() })),
+      depositPercent,
+    );
 
     const booking = await tx.booking.create({
       data: {
@@ -217,6 +238,10 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         discount: payload.discount.toString(),
         totalAmount: totals.total.toString(),
         depositAmount: totals.deposit.toString(),
+        depositPaid: 0,
+        depositRefunded: 0,
+        depositStatus: "PENDING",
+        refundStatus: "NONE",
         balanceDue: totals.balance.toString(),
         bookingItems: {
           create: itemsData,
@@ -241,6 +266,22 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         }),
       ),
     );
+
+    await logActivity({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      bookingId: booking.id,
+      action: "Create booking",
+      entity: "Booking",
+      entityId: booking.id,
+      details: {
+        bookingNumber: booking.bookingNumber,
+        totalAmount: totals.total,
+        depositAmount: totals.deposit,
+      },
+      level: "INFO",
+    });
 
     return serializeBooking(booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
   });
@@ -379,6 +420,23 @@ export async function returnBookingItems(
       },
     });
 
+    await logActivity({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      bookingId,
+      action: "Return booking items",
+      entity: "Booking",
+      entityId: bookingId,
+      details: {
+        returnItems: updates.map((update) => ({
+          bookingItemId: update.bookingItem.id,
+          returnedQuantity: update.quantity,
+        })),
+      },
+      level: "INFO",
+    });
+
     return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
   });
 }
@@ -424,6 +482,18 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
         customer: true,
         bookingItems: { include: { inventoryItem: true } },
       },
+    });
+
+    await logActivity({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      bookingId,
+      action: "Cancel booking",
+      entity: "Booking",
+      entityId: bookingId,
+      details: { reason: "User cancelled booking" },
+      level: "WARNING",
     });
 
     return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
@@ -510,6 +580,18 @@ export async function updateBookingStatus(
         customer: true,
         bookingItems: { include: { inventoryItem: true } },
       },
+    });
+
+    await logActivity({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      bookingId,
+      action: "Update booking status",
+      entity: "Booking",
+      entityId: bookingId,
+      details: { from: booking.status, to: newStatus },
+      level: "INFO",
     });
 
     return serializeBooking(updated as Awaited<ReturnType<typeof prisma.booking.findUnique>>);

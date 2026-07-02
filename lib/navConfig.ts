@@ -3,6 +3,7 @@ import {
   CalendarDays,
   LayoutDashboard,
   Package,
+  Settings,
   Truck,
   Users,
   Wallet,
@@ -23,6 +24,7 @@ export const primaryNavItems: NavItem[] = [
   { label: "Inventory", href: "/inventory", icon: Package },
   { label: "Customers", href: "/customers", icon: Users },
   { label: "Finance", href: "/finance", icon: Wallet },
+  { label: "Settings", href: "/settings", icon: Settings },
   { label: "Damage", href: "/damage", icon: AlertTriangle },
 ];
 

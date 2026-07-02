@@ -4,6 +4,7 @@ import { getCurrentUserFromToken } from "@/services/auth";
 import { getAuthCookie } from "@/lib/cookies";
 import { getBooking } from "@/services/booking";
 import AppShell from "@/components/layout/AppShell";
+import BookingPaymentForm from "@/components/bookings/BookingPaymentForm";
 import BookingReturnForm from "@/components/bookings/BookingReturnForm";
 import BookingStatusControls from "@/components/bookings/BookingStatusControls";
 import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
@@ -52,7 +53,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       </Link>
 
       {/* Header */}
-      <div className={appCard}>
+      <section className={appCard}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className={appEyebrow}>Booking details</p>
@@ -65,60 +66,56 @@ export default async function BookingDetailPage({ params }: PageProps) {
               {booking.customer.phone ? ` · ${booking.customer.phone}` : ""}
             </p>
           </div>
-          <span
-            className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-sm font-semibold ${statusColors[booking.status] ?? statusColors.PENDING}`}
-          >
-            {booking.status.replace("_", " ")}
-          </span>
-        </div>
-      </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
-        {/* LEFT column */}
-        <div className="space-y-5">
-          {/* Timeline */}
-          <section className={appCard}>
-            <p className={appEyebrow}>
-              <Calendar className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
-              Timeline
+          <div className="flex flex-col gap-3 sm:items-end">
+            <span
+              className={`inline-flex items-center rounded-full border px-3.5 py-1.5 text-sm font-semibold ${statusColors[booking.status] ?? statusColors.PENDING}`}
+            >
+              {booking.status.replace(/_/g, " ")}
+            </span>
+            <span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3.5 py-1.5 text-sm font-semibold text-cyan-100">
+              Deposit {booking.depositStatus.replace(/_/g, " ")}
+            </span>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className={appCardInner}>
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Event date</p>
+            <p className="mt-2 font-semibold text-white">
+              {new Date(booking.eventDate).toLocaleDateString("en-US", {
+                weekday: "short",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })}
             </p>
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-              <div className={appCardInner}>
-                <p className="text-xs uppercase tracking-widest text-zinc-500">Event date</p>
-                <p className="mt-2 font-semibold text-white">
-                  {new Date(booking.eventDate).toLocaleDateString("en-US", {
+          </div>
+          <div className={appCardInner}>
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Delivery date</p>
+            <p className="mt-2 font-semibold text-white">
+              {booking.deliveryDate
+                ? new Date(booking.deliveryDate).toLocaleDateString("en-US", {
                     weekday: "short",
-                    year: "numeric",
                     month: "short",
                     day: "numeric",
-                  })}
-                </p>
-              </div>
-              <div className={appCardInner}>
-                <p className="text-xs uppercase tracking-widest text-zinc-500">Delivery date</p>
-                <p className="mt-2 font-semibold text-white">
-                  {booking.deliveryDate
-                    ? new Date(booking.deliveryDate).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "Not scheduled"}
-                </p>
-              </div>
-              <div className={appCardInner}>
-                <p className="text-xs uppercase tracking-widest text-zinc-500">Return date</p>
-                <p className="mt-2 font-semibold text-white">
-                  {booking.returnDate
-                    ? new Date(booking.returnDate).toLocaleDateString("en-US", {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "Open"}
-                </p>
-              </div>
-            </div>
+                  })
+                : "Not scheduled"}
+            </p>
+          </div>
+          <div className={appCardInner}>
+            <p className="text-xs uppercase tracking-widest text-zinc-500">Return date</p>
+            <p className="mt-2 font-semibold text-white">
+              {booking.returnDate
+                ? new Date(booking.returnDate).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
+                : "Open"}
+            </p>
+          </div>
+        </div>
             {booking.notes && (
               <div className={`${appCardInner} mt-3`}>
                 <p className="text-xs uppercase tracking-widest text-zinc-500">Notes</p>
@@ -127,6 +124,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
             )}
           </section>
 
+      <div className="grid gap-5 lg:grid-cols-[1.9fr_0.9fr]">
+        <div className="space-y-5">
           {/* Items */}
           <section className={appCard}>
             <p className={appEyebrow}>
@@ -231,9 +230,30 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <span className="text-white">GHC{booking.totalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-zinc-400">
-                <span>Deposit paid</span>
+                <span>Deposit amount</span>
                 <span className="text-emerald-200">GHC{booking.depositAmount.toFixed(2)}</span>
               </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Deposit paid</span>
+                <span className="text-emerald-200">GHC{booking.depositPaid.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Deposit refunded</span>
+                <span className="text-amber-200">GHC{booking.depositRefunded.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Deposit outstanding</span>
+                <span className="text-cyan-200">GHC{booking.depositOutstanding.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Deposit status</span>
+                <span className="font-semibold text-white">{booking.depositStatus.replace(/_/g, " ")}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Refund status</span>
+                <span className="font-semibold text-white">{booking.refundStatus.replace(/_/g, " ")}</span>
+              </div>
+              <div className="my-2 border-t border-white/10" />
               <div className="flex justify-between font-semibold">
                 <span className="text-zinc-300">Balance due</span>
                 <span
@@ -244,6 +264,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
               </div>
             </div>
           </section>
+
+          <BookingPaymentForm bookingId={booking.id} />
 
           {/* Item return form */}
           {!["COMPLETED", "CANCELLED"].includes(booking.status) && (
