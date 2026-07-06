@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { logActivity } from "@/services/audit";
+import { getOrganizationSettings } from "@/services/settings";
 import type { PaymentPayload, PaymentDTO, ExpensePayload, ExpenseDTO, FinanceSummary } from "@/types/finance";
 
 function decimalToNumber(value: any): number {
@@ -13,6 +14,15 @@ function decimalToNumber(value: any): number {
 
 export async function recordPayment(payload: PaymentPayload, processedById?: string | null): Promise<PaymentDTO> {
   const user = await requireOrganizationContext();
+  const settings = await getOrganizationSettings();
+
+  if (!settings.payment.acceptedMethods.includes(payload.method)) {
+    throw new Error("This payment method is not enabled in workspace settings.");
+  }
+
+  if (settings.payment.requireTransactionReference && !payload.transactionReference?.trim()) {
+    throw new Error("Transaction reference is required by workspace settings.");
+  }
 
   return prisma.$transaction(async (tx) => {
     const now = new Date();
@@ -26,7 +36,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
         method: payload.method as any,
         type: paymentType as any,
         status: paymentType === "REFUND" ? "REFUNDED" : "COMPLETED",
-        transactionReference: payload.transactionReference ?? null,
+        transactionReference: payload.transactionReference?.trim() || null,
         processedById: processedById ?? null,
         processedAt: now,
         notes: payload.notes ?? null,

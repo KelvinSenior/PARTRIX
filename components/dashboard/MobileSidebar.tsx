@@ -16,7 +16,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
           <motion.button
             type="button"
             aria-label="Close menu overlay"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -27,21 +27,23 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="absolute right-0 top-0 flex h-full w-[min(100%,320px)] flex-col border-l border-zinc-800 bg-[#050816] p-5 shadow-2xl z-[80]"
+            className="absolute right-0 top-0 flex h-full w-[min(100%,340px)] flex-col border-l border-white/10 bg-[#060b1a]/95 p-5 shadow-[0_20px_80px_rgba(2,8,23,0.85)] z-[80]"
           >
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/75">Partrix</p>
-                <h3 className="mt-1 text-lg font-semibold text-white">Menu</h3>
+            <div className="mb-6 rounded-2xl border border-cyan-400/15 bg-cyan-400/10 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-200/75">Partrix</p>
+                  <h3 className="mt-1 text-lg font-semibold text-white">Navigation</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200/15 bg-white/10 text-zinc-200 transition hover:bg-white/15"
+                  aria-label="Close menu"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200/15 bg-white/5 text-zinc-200"
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
             <nav className="flex flex-col gap-1">
@@ -53,10 +55,10 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                    className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                       active
-                        ? "bg-cyan-400/15 text-cyan-100"
-                        : "text-zinc-300 hover:bg-white/5"
+                        ? "border-cyan-400/20 bg-cyan-400/15 text-cyan-100"
+                        : "border-transparent text-zinc-300 hover:border-white/10 hover:bg-white/5"
                     }`}
                   >
                     <Icon className="h-4 w-4" aria-hidden />

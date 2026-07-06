@@ -8,6 +8,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import { getCurrentUserFromToken } from "@/services/auth";
 import { getAuthCookie } from "@/lib/cookies";
 import { listBookings } from "@/services/booking";
+import { getOrganizationSettings } from "@/services/settings";
 import { appCard } from "@/lib/appStyles";
 
 export default async function BookingsPage({
@@ -26,6 +27,7 @@ export default async function BookingsPage({
     search: sp?.q,
     status: sp?.status,
   });
+  const settings = await getOrganizationSettings();
 
   return (
     <AppShell user={user} showFab={false}>
@@ -36,7 +38,7 @@ export default async function BookingsPage({
       />
 
       <div className={appCard}>
-        <BookingForm />
+        <BookingForm settings={settings} />
       </div>
 
       <div className="space-y-3">

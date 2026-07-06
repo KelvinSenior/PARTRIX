@@ -6,8 +6,9 @@ import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/layout/PageHeader";
 import { getOrganizationSettings } from "@/services/settings";
 import { listActivityLogs } from "@/services/audit";
-import { appCard, appCardInner, appBtnPrimary } from "@/lib/appStyles";
+import { appCard, appCardInner, appBtnPrimary, appBtnSecondary } from "@/lib/appStyles";
 import SettingsForm from "@/components/settings/SettingsForm";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 export default async function SettingsPage() {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -35,6 +36,16 @@ export default async function SettingsPage() {
           </p>
           <div className="mt-6">
             <SettingsForm initialSettings={settings} />
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-rose-400/15 bg-rose-500/8 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-white">Sign out</p>
+                <p className="mt-1 text-sm text-zinc-400">End your current session from this workspace.</p>
+              </div>
+              <LogoutButton className={`${appBtnSecondary} border-rose-400/20 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15`} label="Log out" />
+            </div>
           </div>
         </section>
 

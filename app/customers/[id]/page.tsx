@@ -6,8 +6,8 @@ import TopNav from "@/components/dashboard/TopNav";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { getCustomerDetail, getCustomerBookings, getCustomerAnalytics } from "@/services/customer";
 
-export default async function CustomerDetailsPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default async function CustomerDetailsPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
+  const { id } = await Promise.resolve(params);
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
   if (!user) redirect("/login");
 

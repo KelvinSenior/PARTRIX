@@ -9,11 +9,12 @@ import { appCard, appBtnSecondary } from "@/lib/appStyles";
 import DeliveryStatusControls from "@/components/delivery/DeliveryStatusControls";
 import { ArrowLeft, User, Truck, MapPin, Calendar, FileText } from "lucide-react";
 
-export default async function DeliveryDetails({ params }: { params: { id: string } }) {
+export default async function DeliveryDetails({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
   if (!user) redirect("/login");
 
-  const d = await getDelivery(params.id);
+  const { id } = await Promise.resolve(params);
+  const d = await getDelivery(id);
   if (!d) notFound();
 
   return (

@@ -9,11 +9,12 @@ import { appCard, appCardInner, appBtnSecondary } from "@/lib/appStyles";
 import DamageResolveForm from "@/components/damage/DamageResolveForm";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Calendar, Clipboard, Hammer } from "lucide-react";
 
-export default async function DamageDetailPage({ params }: { params: { id: string } }) {
+export default async function DamageDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
   if (!user) redirect("/login");
 
-  const d = await getDamageReport(params.id);
+  const { id } = await Promise.resolve(params);
+  const d = await getDamageReport(id);
   if (!d) notFound();
 
   return (

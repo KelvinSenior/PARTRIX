@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { appBtnPrimary, appBtnSecondary, appInput } from "@/lib/appStyles";
 import type { SettingsDTO } from "@/types/settings";
+import type { PaymentMethod } from "@/types/finance";
 
 const paymentMethods = [
   { value: "CASH", label: "Cash" },
@@ -32,7 +33,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
 
   function updateField(path: string, value: any) {
     setSettings((current) => {
-      const next = { ...current } as any;
+      const next = structuredClone(current) as any;
       const pathParts = path.split(".");
       let target = next;
       for (let i = 0; i < pathParts.length - 1; i++) {
@@ -58,9 +59,16 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
 
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.message ?? "Could not save settings.");
+        const fieldMessage = body?.details?.fields
+          ? Object.values(body.details.fields).flat().filter(Boolean).join(" ")
+          : null;
+        throw new Error(fieldMessage || body?.message || "Could not save settings.");
       }
 
+      const body = await res.json();
+      if (body?.settings) {
+        setSettings(body.settings);
+      }
       setSuccess("Settings saved successfully.");
     } catch (err) {
       setError((err as Error).message);
@@ -82,7 +90,12 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
           />
           <input
             value={settings.business.slug}
-            onChange={(e) => updateField("business.slug", e.target.value)}
+            onChange={(e) =>
+              updateField(
+                "business.slug",
+                e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
+              )
+            }
             placeholder="Workspace slug"
             className={appInput}
           />
@@ -186,11 +199,11 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
                 <label key={method.value} className="inline-flex items-center gap-2 text-sm text-zinc-300">
                   <input
                     type="checkbox"
-                    checked={settings.payment.acceptedMethods.includes(method.value as any)}
-                    onChange={(e) => {
-                      const next = settings.payment.acceptedMethods.includes(method.value as any)
+                    checked={settings.payment.acceptedMethods.includes(method.value as PaymentMethod)}
+                    onChange={() => {
+                      const next = settings.payment.acceptedMethods.includes(method.value as PaymentMethod)
                         ? settings.payment.acceptedMethods.filter((item) => item !== method.value)
-                        : [...settings.payment.acceptedMethods, method.value as any];
+                        : [...settings.payment.acceptedMethods, method.value as PaymentMethod];
                       updateField("payment.acceptedMethods", next);
                     }}
                     className="h-4 w-4 rounded border-zinc-500 bg-slate-950 text-cyan-500"

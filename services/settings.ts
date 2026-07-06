@@ -47,10 +47,18 @@ export async function getOrganizationSettings(): Promise<SettingsDTO> {
   const user = await requireOrganizationContext();
   const organization = await prisma.organization.findUnique({
     where: { id: user.organizationId! },
-    select: { settings: true },
+    select: { name: true, slug: true, settings: true },
   });
 
-  return mergeSettings(organization?.settings ?? null);
+  const settings = mergeSettings(organization?.settings ?? null);
+  return {
+    ...settings,
+    business: {
+      ...settings.business,
+      name: organization?.name ?? settings.business.name,
+      slug: organization?.slug ?? settings.business.slug,
+    },
+  };
 }
 
 export async function updateOrganizationSettings(payload: SettingsPayload): Promise<SettingsDTO> {
@@ -59,8 +67,12 @@ export async function updateOrganizationSettings(payload: SettingsPayload): Prom
 
   const updatedOrganization = await prisma.organization.update({
     where: { id: user.organizationId! },
-    data: { settings: parsed as any },
-    select: { settings: true },
+    data: {
+      name: parsed.business.name,
+      slug: parsed.business.slug,
+      settings: parsed as any,
+    },
+    select: { name: true, slug: true, settings: true },
   });
 
   await logActivity({
@@ -73,5 +85,13 @@ export async function updateOrganizationSettings(payload: SettingsPayload): Prom
     level: "INFO",
   });
 
-  return mergeSettings(updatedOrganization.settings ?? null);
+  const settings = mergeSettings(updatedOrganization.settings ?? null);
+  return {
+    ...settings,
+    business: {
+      ...settings.business,
+      name: updatedOrganization.name,
+      slug: updatedOrganization.slug,
+    },
+  };
 }

@@ -7,9 +7,11 @@ import AppShell from "@/components/layout/AppShell";
 import BookingPaymentForm from "@/components/bookings/BookingPaymentForm";
 import BookingReturnForm from "@/components/bookings/BookingReturnForm";
 import BookingStatusControls from "@/components/bookings/BookingStatusControls";
+import InvoiceActions from "@/components/bookings/InvoiceActions";
 import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
-import { ArrowLeft, Calendar, MapPin, Package, CreditCard } from "lucide-react";
+import { ArrowLeft, Package, CreditCard } from "lucide-react";
 import { listPayments } from "@/services/finance";
+import { getOrganizationSettings } from "@/services/settings";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -40,6 +42,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
 
   const allPayments = await listPayments();
   const bookingPayments = allPayments.filter((p) => p.bookingId === booking.id);
+  const settings = await getOrganizationSettings();
 
   return (
     <AppShell user={user} showFab={false}>
@@ -207,6 +210,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
           {/* Status controls */}
           <BookingStatusControls booking={booking} />
 
+          <InvoiceActions bookingId={booking.id} customerEmail={booking.customer.email} />
+
           {/* Financial summary */}
           <section className={appCard}>
             <p className={appEyebrow}>Financial summary</p>
@@ -265,7 +270,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </div>
           </section>
 
-          <BookingPaymentForm bookingId={booking.id} />
+          <BookingPaymentForm bookingId={booking.id} settings={settings} />
 
           {/* Item return form */}
           {!["COMPLETED", "CANCELLED"].includes(booking.status) && (

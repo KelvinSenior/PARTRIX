@@ -2,14 +2,30 @@ import { z } from "zod";
 import type { PaymentMethod } from "@/types/finance";
 
 const paymentMethods = ["CASH", "CREDIT_CARD", "BANK_TRANSFER", "CHECK", "MOBILE_WALLET"] as const;
+const optionalTrimmedString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().optional(),
+);
+const optionalEmail = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().email("Enter a valid email address.").optional(),
+);
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().url("Enter a valid URL.").optional(),
+);
 
 export const settingsSchema = z.object({
   business: z.object({
-    name: z.string().min(1, "Business name is required."),
-    slug: z.string().min(1, "Workspace slug is required."),
-    contactEmail: z.string().email("Enter a valid email address.").optional(),
-    phone: z.string().optional(),
-    address: z.string().optional(),
+    name: z.string().trim().min(1, "Business name is required."),
+    slug: z
+      .string()
+      .trim()
+      .min(1, "Workspace slug is required.")
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only."),
+    contactEmail: optionalEmail,
+    phone: optionalTrimmedString,
+    address: optionalTrimmedString,
   }),
   rental: z.object({
     defaultRentalTermDays: z
@@ -30,8 +46,8 @@ export const settingsSchema = z.object({
     refundPolicy: z.enum(["STANDARD", "FAST", "DELAYED"]),
   }),
   invoice: z.object({
-    invoicePrefix: z.string().min(1, "Invoice prefix is required."),
-    invoiceFooter: z.string().optional(),
+    invoicePrefix: z.string().trim().min(1, "Invoice prefix is required."),
+    invoiceFooter: optionalTrimmedString,
     emailInvoices: z.boolean(),
   }),
   payment: z.object({
@@ -44,9 +60,9 @@ export const settingsSchema = z.object({
     paymentReceipts: z.boolean(),
   }),
   appearance: z.object({
-    brandColor: z.string().min(3, "Brand color is required."),
+    brandColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Enter a valid brand color."),
     theme: z.enum(["light", "dark", "system"]),
-    logoUrl: z.string().url("Enter a valid URL.").optional(),
+    logoUrl: optionalUrl,
   }),
 });
 

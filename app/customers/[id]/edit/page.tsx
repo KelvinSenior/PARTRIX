@@ -8,31 +8,47 @@ import CustomerForm from "@/components/customers/CustomerForm";
 import { toastError, toastSuccess } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function EditCustomerPage({ params }: { params: { id: string } }) {
+export default function EditCustomerPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const router = useRouter();
   const { user } = useAuth();
   const [initialData, setInitialData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const customerId = params.id;
+  const [customerId, setCustomerId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/customers/${customerId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const { customer } = data;
-        setInitialData({
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          email: customer.email,
-          phone: customer.phone || "",
-          company: customer.company || "",
-          address: customer.address || "",
-          notes: customer.notes || "",
-        });
+    let active = true;
+
+    async function loadCustomer() {
+      const routeParams = await Promise.resolve(params);
+      const id = routeParams.id;
+      setCustomerId(id);
+
+      const res = await fetch(`/api/customers/${id}`);
+      const data = await res.json().catch(() => null);
+
+      if (!active || !data?.customer) return;
+
+      setInitialData({
+        firstName: data.customer.firstName,
+        lastName: data.customer.lastName,
+        email: data.customer.email,
+        phone: data.customer.phone || "",
+        company: data.customer.company || "",
+        address: data.customer.address || "",
+        notes: data.customer.notes || "",
       });
-  }, [customerId]);
+    }
+
+    loadCustomer();
+
+    return () => {
+      active = false;
+    };
+  }, [params]);
 
   async function handleSubmit(data: any) {
+    if (!customerId) return;
+
     setIsLoading(true);
     try {
       const res = await fetch(`/api/customers/${customerId}`, {

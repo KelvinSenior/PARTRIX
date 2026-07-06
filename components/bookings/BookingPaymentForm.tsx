@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { appBtnPrimary, appInput } from "@/lib/appStyles";
+import type { PaymentMethod } from "@/types/finance";
+import type { SettingsDTO } from "@/types/settings";
 
 const paymentMethods = [
   { label: "Cash", value: "CASH" },
@@ -18,10 +20,13 @@ const paymentTypes = [
   { label: "Refund", value: "REFUND" },
 ];
 
-export default function BookingPaymentForm({ bookingId }: { bookingId: string }) {
+export default function BookingPaymentForm({ bookingId, settings }: { bookingId: string; settings: SettingsDTO }) {
   const router = useRouter();
+  const enabledMethods = paymentMethods.filter((option) =>
+    settings.payment.acceptedMethods.includes(option.value as PaymentMethod),
+  );
   const [amount, setAmount] = useState(0);
-  const [method, setMethod] = useState("CASH");
+  const [method, setMethod] = useState(enabledMethods[0]?.value ?? "CASH");
   const [type, setType] = useState("RENTAL");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -100,16 +105,17 @@ export default function BookingPaymentForm({ bookingId }: { bookingId: string })
             onChange={(e) => setMethod(e.target.value)}
             className={appInput}
           >
-            {paymentMethods.map((option) => (
+            {enabledMethods.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
           <input
             type="text"
-            placeholder="Reference (optional)"
+            placeholder={settings.payment.requireTransactionReference ? "Reference required" : "Reference (optional)"}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
             className={appInput}
+            required={settings.payment.requireTransactionReference}
           />
         </div>
 

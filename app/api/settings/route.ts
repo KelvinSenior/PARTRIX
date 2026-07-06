@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError, validationError } from "@/lib/apiErrors";
+import { apiError, prismaErrorCode, validationError } from "@/lib/apiErrors";
 import { getOrganizationSettings, updateOrganizationSettings } from "@/services/settings";
 import { settingsSchema } from "@/lib/settingsValidation";
 
@@ -24,6 +24,14 @@ export async function PATCH(request: Request) {
     return validationError(parsed.error);
   }
 
-  const settings = await updateOrganizationSettings(parsed.data);
-  return NextResponse.json({ settings });
+  try {
+    const settings = await updateOrganizationSettings(parsed.data);
+    return NextResponse.json({ settings });
+  } catch (error) {
+    if (prismaErrorCode(error) === "P2002") {
+      return apiError("That workspace slug is already in use.", 409);
+    }
+
+    return apiError((error as Error).message || "Could not save settings.", 500);
+  }
 }

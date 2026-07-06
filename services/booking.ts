@@ -341,6 +341,7 @@ export async function returnBookingItems(
   payload: BookingReturnPayload,
 ): Promise<BookingDTO> {
   const user = await requireOrganizationContext();
+  const settings = await getOrganizationSettings();
 
   return prisma.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({
@@ -376,6 +377,22 @@ export async function returnBookingItems(
         quantity: returnItem.quantity,
       };
     });
+
+    if (!settings.rental.allowPartialReturns) {
+      const returnedByItem = new Map<string, number>();
+      for (const update of updates) {
+        returnedByItem.set(update.bookingItem.id, (returnedByItem.get(update.bookingItem.id) ?? 0) + update.quantity);
+      }
+
+      const returnsEverything = (booking.bookingItems as any[]).every((item: any) => {
+        const submittedQuantity = returnedByItem.get(item.id) ?? 0;
+        return item.returnedQuantity + submittedQuantity >= item.quantity;
+      });
+
+      if (!returnsEverything) {
+        throw new Error("Partial returns are disabled in workspace settings. Return all outstanding items together.");
+      }
+    }
 
     await Promise.all(
       updates.map((update) =>
@@ -552,8 +569,6 @@ export async function updateBookingStatus(
     ) {
       // Re-reserve items: check availability and decrement availableQuantity / increment rentedQuantity
       for (const item of booking.bookingItems) {
-        const outstanding = item.quantity - item.returnedQuantity;
-        
         // If moving back from COMPLETED, reset returned quantities
         if (booking.status === "COMPLETED") {
           await tx.bookingItem.update({

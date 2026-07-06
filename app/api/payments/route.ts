@@ -26,6 +26,6 @@ export async function POST(request: Request) {
     const payment = await recordPayment(body, user.id as string);
     return NextResponse.json({ payment }, { status: 201 });
   } catch (err) {
-    return apiError((err as Error).message ?? "Could not record payment.", 500);
+    return apiError((err as Error).message ?? "Could not record payment.", 400);
   }
 }
