@@ -33,9 +33,9 @@ export default function BookingChart({ bookings }: { bookings: BookingDTO[] }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className={appEyebrow}>Bookings</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">{totalBookings} total</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">{totalBookings} total</h2>
         </div>
-        <span className="rounded-full bg-cyan-400/15 px-3 py-1.5 text-xs font-semibold text-cyan-200">By weekday</span>
+        <span className="rounded-full border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 dark:border-cyan-400/25 dark:bg-cyan-400/15 dark:text-cyan-200">By weekday</span>
       </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-7">

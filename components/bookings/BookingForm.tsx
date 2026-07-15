@@ -15,6 +15,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [inventory, setInventory] = useState<InventoryItemDTO[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [items, setItems] = useState<BookingItemPayload[]>([emptyItem]);
+  const [activeSettings, setActiveSettings] = useState(settings);
 
   const [customerMode, setCustomerMode] = useState<"new" | "existing">("new");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
@@ -48,6 +49,15 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       .then((response) => response.json())
       .then((data) => setCustomers(data.customers ?? []))
       .catch(() => setCustomers([]));
+
+    fetch("/api/settings")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.settings) {
+          setActiveSettings(data.settings);
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -56,9 +66,9 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     }
 
     const defaultReturnDate = new Date(`${eventDate}T00:00:00`);
-    defaultReturnDate.setDate(defaultReturnDate.getDate() + Math.max(settings.rental.defaultRentalTermDays - 1, 0));
+    defaultReturnDate.setDate(defaultReturnDate.getDate() + Math.max(activeSettings.rental.defaultRentalTermDays - 1, 0));
     setReturnDate(defaultReturnDate.toISOString().slice(0, 10));
-  }, [eventDate, returnDate, settings.rental.defaultRentalTermDays]);
+  }, [eventDate, returnDate, activeSettings.rental.defaultRentalTermDays]);
 
   const itemOptions = useMemo(() => inventory.map((item) => ({
     id: item.id,
@@ -76,10 +86,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
 
     const fees = Number(deliveryFee) + Number(setupFee);
     const total = Math.max(subtotal + fees - Number(discount), 0);
-    const deposit = Number(((total * settings.deposit.requiredDepositPercent) / 100).toFixed(2));
+    const deposit = Number(((total * activeSettings.deposit.requiredDepositPercent) / 100).toFixed(2));
     const balance = Number((total - deposit).toFixed(2));
     return { subtotal, total, deposit, balance };
-  }, [items, inventory, deliveryFee, setupFee, discount, settings.deposit.requiredDepositPercent]);
+  }, [items, inventory, deliveryFee, setupFee, discount, activeSettings.deposit.requiredDepositPercent]);
 
   function updateItem(index: number, updated: Partial<BookingItemPayload>) {
     setItems((current) =>
@@ -167,7 +177,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
           </p>
         </div>
         <div className="rounded-3xl bg-zinc-100 px-4 py-3 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          {settings.rental.allowPartialReturns ? "Partial returns supported." : "Returns must be completed in full."}
+          {activeSettings.rental.allowPartialReturns ? "Partial returns supported." : "Returns must be completed in full."}
         </div>
       </div>
 
@@ -183,8 +193,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <button
                 type="button"
                 onClick={() => setCustomerMode("new")}
-                className={`flex-1 rounded-lg py-1 text-xs font-semibold transition ${
-                  customerMode === "new" ? "bg-cyan-500/10 text-cyan-200 border border-cyan-500/20" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-200"
+                className={`flex-1 rounded-lg border py-1 text-xs font-semibold transition ${
+                  customerMode === "new"
+                    ? "border-cyan-300/70 bg-cyan-100 text-cyan-700 shadow-sm dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200"
+                    : "border-transparent text-slate-600 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-zinc-200"
                 }`}
               >
                 New
@@ -192,8 +204,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <button
                 type="button"
                 onClick={() => setCustomerMode("existing")}
-                className={`flex-1 rounded-lg py-1 text-xs font-semibold transition ${
-                  customerMode === "existing" ? "bg-cyan-500/10 text-cyan-200 border border-cyan-500/20" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-200"
+                className={`flex-1 rounded-lg border py-1 text-xs font-semibold transition ${
+                  customerMode === "existing"
+                    ? "border-cyan-300/70 bg-cyan-100 text-cyan-700 shadow-sm dark:border-cyan-500/20 dark:bg-cyan-500/10 dark:text-cyan-200"
+                    : "border-transparent text-slate-600 hover:text-slate-900 dark:text-zinc-500 dark:hover:text-zinc-200"
                 }`}
               >
                 Existing
@@ -457,7 +471,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Deposit</p>
               <p className="mt-3 text-2xl font-semibold text-zinc-950 dark:text-zinc-100">GHC{bookingTotals.deposit.toFixed(2)}</p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{settings.deposit.requiredDepositPercent}% required</p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{activeSettings.deposit.requiredDepositPercent}% required</p>
             </div>
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-zinc-500 dark:text-zinc-400">Total due</p>

@@ -8,32 +8,32 @@ import { Truck, CheckCircle2, Clock, XCircle, MapPin, RefreshCcw } from "lucide-
 const STATUS_CONFIG: Record<DeliveryStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
   SCHEDULED: {
     label: "Scheduled",
-    color: "text-cyan-200",
-    bg: "bg-cyan-400/15 border-cyan-400/25",
+    color: "text-cyan-700 dark:text-cyan-200",
+    bg: "border border-cyan-300/80 bg-cyan-50 dark:border-cyan-400/25 dark:bg-cyan-400/15",
     icon: Clock,
   },
   IN_TRANSIT: {
     label: "In Transit",
-    color: "text-amber-200",
-    bg: "bg-amber-400/15 border-amber-400/25",
+    color: "text-amber-700 dark:text-amber-200",
+    bg: "border border-amber-300/80 bg-amber-50 dark:border-amber-400/25 dark:bg-amber-400/15",
     icon: Truck,
   },
   DELIVERED: {
     label: "Delivered",
-    color: "text-emerald-200",
-    bg: "bg-emerald-400/15 border-emerald-400/25",
+    color: "text-emerald-700 dark:text-emerald-200",
+    bg: "border border-emerald-300/80 bg-emerald-50 dark:border-emerald-400/25 dark:bg-emerald-400/15",
     icon: MapPin,
   },
   COMPLETED: {
     label: "Completed",
-    color: "text-emerald-200",
-    bg: "bg-emerald-400/15 border-emerald-400/25",
+    color: "text-emerald-700 dark:text-emerald-200",
+    bg: "border border-emerald-300/80 bg-emerald-50 dark:border-emerald-400/25 dark:bg-emerald-400/15",
     icon: CheckCircle2,
   },
   CANCELLED: {
     label: "Cancelled",
-    color: "text-rose-200",
-    bg: "bg-rose-400/15 border-rose-400/25",
+    color: "text-rose-700 dark:text-rose-200",
+    bg: "border border-rose-300/80 bg-rose-50 dark:border-rose-400/25 dark:bg-rose-400/15",
     icon: XCircle,
   },
 };
@@ -129,7 +129,7 @@ export default function DeliveryStatusControls({ delivery }: { delivery: Deliver
           type="button"
           onClick={handleCancel}
           disabled={loading}
-          className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 text-sm font-medium text-rose-300 transition hover:bg-rose-500/20 disabled:opacity-60"
+          className="inline-flex h-9 items-center gap-2 rounded-xl border border-rose-300/70 bg-rose-50 px-4 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
         >
           <XCircle className="h-4 w-4" aria-hidden />
           Cancel delivery

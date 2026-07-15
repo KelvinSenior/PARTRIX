@@ -35,21 +35,21 @@ export default function StatsCard({ label, value, change, icon, highlight }: Sta
       className={`${appCard} ${highlight ? "ring-1 ring-cyan-400/25" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-200">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-200/80 bg-cyan-100 text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200">
           <Icon className="h-5 w-5" aria-hidden />
         </span>
         <p className={appEyebrow}>{label}</p>
       </div>
       <div className="mt-6 flex items-end justify-between gap-3">
         <div>
-          <p className="text-3xl font-semibold text-white">{value}</p>
-          <p className="mt-1 text-xs text-zinc-500">vs last week</p>
+          <p className="text-3xl font-semibold text-slate-950 dark:text-white">{value}</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">vs last week</p>
         </div>
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+          className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
             isPositive
-              ? "bg-emerald-400/15 text-emerald-200"
-              : "bg-rose-400/15 text-rose-200"
+              ? "border-emerald-300/70 bg-emerald-100 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200"
+              : "border-rose-300/70 bg-rose-100 text-rose-700 dark:border-rose-400/25 dark:bg-rose-400/15 dark:text-rose-200"
           }`}
         >
           {change}

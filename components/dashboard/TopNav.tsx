@@ -13,16 +13,16 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
   const greeting = user?.name?.split(" ")[0] ?? user?.email ?? "Operator";
 
   return (
-    <header className={`sticky top-0 z-40 ${appCard}`}>
+    <header className="sticky top-0 z-30 rounded-[28px] border border-slate-200/80 bg-white/95 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-cyan-200/10 dark:bg-[#050816]/90 dark:shadow-[0_8px_32px_rgba(2,6,23,0.38)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <p className="text-xs uppercase tracking-[0.24em] text-cyan-200/70">Welcome back</p>
+          <p className="text-xs uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-200/70">Welcome back</p>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-xl font-semibold text-white sm:text-2xl">
+            <h1 className="truncate text-xl font-semibold text-slate-900 sm:text-2xl dark:text-white">
               {user ? `Hi, ${greeting}` : "Partrix"}
             </h1>
             {user ? (
-              <span className="inline-flex rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
+              <span className="inline-flex rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200">
                 {user.role}
               </span>
             ) : null}
@@ -32,7 +32,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-200/15 bg-white/5 text-zinc-200 transition hover:bg-white/10 lg:hidden"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition hover:bg-slate-50 dark:border-cyan-200/15 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10 lg:hidden"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />

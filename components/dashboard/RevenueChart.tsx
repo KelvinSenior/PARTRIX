@@ -38,9 +38,9 @@ export default function RevenueChart({ financeSummary }: { financeSummary?: Fina
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className={appEyebrow}>Revenue</p>
-          <h2 className="mt-2 text-3xl font-semibold text-white">GHC{(totalRevenue / 1000).toFixed(1)}k</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">GHC{(totalRevenue / 1000).toFixed(1)}k</h2>
         </div>
-        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${isPositive ? "bg-emerald-400/15 text-emerald-200" : "bg-rose-400/15 text-rose-200"}`}>
+        <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${isPositive ? "border-emerald-300/70 bg-emerald-100 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200" : "border-rose-300/70 bg-rose-100 text-rose-700 dark:border-rose-400/25 dark:bg-rose-400/15 dark:text-rose-200"}`}>
           {isPositive ? "+" : ""}{changePercent}% vs last month
         </span>
       </div>
