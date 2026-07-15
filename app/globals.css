@@ -1,13 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --app-bg: #0b1020;
-  --app-surface: rgba(255, 255, 255, 0.04);
-  --app-border: rgba(34, 211, 238, 0.12);
-  --app-accent: #22d3ee;
-  --background: #0b1020;
-  --foreground: #f8fafc;
-  --muted: #94a3b8;
+  --app-bg: #f8fafc;
+  --app-surface: rgba(255, 255, 255, 0.96);
+  --app-border: rgba(15, 23, 42, 0.1);
+  --app-accent: #0891b2;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #0b1020;
+    --app-surface: rgba(255, 255, 255, 0.04);
+    --app-border: rgba(34, 211, 238, 0.12);
+    --app-accent: #22d3ee;
+    --background: #0b1020;
+    --foreground: #f8fafc;
+    --muted: #94a3b8;
+    color-scheme: dark;
+  }
 }
 
 @theme inline {
@@ -18,7 +32,8 @@
 }
 
 html {
-  color-scheme: dark;
+  background: var(--app-bg);
+  color: var(--foreground);
 }
 
 body {
@@ -31,8 +46,16 @@ body {
 .app-shell {
   position: relative;
   background:
-    radial-gradient(circle at top, rgba(34, 211, 238, 0.14), transparent 42%),
-    linear-gradient(160deg, #050816 0%, #0b1020 48%, #050816 100%);
+    radial-gradient(circle at top, rgba(8, 145, 178, 0.12), transparent 42%),
+    linear-gradient(160deg, #ffffff 0%, #f8fafc 48%, #eef2ff 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .app-shell {
+    background:
+      radial-gradient(circle at top, rgba(34, 211, 238, 0.14), transparent 42%),
+      linear-gradient(160deg, #050816 0%, #0b1020 48%, #050816 100%);
+  }
 }
 
 .app-shell::before {

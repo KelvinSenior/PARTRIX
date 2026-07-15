@@ -19,7 +19,7 @@ const PremiumCard = React.forwardRef<HTMLDivElement, PremiumCardProps>(
         {...props}
       >
         {header && (
-          <div className="mb-6 border-b border-zinc-200 pb-4 dark:border-zinc-800">
+          <div className="mb-6 border-b border-slate-200/80 pb-4 dark:border-zinc-800">
             {header}
           </div>
         )}
@@ -27,7 +27,7 @@ const PremiumCard = React.forwardRef<HTMLDivElement, PremiumCardProps>(
         <div>{children}</div>
 
         {footer && (
-          <div className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <div className="mt-6 border-t border-slate-200/80 pt-4 dark:border-zinc-800">
             {footer}
           </div>
         )}

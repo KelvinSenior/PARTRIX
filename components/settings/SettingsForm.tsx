@@ -79,8 +79,8 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
 
   return (
     <form onSubmit={save} className="space-y-8">
-      <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/50 p-6">
-        <h3 className="text-base font-semibold text-white">Business profile</h3>
+      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Business profile</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <input
             value={settings.business.name}
@@ -99,6 +99,9 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             placeholder="Workspace slug"
             className={appInput}
           />
+          <p className="sm:col-span-2 text-sm text-slate-500 dark:text-zinc-400">
+            Share this workspace slug with staff members so they can join the same Partrix workspace during signup.
+          </p>
           <input
             value={settings.business.contactEmail ?? ""}
             onChange={(e) => updateField("business.contactEmail", e.target.value)}
@@ -121,10 +124,10 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         </div>
       </section>
 
-      <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/50 p-6">
-        <h3 className="text-base font-semibold text-white">Rental defaults</h3>
+      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Rental defaults</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Default rental days</span>
             <input
               type="number"
@@ -134,7 +137,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               className={appInput}
             />
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Allow partial returns</span>
             <select
               value={settings.rental.allowPartialReturns ? "true" : "false"}
@@ -148,10 +151,10 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         </div>
       </section>
 
-      <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/50 p-6">
-        <h3 className="text-base font-semibold text-white">Deposit policy</h3>
+      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Deposit policy</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Required deposit (%)</span>
             <input
               type="number"
@@ -162,7 +165,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               className={appInput}
             />
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Hold period (days)</span>
             <input
               type="number"
@@ -172,7 +175,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               className={appInput}
             />
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Refund policy</span>
             <select
               value={settings.deposit.refundPolicy}
@@ -189,14 +192,14 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         </div>
       </section>
 
-      <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/50 p-6">
-        <h3 className="text-base font-semibold text-white">Payment & invoicing</h3>
+      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Payment & invoicing</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 text-sm text-zinc-300">
+          <div className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <label className="block">Accepted payment methods</label>
             <div className="grid gap-2">
               {paymentMethods.map((method) => (
-                <label key={method.value} className="inline-flex items-center gap-2 text-sm text-zinc-300">
+                <label key={method.value} className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-300">
                   <input
                     type="checkbox"
                     checked={settings.payment.acceptedMethods.includes(method.value as PaymentMethod)}
@@ -206,14 +209,14 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
                         : [...settings.payment.acceptedMethods, method.value as PaymentMethod];
                       updateField("payment.acceptedMethods", next);
                     }}
-                    className="h-4 w-4 rounded border-zinc-500 bg-slate-950 text-cyan-500"
+                    className="h-4 w-4 rounded border-slate-300 bg-white text-cyan-600 dark:border-zinc-500 dark:bg-slate-950 dark:text-cyan-500"
                   />
                   {method.label}
                 </label>
               ))}
             </div>
           </div>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Require transaction reference</span>
             <select
               value={settings.payment.requireTransactionReference ? "true" : "false"}
@@ -224,7 +227,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               <option value="false">No</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Invoice prefix</span>
             <input
               type="text"
@@ -233,7 +236,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               className={appInput}
             />
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Email invoices</span>
             <select
               value={settings.invoice.emailInvoices ? "true" : "false"}
@@ -244,7 +247,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               <option value="false">Disabled</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm text-zinc-300 sm:col-span-2">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300 sm:col-span-2">
             <span>Invoice footer</span>
             <textarea
               value={settings.invoice.invoiceFooter ?? ""}
@@ -255,10 +258,10 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         </div>
       </section>
 
-      <section className="space-y-4 rounded-3xl border border-white/10 bg-slate-950/50 p-6">
-        <h3 className="text-base font-semibold text-white">Notifications & appearance</h3>
+      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Notifications & appearance</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Booking reminders</span>
             <select
               value={settings.notifications.bookingReminders ? "true" : "false"}
@@ -269,7 +272,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               <option value="false">Disabled</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Low inventory alerts</span>
             <select
               value={settings.notifications.lowInventoryAlerts ? "true" : "false"}
@@ -280,7 +283,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               <option value="false">Disabled</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Payment receipts</span>
             <select
               value={settings.notifications.paymentReceipts ? "true" : "false"}
@@ -291,16 +294,16 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
               <option value="false">Disabled</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm text-zinc-300">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Brand color</span>
             <input
               type="color"
               value={settings.appearance.brandColor}
               onChange={(e) => updateField("appearance.brandColor", e.target.value)}
-              className="h-12 w-full rounded-2xl border border-zinc-700 bg-slate-950 px-3 py-2"
+              className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-slate-950"
             />
           </label>
-          <label className="space-y-2 text-sm text-zinc-300 sm:col-span-2">
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300 sm:col-span-2">
             <span>Theme</span>
             <select
               value={settings.appearance.theme}

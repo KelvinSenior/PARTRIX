@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
+    organizationSlug: formData.get("organizationSlug"),
   });
 
   if (!parsed.success) {

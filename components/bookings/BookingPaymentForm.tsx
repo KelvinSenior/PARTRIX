@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { appBtnPrimary, appInput } from "@/lib/appStyles";
+import { appBtnPrimary, appCard, appInput } from "@/lib/appStyles";
 import type { PaymentMethod } from "@/types/finance";
 import type { SettingsDTO } from "@/types/settings";
 
@@ -72,10 +72,10 @@ export default function BookingPaymentForm({ bookingId, settings }: { bookingId:
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6">
+    <section className={`${appCard} p-6`}>
       <div className="mb-5">
-        <h3 className="text-lg font-semibold text-white">Record payment</h3>
-        <p className="mt-1 text-sm text-zinc-400">Log a payment, deposit, or refund for this booking.</p>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
+        <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">Log a payment, deposit, or refund for this booking.</p>
       </div>
       <form onSubmit={submit} className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -130,13 +130,13 @@ export default function BookingPaymentForm({ bookingId, settings }: { bookingId:
         </div>
 
         {message ? (
-          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+          <div className="rounded-2xl border border-emerald-300/70 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
             {message}
           </div>
         ) : null}
 
         {error ? (
-          <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">
+          <div className="rounded-2xl border border-rose-300/70 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
             {error}
           </div>
         ) : null}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookingDTO } from "@/types/booking";
-import { appCard, appBtnPrimary, appBtnSecondary } from "@/lib/appStyles";
+import { appCard } from "@/lib/appStyles";
 import { CheckCircle2, Clock, PlayCircle, XCircle, AlertCircle, RefreshCcw } from "lucide-react";
 
 const STATUS_CONFIG: Record<
@@ -12,38 +12,38 @@ const STATUS_CONFIG: Record<
 > = {
   PENDING: {
     label: "Pending",
-    color: "text-amber-200",
-    bg: "bg-amber-400/15 border-amber-400/25",
+    color: "text-amber-700 dark:text-amber-200",
+    bg: "border border-amber-300/70 bg-amber-50 dark:border-amber-400/25 dark:bg-amber-400/15",
     icon: Clock,
   },
   CONFIRMED: {
     label: "Confirmed",
-    color: "text-emerald-200",
-    bg: "bg-emerald-400/15 border-emerald-400/25",
+    color: "text-emerald-700 dark:text-emerald-200",
+    bg: "border border-emerald-300/70 bg-emerald-50 dark:border-emerald-400/25 dark:bg-emerald-400/15",
     icon: CheckCircle2,
   },
   IN_PROGRESS: {
     label: "In Progress",
-    color: "text-cyan-200",
-    bg: "bg-cyan-400/15 border-cyan-400/25",
+    color: "text-cyan-700 dark:text-cyan-200",
+    bg: "border border-cyan-300/70 bg-cyan-50 dark:border-cyan-400/25 dark:bg-cyan-400/15",
     icon: PlayCircle,
   },
   COMPLETED: {
     label: "Completed",
-    color: "text-emerald-200",
-    bg: "bg-emerald-400/15 border-emerald-400/25",
+    color: "text-emerald-700 dark:text-emerald-200",
+    bg: "border border-emerald-300/70 bg-emerald-50 dark:border-emerald-400/25 dark:bg-emerald-400/15",
     icon: CheckCircle2,
   },
   CANCELLED: {
     label: "Cancelled",
-    color: "text-rose-200",
-    bg: "bg-rose-400/15 border-rose-400/25",
+    color: "text-rose-700 dark:text-rose-200",
+    bg: "border border-rose-300/70 bg-rose-50 dark:border-rose-400/25 dark:bg-rose-400/15",
     icon: XCircle,
   },
   NO_SHOW: {
     label: "No Show",
-    color: "text-zinc-300",
-    bg: "bg-zinc-500/20 border-zinc-500/25",
+    color: "text-slate-700 dark:text-zinc-300",
+    bg: "border border-slate-300/70 bg-slate-100 dark:border-zinc-500/25 dark:bg-zinc-500/20",
     icon: AlertCircle,
   },
 };
@@ -121,10 +121,10 @@ export default function BookingStatusControls({
   }
 
   return (
-    <section className={`${appCard} space-y-5 border border-zinc-800/80`}>
+    <section className={`${appCard} space-y-5 border border-slate-200/80 dark:border-cyan-200/10`}>
       <div className="flex flex-col gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-200/75">
             Booking status
           </p>
           <div className="mt-3 flex items-center gap-3">
@@ -137,15 +137,15 @@ export default function BookingStatusControls({
           </div>
         </div>
 
-        <div className="border-t border-zinc-800/60 pt-4 space-y-2">
-          <label className="block text-xs uppercase tracking-[0.2em] text-zinc-500 font-semibold">
+        <div className="border-t border-slate-200/70 pt-4 space-y-2 dark:border-zinc-800/60">
+          <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-zinc-500">
             Change Status Manually
           </label>
           <select
             value={booking.status}
             onChange={(e) => transitionTo(e.target.value)}
             disabled={loading}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-200 outline-none focus:border-cyan-500"
+            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
           >
             <option value="PENDING">Pending (Draft / Quote)</option>
             <option value="CONFIRMED">Confirmed (Items Reserved)</option>
@@ -159,8 +159,8 @@ export default function BookingStatusControls({
 
       {/* Status progression steps */}
       {nextSteps.length > 0 && (
-        <div className="space-y-2 border-t border-zinc-800/60 pt-4">
-          <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+        <div className="space-y-2 border-t border-slate-200/70 pt-4 dark:border-zinc-800/60">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-zinc-500">
             Suggested Next Action
           </p>
           <div className="flex flex-wrap gap-2">
@@ -182,12 +182,12 @@ export default function BookingStatusControls({
 
       {/* Cancel — always shown unless already final */}
       {!isFinal && (
-        <div className="border-t border-zinc-800/60 pt-4">
+        <div className="border-t border-slate-200/70 pt-4 dark:border-zinc-800/60">
           <button
             type="button"
             onClick={handleCancel}
             disabled={loading}
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 text-sm font-semibold text-rose-300 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rose-300/70 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
           >
             <XCircle className="h-4 w-4" />
             Cancel booking
@@ -196,11 +196,11 @@ export default function BookingStatusControls({
       )}
 
       {loading && (
-        <p className="text-xs text-zinc-500">Updating status…</p>
+        <p className="text-xs text-slate-500 dark:text-zinc-500">Updating status…</p>
       )}
 
       {error && (
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+        <div className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </div>
       )}

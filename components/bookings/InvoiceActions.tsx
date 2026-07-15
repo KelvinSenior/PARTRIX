@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, Mail } from "lucide-react";
-import { appBtnPrimary, appBtnSecondary, appInput } from "@/lib/appStyles";
+import { appBtnPrimary, appBtnSecondary, appCard, appInput } from "@/lib/appStyles";
 import { toastError, toastSuccess } from "@/components/ui/Toast";
 
 type InvoiceActionsProps = {
@@ -46,11 +46,11 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
   }
 
   return (
-    <section className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6">
+    <section className={`${appCard} p-6`}>
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-200/75">Invoice</p>
-        <h3 className="mt-2 text-lg font-semibold text-white">PDF invoice</h3>
-        <p className="mt-1 text-sm text-zinc-400">Download or email a polished invoice for this booking.</p>
+        <p className="text-xs font-medium uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-200/75">Invoice</p>
+        <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">PDF invoice</h3>
+        <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">Download or email a polished invoice for this booking.</p>
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -65,24 +65,24 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-cyan-200/15 bg-[#050816] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl dark:border-cyan-200/15 dark:bg-[#050816]">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-white">Send invoice</h3>
-                <p className="mt-1 text-sm text-zinc-400">The invoice PDF will be attached to the email.</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Send invoice</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">The invoice PDF will be attached to the email.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300"
+                className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-transparent dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 Close
               </button>
             </div>
 
             <form onSubmit={sendInvoice} className="mt-5 space-y-4">
-              <label className="block text-sm text-zinc-300">
+              <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
                 Recipient email
                 <input
                   type="email"
@@ -92,7 +92,7 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
                   className={`${appInput} mt-2`}
                 />
               </label>
-              <label className="block text-sm text-zinc-300">
+              <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
                 Message
                 <textarea
                   value={message}

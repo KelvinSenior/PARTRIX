@@ -36,7 +36,7 @@ export default function Modal({ open, title, description, onClose, children, foo
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-2xl dark:bg-zinc-950">
+      <div className="w-full max-w-2xl rounded-[32px] border border-slate-200/80 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-start justify-between gap-4">
           <div>
             {title ? <h2 className="text-xl font-semibold text-zinc-950 dark:text-zinc-50">{title}</h2> : null}

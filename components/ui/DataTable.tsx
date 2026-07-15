@@ -22,9 +22,9 @@ export default function DataTable<T>({ columns, data, emptyState, className }: D
   }
 
   return (
-    <div className={mergeClasses("overflow-x-auto rounded-2xl border border-cyan-200/10 bg-white/[0.04] backdrop-blur-xl sm:rounded-3xl", className)}>
-      <table className="min-w-full border-collapse text-left text-sm text-zinc-300">
-        <thead className="border-b border-white/10 text-xs uppercase tracking-[0.2em] text-zinc-500">
+    <div className={mergeClasses("overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl sm:rounded-3xl dark:border-cyan-200/10 dark:bg-white/[0.04]", className)}>
+      <table className="min-w-full border-collapse text-left text-sm text-slate-700 dark:text-zinc-300">
+        <thead className="border-b border-slate-200/80 text-xs uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:text-zinc-500">
           <tr>
             {columns.map((column, index) => (
               <th key={index} className={mergeClasses("px-4 py-4 text-left align-middle", column.headerClassName)}>
@@ -35,7 +35,7 @@ export default function DataTable<T>({ columns, data, emptyState, className }: D
         </thead>
         <tbody>
           {data.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
+            <tr key={rowIndex} className="border-b border-slate-200/70 last:border-b-0 hover:bg-slate-50/70 dark:border-white/5 dark:hover:bg-white/[0.03]">
               {columns.map((column, index) => (
                 <td key={index} className={mergeClasses("px-4 py-4 align-middle", column.className)}>
                   {column.cell(row)}

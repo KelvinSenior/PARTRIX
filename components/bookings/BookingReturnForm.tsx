@@ -76,10 +76,10 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
   const allReturned = booking.bookingItems.every(i => i.returnedQuantity >= i.quantity);
 
   return (
-    <section className={`${appCard} border border-zinc-800/80`}>
+    <section className={`${appCard} border border-slate-200/80 dark:border-cyan-200/10`}>
       <div className="mb-6">
         <p className={appEyebrow}>Returns Management</p>
-        <h3 className="text-xl font-semibold text-white mt-1">Return items for this booking</h3>
+        <h3 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">Return items for this booking</h3>
       </div>
 
       <form onSubmit={handleReturn} className="space-y-4">
@@ -88,16 +88,16 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
           if (availableToReturn <= 0) return null;
 
           return (
-            <div key={item.id} className={`${appCardInner} border border-zinc-800/60 bg-zinc-900/50 p-4 rounded-xl space-y-3`}>
+            <div key={item.id} className={`${appCardInner} space-y-3`}>
               <div>
-                <p className="font-semibold text-white">{item.inventoryItemName}</p>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Booked: <span className="text-zinc-200">{item.quantity}</span> &middot; Returned: <span className="text-zinc-200">{item.returnedQuantity}</span>
+                <p className="font-semibold text-slate-900 dark:text-white">{item.inventoryItemName}</p>
+                <p className="mt-0.5 text-xs text-slate-600 dark:text-zinc-400">
+                  Booked: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.quantity}</span> &middot; Returned: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.returnedQuantity}</span>
                 </p>
               </div>
               <div className="grid gap-3 grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-1">
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-500">
                     Return quantity
                   </label>
                   <input
@@ -109,9 +109,9 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
                     className={`${appInput} py-1.5 px-3 text-sm`}
                   />
                 </div>
-                <div className="rounded-xl bg-zinc-950 p-3 text-xs text-zinc-400 border border-zinc-900 flex flex-col justify-between">
+                <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-slate-100/80 p-3 text-xs text-slate-600 dark:border-zinc-900 dark:bg-zinc-950 dark:text-zinc-400">
                   <span>Available to return</span>
-                  <span className="text-lg font-bold text-white mt-1">{availableToReturn}</span>
+                  <span className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{availableToReturn}</span>
                 </div>
               </div>
             </div>
@@ -119,19 +119,19 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
         })}
 
         {message && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div className="rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
             {message}
           </div>
         )}
 
         {error && (
-          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+          <div className="rounded-xl border border-rose-300/70 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
             {error}
           </div>
         )}
 
         {allReturned ? (
-          <p className="text-sm text-emerald-400 font-medium text-center py-2">
+          <p className="py-2 text-center text-sm font-medium text-emerald-700 dark:text-emerald-400">
             All items have been fully returned.
           </p>
         ) : (

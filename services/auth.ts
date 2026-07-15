@@ -53,11 +53,41 @@ export async function verifyPassword(password: string, hash: string) {
 /**
  * Register a new user with validation
  */
+async function resolveOrganizationForSignup(options: {
+  organizationSlug?: string | null;
+  organizationId?: string | null;
+  fallbackName: string;
+}) {
+  if (options.organizationId) {
+    return prisma.organization.findUnique({ where: { id: options.organizationId } });
+  }
+
+  const normalizedSlug = options.organizationSlug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
+
+  if (normalizedSlug) {
+    const existingOrganization = await prisma.organization.findUnique({ where: { slug: normalizedSlug } });
+    if (existingOrganization) {
+      return existingOrganization;
+    }
+  }
+
+  const slug = normalizedSlug || `${options.fallbackName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now().toString(36)}`;
+
+  return prisma.organization.create({
+    data: {
+      name: options.fallbackName,
+      slug,
+    },
+  });
+}
+
 export async function registerUser(options: {
   email: string;
   password: string;
   name: string;
   role?: UserRole;
+  organizationSlug?: string | null;
+  organizationId?: string | null;
 }) {
   const normalizedEmail = options.email.trim().toLowerCase();
 
@@ -73,12 +103,15 @@ export async function registerUser(options: {
   // Hash password with strong parameters
   const passwordHash = await hashPassword(options.password);
 
-  const organization = await prisma.organization.create({
-    data: {
-      name: `${options.name.trim()}'s Workspace`,
-      slug: `${normalizedEmail.split("@")[0]}-${Date.now().toString(36)}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-    },
+  const organization = await resolveOrganizationForSignup({
+    organizationSlug: options.organizationSlug,
+    organizationId: options.organizationId,
+    fallbackName: `${options.name.trim()}'s Workspace`,
   });
+
+  if (!organization) {
+    throw new Error("Unable to resolve or create an organization for this account.");
+  }
 
   // Create user with ACTIVE status
   const user = await prisma.user.create({

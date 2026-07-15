@@ -12,6 +12,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState("");
   const [ownerName, setOwnerName] = useState("");
+  const [organizationSlug, setOrganizationSlug] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -90,6 +91,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
       <input type="hidden" name="name" value={ownerName} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="password" value={password} />
+      <input type="hidden" name="organizationSlug" value={organizationSlug} />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -119,6 +121,15 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
                 value={ownerName}
                 onChange={(event) => setOwnerName(event.target.value)}
                 required
+              />
+              <AuthInput
+                label="Workspace slug (optional)"
+                icon={Building2}
+                type="text"
+                placeholder="acme-rentals"
+                value={organizationSlug}
+                onChange={(event) => setOrganizationSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""))}
+                hint="Enter an existing workspace slug to join that team. Leave it blank to create a new one."
               />
             </>
           ) : null}
@@ -173,15 +184,15 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
           ) : null}
 
           {step === 4 ? (
-            <div className="rounded-2xl border border-cyan-200/20 bg-cyan-400/10 p-5 text-center">
+            <div className="rounded-2xl border border-cyan-200/30 bg-cyan-50 p-5 text-center dark:border-cyan-200/20 dark:bg-cyan-400/10">
               <motion.div
-                className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-cyan-300 to-blue-500"
+                className="mx-auto h-14 w-14 rounded-full bg-gradient-to-br from-cyan-600 to-blue-600 dark:from-cyan-300 dark:to-blue-500"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.25 }}
               />
-              <h3 className="mt-4 text-xl font-semibold text-cyan-100">Account details ready</h3>
-              <p className="mt-2 text-sm text-zinc-300">
+              <h3 className="mt-4 text-xl font-semibold text-cyan-700 dark:text-cyan-100">Account details ready</h3>
+              <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">
                 You are one tap away from activating your Partrix workspace.
               </p>
             </div>
@@ -194,7 +205,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
           type="button"
           onClick={goBackStep}
           disabled={step === 1 || isSubmitting}
-          className="inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-cyan-200/20 bg-white/5 text-sm font-medium text-zinc-200 transition disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex h-12 flex-1 items-center justify-center rounded-2xl border border-slate-300 bg-white text-sm font-medium text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50 dark:border-cyan-200/20 dark:bg-white/5 dark:text-zinc-200"
         >
           Back
         </button>
@@ -202,7 +213,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
           <button
             type="button"
             onClick={goNextStep}
-            className="inline-flex h-12 flex-[1.4] items-center justify-center rounded-2xl border border-cyan-200/20 bg-white/10 text-sm font-semibold text-cyan-100 transition hover:bg-white/15"
+            className="inline-flex h-12 flex-[1.4] items-center justify-center rounded-2xl border border-cyan-200/40 bg-cyan-50 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-200/20 dark:bg-white/10 dark:text-cyan-100 dark:hover:bg-white/15"
           >
             Continue
           </button>

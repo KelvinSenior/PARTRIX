@@ -5,6 +5,11 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d
 const passwordErrorMsg =
   "Password must be at least 12 characters and contain uppercase, lowercase, number, and special character (@$!%*?&^#).";
 
+const optionalOrganizationSlug = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().trim().min(1, "Workspace slug must not be empty.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only.").optional(),
+);
+
 export const signupPayloadSchema = z.object({
   name: z
     .string()
@@ -25,6 +30,7 @@ export const signupPayloadSchema = z.object({
       (password) => !isCommonPassword(password),
       "This password is too common. Choose a more unique password.",
     ),
+  organizationSlug: optionalOrganizationSlug,
 });
 
 export const loginPayloadSchema = z.object({
