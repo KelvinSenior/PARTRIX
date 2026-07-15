@@ -8,6 +8,7 @@ import BookingPaymentForm from "@/components/bookings/BookingPaymentForm";
 import BookingReturnForm from "@/components/bookings/BookingReturnForm";
 import BookingStatusControls from "@/components/bookings/BookingStatusControls";
 import InvoiceActions from "@/components/bookings/InvoiceActions";
+import BookingItemEditor from "@/components/bookings/BookingItemEditor";
 import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
 import { ArrowLeft, Package, CreditCard } from "lucide-react";
 import { listPayments } from "@/services/finance";
@@ -18,12 +19,12 @@ type PageProps = {
 };
 
 const statusColors: Record<string, string> = {
-  PENDING: "bg-amber-400/15 text-amber-200 border-amber-400/25",
-  CONFIRMED: "bg-emerald-400/15 text-emerald-200 border-emerald-400/25",
-  IN_PROGRESS: "bg-cyan-400/15 text-cyan-200 border-cyan-400/25",
-  COMPLETED: "bg-emerald-400/15 text-emerald-200 border-emerald-400/25",
-  CANCELLED: "bg-rose-400/15 text-rose-200 border-rose-400/25",
-  NO_SHOW: "bg-zinc-500/20 text-zinc-300 border-zinc-500/25",
+  PENDING: "border border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/15 dark:text-amber-200",
+  CONFIRMED: "border border-emerald-300/80 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200",
+  IN_PROGRESS: "border border-cyan-300/80 bg-cyan-50 text-cyan-700 dark:border-cyan-400/25 dark:bg-cyan-400/15 dark:text-cyan-200",
+  COMPLETED: "border border-emerald-300/80 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200",
+  CANCELLED: "border border-rose-300/80 bg-rose-50 text-rose-700 dark:border-rose-400/25 dark:bg-rose-400/15 dark:text-rose-200",
+  NO_SHOW: "border border-slate-300/80 bg-slate-100 text-slate-700 dark:border-zinc-500/25 dark:bg-zinc-500/20 dark:text-zinc-300",
 };
 
 export default async function BookingDetailPage({ params }: PageProps) {
@@ -49,7 +50,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       {/* Back nav */}
       <Link
         href="/bookings"
-        className="inline-flex items-center gap-2 text-sm text-zinc-400 transition hover:text-cyan-200"
+        className="inline-flex items-center gap-2 text-sm text-slate-600 transition hover:text-cyan-700 dark:text-zinc-400 dark:hover:text-cyan-200"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to bookings
@@ -60,10 +61,10 @@ export default async function BookingDetailPage({ params }: PageProps) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className={appEyebrow}>Booking details</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white">
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
               {booking.bookingNumber}
             </h1>
-            <p className="mt-2 text-sm text-zinc-400">
+            <p className="mt-2 text-sm text-slate-600 dark:text-zinc-400">
               {booking.customer.firstName} {booking.customer.lastName}
               {booking.customer.email ? ` · ${booking.customer.email}` : ""}
               {booking.customer.phone ? ` · ${booking.customer.phone}` : ""}
@@ -76,7 +77,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             >
               {booking.status.replace(/_/g, " ")}
             </span>
-            <span className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3.5 py-1.5 text-sm font-semibold text-cyan-100">
+            <span className="inline-flex items-center rounded-full border border-cyan-300/70 bg-cyan-50 px-3.5 py-1.5 text-sm font-semibold text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-100">
               Deposit {booking.depositStatus.replace(/_/g, " ")}
             </span>
           </div>
@@ -84,8 +85,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
 
         <div className="mt-6 grid gap-4 lg:grid-cols-3">
           <div className={appCardInner}>
-            <p className="text-xs uppercase tracking-widest text-zinc-500">Event date</p>
-            <p className="mt-2 font-semibold text-white">
+            <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-zinc-500">Event date</p>
+            <p className="mt-2 font-semibold text-slate-900 dark:text-white">
               {new Date(booking.eventDate).toLocaleDateString("en-US", {
                 weekday: "short",
                 year: "numeric",
@@ -95,8 +96,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </p>
           </div>
           <div className={appCardInner}>
-            <p className="text-xs uppercase tracking-widest text-zinc-500">Delivery date</p>
-            <p className="mt-2 font-semibold text-white">
+            <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-zinc-500">Delivery date</p>
+            <p className="mt-2 font-semibold text-slate-900 dark:text-white">
               {booking.deliveryDate
                 ? new Date(booking.deliveryDate).toLocaleDateString("en-US", {
                     weekday: "short",
@@ -107,8 +108,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </p>
           </div>
           <div className={appCardInner}>
-            <p className="text-xs uppercase tracking-widest text-zinc-500">Return date</p>
-            <p className="mt-2 font-semibold text-white">
+            <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-zinc-500">Return date</p>
+            <p className="mt-2 font-semibold text-slate-900 dark:text-white">
               {booking.returnDate
                 ? new Date(booking.returnDate).toLocaleDateString("en-US", {
                     weekday: "short",
@@ -121,8 +122,8 @@ export default async function BookingDetailPage({ params }: PageProps) {
         </div>
             {booking.notes && (
               <div className={`${appCardInner} mt-3`}>
-                <p className="text-xs uppercase tracking-widest text-zinc-500">Notes</p>
-                <p className="mt-2 text-sm text-zinc-300">{booking.notes}</p>
+                <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-zinc-500">Notes</p>
+                <p className="mt-2 text-sm text-slate-700 dark:text-zinc-300">{booking.notes}</p>
               </div>
             )}
           </section>
@@ -130,43 +131,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       <div className="grid gap-5 lg:grid-cols-[1.9fr_0.9fr]">
         <div className="space-y-5">
           {/* Items */}
-          <section className={appCard}>
-            <p className={appEyebrow}>
-              <Package className="mr-1.5 inline h-3.5 w-3.5" aria-hidden />
-              Rented items
-            </p>
-            <div className="mt-4 space-y-3">
-              {booking.bookingItems.map((item) => {
-                const fullyReturned = item.returnedQuantity >= item.quantity;
-                return (
-                  <div
-                    key={item.id}
-                    className={`${appCardInner} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}
-                  >
-                    <div className="flex-1">
-                      <p className="font-semibold text-white">{item.inventoryItemName}</p>
-                      <p className="mt-0.5 text-xs text-zinc-500">
-                        Qty: {item.quantity} · Unit: GHC{item.unitPrice.toFixed(2)} · Line: GHC
-                        {item.totalPrice.toFixed(2)}
-                        {item.discount > 0 ? ` · Discount: GHC${item.discount.toFixed(2)}` : ""}
-                      </p>
-                    </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold ${
-                        fullyReturned
-                          ? "bg-emerald-400/15 text-emerald-200"
-                          : item.returnedQuantity > 0
-                            ? "bg-amber-400/15 text-amber-200"
-                            : "bg-zinc-500/20 text-zinc-300"
-                      }`}
-                    >
-                      Returned {item.returnedQuantity}/{item.quantity}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+          <BookingItemEditor booking={booking} />
 
           {/* Payments */}
           <section className={appCard}>
@@ -176,13 +141,13 @@ export default async function BookingDetailPage({ params }: PageProps) {
             </p>
             <div className="mt-4 space-y-3">
               {bookingPayments.length === 0 ? (
-                <p className="text-sm text-zinc-500">No payments recorded yet.</p>
+                <p className="text-sm text-slate-600 dark:text-zinc-500">No payments recorded yet.</p>
               ) : (
                 bookingPayments.map((p) => (
                   <div key={p.id} className={`${appCardInner} flex items-center justify-between gap-3 text-sm`}>
                     <div>
-                      <p className="font-semibold text-white">GHC{p.amount.toFixed(2)}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="font-semibold text-slate-900 dark:text-white">GHC{p.amount.toFixed(2)}</p>
+                      <p className="text-xs text-slate-600 dark:text-zinc-500">
                         {p.method.replace("_", " ")} ·{" "}
                         {p.processedAt
                           ? new Date(p.processedAt).toLocaleDateString()
@@ -190,10 +155,10 @@ export default async function BookingDetailPage({ params }: PageProps) {
                       </p>
                     </div>
                     <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${
                         p.status === "COMPLETED"
-                          ? "bg-emerald-400/15 text-emerald-200"
-                          : "bg-amber-400/15 text-amber-200"
+                          ? "border-emerald-300/80 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200"
+                          : "border-amber-300/80 bg-amber-50 text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/15 dark:text-amber-200"
                       }`}
                     >
                       {p.status}
@@ -222,41 +187,41 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 { label: "Setup fee", value: booking.setupFee },
                 { label: "Discount", value: -booking.discount },
               ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between text-zinc-400">
+                <div key={label} className="flex justify-between text-slate-600 dark:text-zinc-400">
                   <span>{label}</span>
-                  <span className={value < 0 ? "text-rose-300" : "text-zinc-200"}>
+                  <span className={value < 0 ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-zinc-200"}>
                     {value < 0 ? `-GHC${Math.abs(value).toFixed(2)}` : `GHC${value.toFixed(2)}`}
                   </span>
                 </div>
               ))}
               <div className="my-2 border-t border-white/10" />
               <div className="flex justify-between font-semibold">
-                <span className="text-zinc-300">Total</span>
-                <span className="text-white">GHC{booking.totalAmount.toFixed(2)}</span>
+                <span className="text-slate-700 dark:text-zinc-300">Total</span>
+                <span className="text-slate-900 dark:text-white">GHC{booking.totalAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Deposit amount</span>
-                <span className="text-emerald-200">GHC{booking.depositAmount.toFixed(2)}</span>
+                <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Deposit paid</span>
-                <span className="text-emerald-200">GHC{booking.depositPaid.toFixed(2)}</span>
+                <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositPaid.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Deposit refunded</span>
-                <span className="text-amber-200">GHC{booking.depositRefunded.toFixed(2)}</span>
+                <span className="text-amber-700 dark:text-amber-200">GHC{booking.depositRefunded.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Deposit outstanding</span>
-                <span className="text-cyan-200">GHC{booking.depositOutstanding.toFixed(2)}</span>
+                <span className="text-cyan-700 dark:text-cyan-200">GHC{booking.depositOutstanding.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Deposit status</span>
-                <span className="font-semibold text-white">{booking.depositStatus.replace(/_/g, " ")}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{booking.depositStatus.replace(/_/g, " ")}</span>
               </div>
-              <div className="flex justify-between text-zinc-400">
+              <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refund status</span>
-                <span className="font-semibold text-white">{booking.refundStatus.replace(/_/g, " ")}</span>
+                <span className="font-semibold text-slate-900 dark:text-white">{booking.refundStatus.replace(/_/g, " ")}</span>
               </div>
               <div className="my-2 border-t border-white/10" />
               <div className="flex justify-between font-semibold">

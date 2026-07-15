@@ -458,6 +458,64 @@ export async function returnBookingItems(
   });
 }
 
+export async function updateBookingItems(
+  bookingId: string,
+  updates: Array<{ bookingItemId: string; quantity: number; discount?: number; notes?: string | null }>,
+): Promise<BookingDTO> {
+  const user = await requireOrganizationContext();
+
+  return prisma.$transaction(async (tx) => {
+    const booking = await tx.booking.findFirst({
+      where: { id: bookingId, organizationId: user.organizationId! },
+      include: { bookingItems: true },
+    });
+
+    if (!booking) {
+      throw new Error("Booking not found.");
+    }
+
+    if (["CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"].includes(booking.status)) {
+      throw new Error("This booking can no longer be edited.");
+    }
+
+    const bookingItemMap = new Map((booking.bookingItems as any[]).map((item: any) => [item.id, item]));
+    const updatesToApply = updates.map((update) => {
+      const bookingItem = bookingItemMap.get(update.bookingItemId);
+      if (!bookingItem) {
+        throw new Error("One or more booking items are invalid.");
+      }
+      return {
+        bookingItem,
+        quantity: Math.max(1, update.quantity),
+        discount: update.discount ?? bookingItem.discount.toNumber(),
+        notes: update.notes ?? bookingItem.notes,
+      };
+    });
+
+    for (const update of updatesToApply) {
+      await tx.bookingItem.update({
+        where: { id: update.bookingItem.id },
+        data: {
+          quantity: update.quantity,
+          discount: update.discount.toString(),
+          notes: update.notes ?? null,
+        },
+      });
+    }
+
+    const updatedBooking = await tx.booking.update({
+      where: { id: bookingId },
+      data: {},
+      include: {
+        customer: true,
+        bookingItems: { include: { inventoryItem: true } },
+      },
+    });
+
+    return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
+  });
+}
+
 export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
   const user = await requireOrganizationContext();
 

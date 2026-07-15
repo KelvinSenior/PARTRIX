@@ -12,7 +12,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
   return (
     <AnimatePresence>
       {open ? (
-        <div className="fixed inset-0 z-[120] lg:hidden">
+        <div className="fixed inset-0 z-120 lg:hidden">
           <motion.button
             type="button"
             aria-label="Close menu overlay"
@@ -27,7 +27,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 320 }}
-            className="fixed right-0 top-0 z-[130] flex h-screen w-[min(100%,340px)] flex-col overflow-hidden border-l border-slate-300/80 bg-white/98 p-5 shadow-[0_24px_90px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10 dark:bg-[#060b1a]/95 dark:shadow-[0_20px_80px_rgba(2,8,23,0.85)]"
+            className="fixed right-0 top-0 z-130 flex h-screen w-[min(100%,288px)] max-w-[88vw] flex-col overflow-hidden border-l border-slate-300/80 bg-white/98 p-4 shadow-[0_24px_90px_rgba(15,23,42,0.28)] backdrop-blur-xl dark:border-white/10 dark:bg-[#060b1a]/95 dark:shadow-[0_20px_80px_rgba(2,8,23,0.85)] sm:w-[min(100%,320px)]"
           >
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-cyan-400/15 dark:bg-cyan-400/10 dark:shadow-none">
               <div className="flex items-center justify-between gap-3">

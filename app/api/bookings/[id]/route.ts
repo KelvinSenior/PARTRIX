@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError, validationError } from "@/lib/apiErrors";
-import { getBooking, returnBookingItems, cancelBooking, updateBookingStatus } from "@/services/booking";
+import { getBooking, returnBookingItems, cancelBooking, updateBookingStatus, updateBookingItems } from "@/services/booking";
 
 const bookingUpdateSchema = z.object({
-  action: z.enum(["return", "cancel", "updateStatus"]),
+  action: z.enum(["return", "cancel", "updateStatus", "updateItems"]),
   returnItems: z
     .array(
       z.object({
@@ -14,6 +14,16 @@ const bookingUpdateSchema = z.object({
           .number({ message: "Quantity must be a number." })
           .int({ message: "Quantity must be a whole number." })
           .positive({ message: "Return quantity must be at least 1." }),
+      }),
+    )
+    .optional(),
+  items: z
+    .array(
+      z.object({
+        bookingItemId: z.string().uuid({ message: "Select a valid booking item." }),
+        quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
+        discount: z.number().min(0).optional(),
+        notes: z.string().nullable().optional(),
       }),
     )
     .optional(),
@@ -84,6 +94,14 @@ export async function PATCH(request: Request, context: RouteContext) {
         return apiError("Status is required for updateStatus action.", 400);
       }
       const booking = await updateBookingStatus(parsedId.data, payload.data.status);
+      return NextResponse.json({ booking });
+    }
+
+    if (payload.data.action === "updateItems") {
+      if (!payload.data.items) {
+        return apiError("Items are required for updateItems action.", 400);
+      }
+      const booking = await updateBookingItems(parsedId.data, payload.data.items);
       return NextResponse.json({ booking });
     }
 
