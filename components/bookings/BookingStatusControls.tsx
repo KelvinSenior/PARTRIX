@@ -145,7 +145,7 @@ export default function BookingStatusControls({
             value={booking.status}
             onChange={(e) => transitionTo(e.target.value)}
             disabled={loading}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+            className="min-h-[44px] w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
           >
             <option value="PENDING">Pending (Draft / Quote)</option>
             <option value="CONFIRMED">Confirmed (Items Reserved)</option>
@@ -163,14 +163,14 @@ export default function BookingStatusControls({
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-zinc-500">
             Suggested Next Action
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             {nextSteps.map((step) => (
               <button
                 key={step.target}
                 type="button"
                 onClick={() => transitionTo(step.target)}
                 disabled={loading}
-                className={`inline-flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${step.style}`}
+                className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${step.style}`}
               >
                 <RefreshCcw className="h-3.5 w-3.5" aria-hidden />
                 {step.label}

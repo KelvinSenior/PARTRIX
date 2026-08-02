@@ -18,10 +18,10 @@ export const appTitle = "text-2xl font-semibold tracking-tight text-slate-900 sm
 export const appSubtitle = "text-sm leading-relaxed text-slate-600 dark:text-zinc-400";
 
 export const appBtnPrimary =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-cyan-600 px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(8,145,178,0.22)] transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#22D3EE] dark:text-[#050816] dark:hover:bg-cyan-300 dark:shadow-[0_8px_24px_rgba(34,211,238,0.32)]";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-cyan-600 px-5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(8,145,178,0.22)] transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#22D3EE] dark:text-[#050816] dark:hover:bg-cyan-300 dark:shadow-[0_8px_24px_rgba(34,211,238,0.32)]";
 
 export const appBtnSecondary =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white/80 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-cyan-200/20 dark:bg-white/5 dark:text-cyan-100 dark:hover:bg-white/10";
+  "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white/80 px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-cyan-200/20 dark:bg-white/5 dark:text-cyan-100 dark:hover:bg-white/10";
 
 export const appInput =
   "h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-cyan-600 focus:shadow-[0_0_0_2px_rgba(8,145,178,0.15)] dark:border-cyan-200/15 dark:bg-[#050816]/80 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-300/60 dark:focus:shadow-[0_0_0_2px_rgba(34,211,238,0.15)]";

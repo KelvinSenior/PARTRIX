@@ -33,14 +33,14 @@ export default function RecentBookings({ bookings }: { bookings: BookingDTO[] })
           <p className="py-8 text-center text-sm text-zinc-500">No bookings yet</p>
         ) : (
           recentBookings.map((booking) => (
-            <div key={booking.id} className={`${appCardInner} flex flex-wrap items-center justify-between gap-3`}>
+            <div key={booking.id} className={`${appCardInner} flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`}>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
                   {booking.customer.firstName} {booking.customer.lastName}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-zinc-500">{booking.bookingNumber}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[booking.status] ?? statusStyles.PENDING}`}>
                   {booking.status}
                 </span>

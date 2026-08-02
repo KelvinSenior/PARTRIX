@@ -9,7 +9,7 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
-      <div className="mx-auto max-w-lg px-3 pb-2 pt-1">
+      <div className="mx-auto max-w-lg px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
         <div className="flex items-stretch justify-between gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1.5 shadow-[0_-8px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-cyan-200/15 dark:bg-[#0c1528]/95 dark:shadow-[0_-8px_32px_rgba(2,6,23,0.6)]">
           {mobileBottomNavItems.map((item) => {
             const active = isNavActive(pathname, item.href);

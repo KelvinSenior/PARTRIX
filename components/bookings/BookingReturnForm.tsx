@@ -95,7 +95,7 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
                   Booked: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.quantity}</span> &middot; Returned: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.returnedQuantity}</span>
                 </p>
               </div>
-              <div className="grid gap-3 grid-cols-2">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-500">
                     Return quantity

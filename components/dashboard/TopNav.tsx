@@ -5,7 +5,7 @@ import { SessionUser } from "@/types/auth";
 import { useState } from "react";
 import { Menu, Plus } from "lucide-react";
 import MobileSidebar from "./MobileSidebar";
-import { appCard, appBtnPrimary, appBtnSecondary } from "@/lib/appStyles";
+import { appBtnPrimary, appBtnSecondary } from "@/lib/appStyles";
 
 export default function TopNav({ user }: { user: SessionUser | null }) {
   const [open, setOpen] = useState(false);
@@ -13,7 +13,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
   const greeting = user?.name?.split(" ")[0] ?? user?.email ?? "Operator";
 
   return (
-    <header className="sticky top-0 z-30 rounded-[28px] border border-slate-200/80 bg-white/95 p-5 shadow-[0_8px_24px_rgba(15,23,42,0.07)] backdrop-blur-xl dark:border-cyan-200/10 dark:bg-[#050816]/90 dark:shadow-[0_8px_32px_rgba(2,6,23,0.38)]">
+    <header className="sticky top-0 z-30 rounded-[28px] border border-slate-200/80 bg-white/95 p-4 shadow-[0_8px_24px_rgba(15,23,42,0.07)] backdrop-blur-xl sm:p-5 dark:border-cyan-200/10 dark:bg-[#050816]/90 dark:shadow-[0_8px_32px_rgba(2,6,23,0.38)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-xs uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-200/70">Welcome back</p>
@@ -39,11 +39,11 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
         </button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/profile" className={appBtnSecondary}>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <Link href="/profile" className={`${appBtnSecondary} w-full sm:w-auto`}>
           Profile
         </Link>
-        <Link href="/bookings" className={appBtnPrimary}>
+        <Link href="/bookings" className={`${appBtnPrimary} w-full sm:w-auto`}>
           <Plus className="h-4 w-4" aria-hidden />
           New booking
         </Link>

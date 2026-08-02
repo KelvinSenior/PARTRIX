@@ -31,15 +31,25 @@
   --font-mono: "Fira Code", "Courier New", monospace;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 html {
   background: var(--app-bg);
   color: var(--foreground);
+  overflow-x: clip;
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--app-bg);
   color: var(--foreground);
   font-family: var(--font-sans);
+  overflow-x: clip;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Premium app shell */
@@ -102,6 +112,7 @@ body {
 
 .touch-target {
   min-height: 44px;
+  min-width: 44px;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
   padding-left: 0.75rem;

@@ -57,11 +57,11 @@ export default async function BookingDetailPage({ params }: PageProps) {
       </Link>
 
       {/* Header */}
-      <section className={appCard}>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+      <section className={`${appCard} overflow-hidden`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <p className={appEyebrow}>Booking details</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
               {booking.bookingNumber}
             </h1>
             <p className="mt-2 text-sm text-slate-600 dark:text-zinc-400">
@@ -83,7 +83,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className={appCardInner}>
             <p className="text-xs uppercase tracking-widest text-slate-500 dark:text-zinc-500">Event date</p>
             <p className="mt-2 font-semibold text-slate-900 dark:text-white">
@@ -128,7 +128,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
             )}
           </section>
 
-      <div className="grid gap-5 lg:grid-cols-[1.9fr_0.9fr]">
+      <div className="grid gap-5 xl:grid-cols-[1.9fr_0.9fr]">
         <div className="space-y-5">
           {/* Items */}
           <BookingItemEditor booking={booking} />

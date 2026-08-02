@@ -21,10 +21,10 @@ export default function AppShell({
   fabLabel,
 }: AppShellProps) {
   return (
-    <main className={appShell}>
-      <div className="app-shell-grid mx-auto grid min-h-[100dvh] w-full max-w-[1800px] gap-5 px-0 py-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-6 lg:py-6">
+    <main className={`${appShell} overflow-x-clip`}>
+      <div className="app-shell-grid mx-auto grid min-h-[100dvh] w-full max-w-[1800px] gap-5 px-0 py-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:py-6">
         <Sidebar />
-        <section className="min-w-0 space-y-5 pb-24 lg:pb-6">
+        <section className="min-w-0 overflow-x-clip space-y-5 pb-24 lg:pb-6">
           <TopNav user={user} />
           {children}
         </section>

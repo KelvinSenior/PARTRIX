@@ -10,8 +10,8 @@ export default function Sidebar() {
   const pathname = usePathname() || "/";
 
   return (
-    <aside className="hidden w-full shrink-0 flex-col overflow-hidden rounded-[30px] border border-slate-300/90 bg-slate-50/95 p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_24px_70px_rgba(15,23,42,0.14)] lg:flex lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] dark:border-cyan-200/10 dark:bg-[#060b1a]/95">
-      <div className="flex h-full flex-1 flex-col rounded-[24px] border border-slate-200/80 bg-white/95 p-4 shadow-sm dark:border-cyan-200/10 dark:bg-[#070d1f]/90">
+    <aside className="hidden w-full shrink-0 flex-col overflow-hidden rounded-[30px] border border-slate-300/90 bg-slate-50/95 p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_24px_70px_rgba(15,23,42,0.14)] lg:flex lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:min-h-0 dark:border-cyan-200/10 dark:bg-[#060b1a]/95">
+      <div className="flex h-full flex-1 flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/95 p-4 shadow-sm dark:border-cyan-200/10 dark:bg-[#070d1f]/90">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 dark:text-cyan-200/75">Partrix</p>
@@ -26,7 +26,7 @@ export default function Sidebar() {
           </motion.div>
         </div>
 
-        <nav className="mt-1 flex flex-1 flex-col gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-2 shadow-inner dark:border-white/10 dark:bg-white/[0.04]" aria-label="Sidebar">
+        <nav className="mt-1 flex flex-1 flex-col gap-1.5 overflow-y-auto rounded-2xl border border-slate-200/80 bg-slate-50/90 p-2 shadow-inner dark:border-white/10 dark:bg-white/[0.04]" aria-label="Sidebar">
           {primaryNavItems.map((item) => {
             const active = isNavActive(pathname, item.href);
             const Icon = item.icon;

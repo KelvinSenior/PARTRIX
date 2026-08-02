@@ -45,7 +45,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell user={user}>
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard icon="briefcase" label="Active bookings" value={activeBookings.toString()} change={bookingChange} />
         <StatsCard icon="wallet" label="Revenue" value={`GHC${(totalRevenue / 1000).toFixed(1)}k`} change={revenueChange} highlight />
         <StatsCard icon="package" label="Inventory alerts" value={inventoryAlerts.toString()} change={alertChange} />

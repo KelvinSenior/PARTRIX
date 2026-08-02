@@ -34,7 +34,7 @@ export default function BookingTable({ bookings }: { bookings: BookingDTO[] }) {
         </div>
       ) : (
         <div className="-mx-1 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+          <table className="min-w-[780px] text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200/80 text-xs uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:text-zinc-500">
                 <th className="px-3 py-3">Booking</th>

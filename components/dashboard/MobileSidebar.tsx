@@ -46,7 +46,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
               </div>
             </div>
 
-            <nav className="flex flex-col gap-1 overflow-y-auto pb-4">
+            <nav className="flex flex-col gap-1 overflow-y-auto pb-4 overscroll-contain">
               {primaryNavItems.map((item) => {
                 const active = isNavActive(pathname, item.href);
                 const Icon = item.icon;

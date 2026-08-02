@@ -138,11 +138,11 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[480px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-white/10 text-xs uppercase tracking-[0.2em] text-zinc-500">
-                    <th className="pb-2 pr-4">Customer</th>
-                    <th className="pb-2 pr-4">Email</th>
-                    <th className="pb-2">Outstanding</th>
+                <thead className="sticky top-0 z-10 bg-[#050816]/95 text-xs uppercase tracking-[0.2em] text-zinc-500 backdrop-blur-xl">
+                  <tr className="border-b border-white/10">
+                    <th className="pb-2 pr-4 text-left">Customer</th>
+                    <th className="pb-2 pr-4 text-left">Email</th>
+                    <th className="pb-2 text-left">Outstanding</th>
                   </tr>
                 </thead>
                 <tbody>

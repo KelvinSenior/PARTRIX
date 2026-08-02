@@ -23,8 +23,8 @@ export default function DataTable<T>({ columns, data, emptyState, className }: D
 
   return (
     <div className={mergeClasses("overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur-xl sm:rounded-3xl dark:border-cyan-200/10 dark:bg-white/[0.04]", className)}>
-      <table className="min-w-full border-collapse text-left text-sm text-slate-700 dark:text-zinc-300">
-        <thead className="border-b border-slate-200/80 text-xs uppercase tracking-[0.2em] text-slate-500 dark:border-white/10 dark:text-zinc-500">
+      <table className="min-w-[640px] border-collapse text-left text-sm text-slate-700 dark:text-zinc-300">
+        <thead className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/95 text-xs uppercase tracking-[0.2em] text-slate-500 backdrop-blur-xl dark:border-white/10 dark:bg-[#050816]/95 dark:text-zinc-500">
           <tr>
             {columns.map((column, index) => (
               <th key={index} className={mergeClasses("px-4 py-4 text-left align-middle", column.headerClassName)}>

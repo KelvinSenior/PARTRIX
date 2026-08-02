@@ -32,7 +32,7 @@ export default function StatsCard({ label, value, change, icon, highlight }: Sta
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`${appCard} ${highlight ? "ring-1 ring-cyan-400/25" : ""}`}
+      className={`${appCard} h-full ${highlight ? "ring-1 ring-cyan-400/25" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-200/80 bg-cyan-100 text-cyan-700 shadow-sm dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200">

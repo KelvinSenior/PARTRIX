@@ -38,9 +38,9 @@ export default function BookingChart({ bookings }: { bookings: BookingDTO[] }) {
         <span className="rounded-full border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 dark:border-cyan-400/25 dark:bg-cyan-400/15 dark:text-cyan-200">By weekday</span>
       </div>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-7">
+      <div className="mt-8 grid grid-cols-7 gap-2 sm:gap-4">
         {barsData.map((bar) => (
-          <div key={bar.label} className="flex flex-col items-center gap-3">
+          <div key={bar.label} className="flex min-w-0 flex-col items-center gap-3">
             <motion.div
               initial={{ height: 0 }}
               animate={{ height: `${(bar.value / Math.max(maxValue, 1)) * 100}%` }}

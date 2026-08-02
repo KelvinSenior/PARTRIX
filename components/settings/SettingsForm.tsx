@@ -82,14 +82,17 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
       <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white">Business profile</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <input
-            value={settings.business.name}
-            onChange={(e) => updateField("business.name", e.target.value)}
-            placeholder="Business name"
-            className={appInput}
-          />
-          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
-            <span>Workspace slug</span>
+          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Business name</span>
+            <input
+              value={settings.business.name}
+              onChange={(e) => updateField("business.name", e.target.value)}
+              placeholder="Business name"
+              className={appInput}
+            />
+          </label>
+          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Workspace slug</span>
             <input
               value={settings.business.slug}
               onChange={(e) =>
@@ -106,25 +109,34 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
           <p className="sm:col-span-2 text-sm text-slate-500 dark:text-zinc-400">
             This slug identifies your workspace for signup and team joins. Share it with staff so they can join the same Partrix workspace.
           </p>
-          <input
-            value={settings.business.contactEmail ?? ""}
-            onChange={(e) => updateField("business.contactEmail", e.target.value)}
-            placeholder="Contact email"
-            type="email"
-            className={appInput}
-          />
-          <input
-            value={settings.business.phone ?? ""}
-            onChange={(e) => updateField("business.phone", e.target.value)}
-            placeholder="Phone number"
-            className={appInput}
-          />
-          <input
-            value={settings.business.address ?? ""}
-            onChange={(e) => updateField("business.address", e.target.value)}
-            placeholder="Address"
-            className={appInput}
-          />
+          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Contact email</span>
+            <input
+              value={settings.business.contactEmail ?? ""}
+              onChange={(e) => updateField("business.contactEmail", e.target.value)}
+              placeholder="Contact email"
+              type="email"
+              className={appInput}
+            />
+          </label>
+          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
+            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Phone number</span>
+            <input
+              value={settings.business.phone ?? ""}
+              onChange={(e) => updateField("business.phone", e.target.value)}
+              placeholder="Phone number"
+              className={appInput}
+            />
+          </label>
+          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300 sm:col-span-2">
+            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Address</span>
+            <input
+              value={settings.business.address ?? ""}
+              onChange={(e) => updateField("business.address", e.target.value)}
+              placeholder="Address"
+              className={appInput}
+            />
+          </label>
         </div>
       </section>
 
