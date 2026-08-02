@@ -200,23 +200,23 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <span className="text-slate-900 dark:text-white">GHC{booking.totalAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                <span>Deposit amount</span>
+                <span>Refundable deposit amount</span>
                 <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                <span>Deposit paid</span>
+                <span>Refundable deposit paid</span>
                 <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositPaid.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                <span>Deposit refunded</span>
+                <span>Refundable deposit refunded</span>
                 <span className="text-amber-700 dark:text-amber-200">GHC{booking.depositRefunded.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                <span>Deposit outstanding</span>
+                <span>Refundable deposit outstanding</span>
                 <span className="text-cyan-700 dark:text-cyan-200">GHC{booking.depositOutstanding.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                <span>Deposit status</span>
+                <span>Refundable deposit status</span>
                 <span className="font-semibold text-slate-900 dark:text-white">{booking.depositStatus.replace(/_/g, " ")}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">

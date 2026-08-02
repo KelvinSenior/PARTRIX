@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { BookingItemPayload } from "@/types/booking";
 import type { InventoryItemDTO } from "@/types/inventory";
@@ -61,6 +61,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const customerSearchRef = useRef<HTMLInputElement>(null);
+  const eventDateRef = useRef<HTMLInputElement>(null);
+  const inventoryPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/inventory?availability=available&sort=name")
@@ -153,7 +159,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     const fees = Number(deliveryFee) + Number(setupFee);
     const total = Math.max(subtotal + fees - Number(discount), 0);
     const deposit = Number(((total * activeSettings.deposit.requiredDepositPercent) / 100).toFixed(2));
-    const balance = Number((total - deposit).toFixed(2));
+    const balance = Number((total + deposit).toFixed(2));
     return { subtotal, total, deposit, balance };
   }, [items, inventory, deliveryFee, setupFee, discount, activeSettings.deposit.requiredDepositPercent]);
 
@@ -179,6 +185,16 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
+  function clearValidationError(field: string) {
+    setValidationErrors((current) => {
+      if (!current[field]) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+    if (error) setError(null);
+  }
+
   function clearForm() {
     setActiveStep(0);
     setItems([]);
@@ -200,6 +216,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setStatus("PENDING");
     setNotes("");
     setError(null);
+    setValidationErrors({});
     setSuccess("Booking flow cleared.");
     window.localStorage.removeItem("partrix-booking-draft");
   }
@@ -231,33 +248,57 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   }
 
   function validateStep(stepIndex: number) {
+    const nextErrors: Record<string, string> = {};
+
     switch (stepIndex) {
       case 0:
         if (customerMode === "existing") {
           if (!selectedCustomerId) {
-            setError("Select a customer before continuing.");
-            return false;
+            nextErrors.customer = "Please select a customer before continuing.";
           }
-        } else if (!firstName.trim() || !lastName.trim()) {
-          setError("Add a first and last name for the new customer.");
-          return false;
+        } else {
+          if (!firstName.trim()) {
+            nextErrors.firstName = "Please enter the customer's first name.";
+          }
+          if (!lastName.trim()) {
+            nextErrors.lastName = "Please enter the customer's last name.";
+          }
+          if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            nextErrors.email = "Enter a valid email address.";
+          }
+          if (phone.trim() && !/^[\d\s+\-().]*$/.test(phone)) {
+            nextErrors.phone = "Phone number contains invalid characters.";
+          }
         }
         break;
       case 1:
         if (!eventDate) {
-          setError("Choose an event date to continue.");
-          return false;
+          nextErrors.eventDate = "Please choose an event date before continuing.";
         }
         break;
       case 2:
         if (selectedItems.length === 0) {
-          setError("Choose at least one inventory item before continuing.");
-          return false;
+          nextErrors.items = "Choose at least one inventory item before continuing.";
         }
         break;
       default:
         break;
     }
+
+    setValidationErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      const firstField = Object.keys(nextErrors)[0];
+      setError(nextErrors[firstField]);
+      setTimeout(() => {
+        if (firstField === "customer") customerSearchRef.current?.focus();
+        if (firstField === "firstName") firstNameRef.current?.focus();
+        if (firstField === "lastName") lastNameRef.current?.focus();
+        if (firstField === "eventDate") eventDateRef.current?.focus();
+        if (firstField === "items") inventoryPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 0);
+      return false;
+    }
+
     setError(null);
     return true;
   }
@@ -401,11 +442,14 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Search customer
                     <input
+                      ref={customerSearchRef}
                       value={customerSearch}
-                      onChange={(event) => setCustomerSearch(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                      onChange={(event) => { setCustomerSearch(event.target.value); clearValidationError("customer"); }}
+                      className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.customer ? "border-rose-400" : "border-zinc-200"}`}
                       placeholder="Type a name or email"
+                      aria-invalid={Boolean(validationErrors.customer)}
                     />
+                    {validationErrors.customer ? <p className="mt-2 text-sm text-rose-600">{validationErrors.customer}</p> : null}
                   </label>
                   <div className="space-y-2">
                     {filteredCustomers.map((customer) => (
@@ -429,19 +473,23 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     First name
-                    <input value={firstName} onChange={(event) => setFirstName(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" required />
+                    <input ref={firstNameRef} value={firstName} onChange={(event) => { setFirstName(event.target.value); clearValidationError("firstName"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.firstName ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.firstName)} />
+                    {validationErrors.firstName ? <p className="mt-2 text-sm text-rose-600">{validationErrors.firstName}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Last name
-                    <input value={lastName} onChange={(event) => setLastName(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" required />
+                    <input ref={lastNameRef} value={lastName} onChange={(event) => { setLastName(event.target.value); clearValidationError("lastName"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.lastName ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.lastName)} />
+                    {validationErrors.lastName ? <p className="mt-2 text-sm text-rose-600">{validationErrors.lastName}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Email
-                    <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+                    <input type="email" value={email} onChange={(event) => { setEmail(event.target.value); clearValidationError("email"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.email ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.email)} />
+                    {validationErrors.email ? <p className="mt-2 text-sm text-rose-600">{validationErrors.email}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Phone
-                    <input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+                    <input value={phone} onChange={(event) => { setPhone(event.target.value); clearValidationError("phone"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.phone ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.phone)} />
+                    {validationErrors.phone ? <p className="mt-2 text-sm text-rose-600">{validationErrors.phone}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:col-span-2">
                     Company
@@ -476,7 +524,8 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:col-span-2">
                   Event date
-                  <input type="date" value={eventDate} onChange={(event) => setEventDate(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" required />
+                  <input ref={eventDateRef} type="date" value={eventDate} onChange={(event) => { setEventDate(event.target.value); clearValidationError("eventDate"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.eventDate ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.eventDate)} />
+                  {validationErrors.eventDate ? <p className="mt-2 text-sm text-rose-600">{validationErrors.eventDate}</p> : null}
                 </label>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Delivery date
@@ -543,6 +592,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Selected items</p>
                 <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{selectedItems.length}</span>
               </div>
+              {validationErrors.items ? <p className="mt-2 text-sm text-rose-600">{validationErrors.items}</p> : null}
               <div className="mt-4 space-y-3">
                 {selectedItems.length === 0 ? (
                   <p className="rounded-2xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">No items selected yet. Tap any card to add it to the booking.</p>
@@ -592,12 +642,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{(Number(deliveryFee) + Number(setupFee)).toFixed(2)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Deposit</p>
+                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Refundable deposit</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.deposit.toFixed(2)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Grand total</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.total.toFixed(2)}</p>
+                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Amount due now</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.balance.toFixed(2)}</p>
                 </div>
               </div>
             </div>
@@ -627,11 +677,11 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Deposit and payment overview</p>
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="font-semibold text-slate-900 dark:text-white">Deposit required</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Refundable deposit</p>
                   <p className="mt-1">GHC{bookingTotals.deposit.toFixed(2)} at {activeSettings.deposit.requiredDepositPercent}%</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="font-semibold text-slate-900 dark:text-white">Remaining balance</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Amount due now</p>
                   <p className="mt-1">GHC{bookingTotals.balance.toFixed(2)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -644,7 +694,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Next steps</p>
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Payment collection can be logged after the booking is created from the booking detail view.</div>
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Deposit expectations stay linked to the existing business rules and are calculated automatically.</div>
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Refundable deposit expectations stay linked to the existing business rules and are calculated automatically.</div>
               </div>
             </div>
           </div>
@@ -669,14 +719,14 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Pricing</p>
-                  <p className="mt-1">Subtotal GHC{bookingTotals.subtotal.toFixed(2)} · Deposit GHC{bookingTotals.deposit.toFixed(2)} · Total GHC{bookingTotals.total.toFixed(2)}</p>
+                  <p className="mt-1">Subtotal GHC{bookingTotals.subtotal.toFixed(2)} · Refundable deposit GHC{bookingTotals.deposit.toFixed(2)} · Amount due now GHC{bookingTotals.balance.toFixed(2)}</p>
                 </div>
               </div>
             </div>
             <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Ready to create</p>
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Your booking will be created with the same pricing, deposit, and inventory rules already used by the app.</div>
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Your booking will be created with the same pricing, refundable deposit, and inventory rules already used by the app.</div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">You can still adjust quantities or fees from the previous steps before confirming.</div>
               </div>
             </div>

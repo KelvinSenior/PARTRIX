@@ -162,7 +162,7 @@ async function computeBookingTotals(
     (itemSum + payload.deliveryFee + payload.setupFee - payload.discount).toFixed(2),
   );
   const deposit = Number(((total * depositPercent) / 100).toFixed(2));
-  const balance = total;
+  const balance = Number((total + deposit).toFixed(2));
 
   return { itemTotals, total, deposit, balance };
 }
@@ -171,14 +171,15 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
   const user = await requireOrganizationContext();
   const settings = await getOrganizationSettings();
   const depositPercent = settings.deposit.requiredDepositPercent;
+  const organizationId = user.organizationId!;
 
-  return prisma.$transaction(async (tx) => {
+  const createdBooking = await prisma.$transaction(async (tx) => {
     const eventDate = new Date(payload.eventDate);
     const returnDate = payload.returnDate ? new Date(payload.returnDate) : eventDate;
     const itemIds = payload.items.map((item) => item.inventoryItemId);
 
     const inventoryItems = await tx.inventoryItem.findMany({
-      where: { id: { in: itemIds }, organizationId: user.organizationId! },
+      where: { id: { in: itemIds }, organizationId },
     });
 
     if (inventoryItems.length !== payload.items.length) {
@@ -207,7 +208,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       }
 
       return {
-        organization: { connect: { id: user.organizationId! } },
+        organization: { connect: { id: organizationId } },
         inventoryItem: { connect: { id: inventoryItem.id } },
         quantity: item.quantity,
         unitPrice: inventoryItem.unitPrice.toString(),
@@ -225,9 +226,9 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
 
     const booking = await tx.booking.create({
       data: {
-        organization: { connect: { id: user.organizationId! } },
+        organization: { connect: { id: organizationId } },
         bookingNumber: formatBookingNumber(),
-        customer: await findOrCreateCustomer(payload.customer, tx, user.organizationId!),
+        customer: await findOrCreateCustomer(payload.customer, tx, organizationId),
         eventDate,
         deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : null,
         returnDate: payload.returnDate ? new Date(payload.returnDate) : null,
@@ -267,24 +268,29 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       ),
     );
 
-    await logActivity({
-      tx,
-      organizationId: user.organizationId!,
-      userId: user.id,
-      bookingId: booking.id,
-      action: "Create booking",
-      entity: "Booking",
-      entityId: booking.id,
-      details: {
-        bookingNumber: booking.bookingNumber,
-        totalAmount: totals.total,
-        depositAmount: totals.deposit,
-      },
-      level: "INFO",
-    });
+    return booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>;
+  }, { timeout: 20000, maxWait: 20000 });
 
-    return serializeBooking(booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
+  if (!createdBooking) {
+    throw new Error("Booking creation failed.");
+  }
+
+  await logActivity({
+    organizationId,
+    userId: user.id,
+    bookingId: createdBooking.id,
+    action: "Create booking",
+    entity: "Booking",
+    entityId: createdBooking.id,
+    details: {
+      bookingNumber: createdBooking.bookingNumber,
+      totalAmount: decimalToNumber(createdBooking.totalAmount),
+      depositAmount: decimalToNumber(createdBooking.depositAmount),
+    },
+    level: "INFO",
   });
+
+  return serializeBooking(createdBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
 }
 
 export async function listBookings(opts?: {

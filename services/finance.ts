@@ -76,7 +76,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
             data: {
               depositRefunded: nextDepositRefunded.toFixed(2),
               refundStatus,
-              balanceDue: (decimalToNumber(booking.balanceDue) + amount).toFixed(2),
+              balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - refunded).toFixed(2),
             } as any,
           });
         } else {

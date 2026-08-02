@@ -88,19 +88,23 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             placeholder="Business name"
             className={appInput}
           />
-          <input
-            value={settings.business.slug}
-            onChange={(e) =>
-              updateField(
-                "business.slug",
-                e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
-              )
-            }
-            placeholder="Workspace slug"
-            className={appInput}
-          />
+          <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
+            <span>Workspace slug</span>
+            <input
+              value={settings.business.slug}
+              onChange={(e) =>
+                updateField(
+                  "business.slug",
+                  e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
+                )
+              }
+              placeholder="workspace-slug"
+              className={appInput}
+              autoComplete="off"
+            />
+          </label>
           <p className="sm:col-span-2 text-sm text-slate-500 dark:text-zinc-400">
-            Share this workspace slug with staff members so they can join the same Partrix workspace during signup.
+            This slug identifies your workspace for signup and team joins. Share it with staff so they can join the same Partrix workspace.
           </p>
           <input
             value={settings.business.contactEmail ?? ""}

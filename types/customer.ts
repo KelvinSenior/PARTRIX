@@ -1,6 +1,6 @@
 export interface CustomerPayload {
   firstName: string;
-  lastName: string;
+  lastName?: string | null;
   email?: string | null;
   phone?: string | null;
   company?: string | null;

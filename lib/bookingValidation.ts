@@ -21,6 +21,21 @@ export const bookingCustomerSchema = z.object({
   phone: z.string().trim().optional().nullable(),
   company: z.string().trim().optional().nullable(),
   address: z.string().trim().optional().nullable(),
+}).superRefine((customer, ctx) => {
+  if (customer.id) {
+    return;
+  }
+
+  const firstName = customer.firstName?.trim();
+  const lastName = customer.lastName?.trim();
+
+  if (!firstName) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstName"], message: "First name is required when creating a new customer." });
+  }
+
+  if (!lastName) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["lastName"], message: "Last name is required when creating a new customer." });
+  }
 });
 
 export const bookingPayloadSchema = z

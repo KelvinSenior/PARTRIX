@@ -28,16 +28,26 @@ function serializeCustomer(customer: any): CustomerDTO {
 export async function createCustomer(payload: CustomerPayload): Promise<CustomerDTO> {
   const user = await requireOrganizationContext();
 
+  const normalizedPayload = {
+    firstName: payload.firstName.trim(),
+    lastName: payload.lastName?.trim() || null,
+    email: payload.email?.trim() || null,
+    phone: payload.phone?.trim() || null,
+    company: payload.company?.trim() || null,
+    address: payload.address?.trim() || null,
+    notes: payload.notes?.trim() || null,
+  };
+
   const customer = await prisma.customer.create({
     data: {
       organizationId: user.organizationId!,
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email ?? null,
-      phone: payload.phone ?? null,
-      company: payload.company ?? null,
-      address: payload.address ?? null,
-      notes: payload.notes ?? null,
+      firstName: normalizedPayload.firstName,
+      lastName: normalizedPayload.lastName ?? "",
+      email: normalizedPayload.email,
+      phone: normalizedPayload.phone,
+      company: normalizedPayload.company,
+      address: normalizedPayload.address,
+      notes: normalizedPayload.notes,
     },
   });
 
@@ -57,16 +67,26 @@ export async function updateCustomer(id: string, payload: CustomerPayload): Prom
     throw new Error("Customer not found in this workspace.");
   }
 
+  const normalizedPayload = {
+    firstName: payload.firstName.trim(),
+    lastName: payload.lastName?.trim() || null,
+    email: payload.email?.trim() || null,
+    phone: payload.phone?.trim() || null,
+    company: payload.company?.trim() || null,
+    address: payload.address?.trim() || null,
+    notes: payload.notes?.trim() || null,
+  };
+
   const customer = await prisma.customer.update({
     where: { id },
     data: {
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      email: payload.email ?? null,
-      phone: payload.phone ?? null,
-      company: payload.company ?? null,
-      address: payload.address ?? null,
-      notes: payload.notes ?? null,
+      firstName: normalizedPayload.firstName,
+      lastName: normalizedPayload.lastName ?? undefined,
+      email: normalizedPayload.email,
+      phone: normalizedPayload.phone,
+      company: normalizedPayload.company,
+      address: normalizedPayload.address,
+      notes: normalizedPayload.notes,
     },
   });
 

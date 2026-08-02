@@ -16,7 +16,7 @@ const paymentMethods = [
 
 const paymentTypes = [
   { label: "Rental payment", value: "RENTAL" },
-  { label: "Deposit payment", value: "SECURITY_DEPOSIT" },
+  { label: "Refundable deposit payment", value: "SECURITY_DEPOSIT" },
   { label: "Refund", value: "REFUND" },
 ];
 
