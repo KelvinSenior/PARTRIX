@@ -5,10 +5,11 @@ import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/layout/PageHeader";
 import { getOrganizationSettings } from "@/services/settings";
 import { listActivityLogs } from "@/services/audit";
-import { appCard, appCardInner, appBtnSecondary } from "@/lib/appStyles";
+import { appCard, appBtnSecondary } from "@/lib/appStyles";
 import SettingsForm from "@/components/settings/SettingsForm";
 import LogoutButton from "@/components/auth/LogoutButton";
 import SettingsRefreshButton from "@/components/settings/SettingsRefreshButton";
+import AuditLogPanel from "@/components/settings/AuditLogPanel";
 
 export default async function SettingsPage() {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -59,33 +60,8 @@ export default async function SettingsPage() {
               <SettingsRefreshButton />
             </div>
 
-            <div className="mt-5 space-y-3 text-sm text-zinc-300">
-              {activityLogs.length === 0 ? (
-                <p className="text-zinc-500">No recent activity has been recorded yet.</p>
-              ) : (
-                <div className="space-y-3">
-                  {activityLogs.slice(0, 12).map((log) => (
-                    <div key={log.id} className={`${appCardInner} space-y-2`}>
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{log.action}</p>
-                          <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{log.entity}</p>
-                        </div>
-                        <span className="text-[11px] uppercase tracking-[0.24em] text-zinc-400">{log.level}</span>
-                      </div>
-                      <div className="grid gap-1 text-xs text-zinc-400 sm:grid-cols-2">
-                        <div>{log.userName ?? "System"}</div>
-                        <div>{new Date(log.createdAt).toLocaleString()}</div>
-                      </div>
-                      {log.details && Object.keys(log.details).length > 0 ? (
-                        <pre className="overflow-x-auto rounded-xl bg-slate-950/70 p-3 text-xs text-zinc-300">
-                          {JSON.stringify(log.details, null, 2)}
-                        </pre>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="mt-5">
+              <AuditLogPanel logs={activityLogs} />
             </div>
           </section>
         </div>

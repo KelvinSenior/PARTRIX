@@ -1,6 +1,7 @@
 import type { InventoryItem, Prisma } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
+import { createNotification } from "@/services/notification";
 import type { InventoryItemPayload } from "@/lib/inventoryValidation";
 import type {
   InventoryItemDTO,
@@ -233,6 +234,21 @@ export async function createInventoryItem(data: InventoryItemPayload) {
     data: { organizationId: user.organizationId!, ...toPrismaData(data) },
   });
 
+  if (item.minimumThreshold > 0 && item.availableQuantity <= item.minimumThreshold) {
+    await createNotification({
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "INVENTORY",
+      priority: "WARNING",
+      title: "Low stock warning",
+      message: `${item.name} is at or below its minimum stock threshold.`,
+      href: "/inventory",
+      entity: "InventoryItem",
+      entityId: item.id,
+      metadata: { sku: item.sku, availableQuantity: item.availableQuantity },
+    });
+  }
+
   return serializeInventoryItem(item);
 }
 
@@ -251,6 +267,21 @@ export async function updateInventoryItem(
     data: toPrismaData(data),
   });
 
+  if (item.availableQuantity === 0 || (item.minimumThreshold > 0 && item.availableQuantity <= item.minimumThreshold)) {
+    await createNotification({
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "INVENTORY",
+      priority: item.availableQuantity === 0 ? "CRITICAL" : "WARNING",
+      title: item.availableQuantity === 0 ? "Item unavailable" : "Low stock warning",
+      message: `${item.name} has ${item.availableQuantity} available.`,
+      href: "/inventory",
+      entity: "InventoryItem",
+      entityId: item.id,
+      metadata: { sku: item.sku, availableQuantity: item.availableQuantity },
+    });
+  }
+
   return serializeInventoryItem(item);
 }
 
@@ -263,4 +294,3 @@ export async function deleteInventoryItem(id: string) {
 
   await prisma.inventoryItem.delete({ where: { id } });
 }
-

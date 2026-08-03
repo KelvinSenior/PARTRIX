@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import BookingForm from "@/components/bookings/BookingForm";
 import BookingTable from "@/components/bookings/BookingTable";
-import BookingFilters from "@/components/bookings/BookingFilters";
 import AppShell from "@/components/layout/AppShell";
 import PageHeader from "@/components/layout/PageHeader";
 import { getCurrentUserFromToken } from "@/services/auth";
@@ -42,9 +40,6 @@ export default async function BookingsPage({
       </div>
 
       <div className="space-y-3">
-        <Suspense>
-          <BookingFilters />
-        </Suspense>
         <BookingTable bookings={bookingsResult.bookings} settings={settings} />
       </div>
     </AppShell>

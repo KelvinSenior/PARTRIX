@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { logActivity } from "@/services/audit";
 import { getOrganizationSettings } from "@/services/settings";
+import { createNotification } from "@/services/notification";
 import type { PaymentPayload, PaymentDTO, ExpensePayload, ExpenseDTO, FinanceSummary } from "@/types/finance";
 
 function decimalToNumber(value: any): number {
@@ -101,6 +102,20 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
           bookingId: payment.bookingId,
         },
         level: "INFO",
+      });
+
+      await createNotification({
+        tx,
+        organizationId: user.organizationId!,
+        userId: processedById ?? user.id,
+        type: "PAYMENT",
+        priority: paymentType === "REFUND" ? "INFO" : "SUCCESS",
+        title: paymentType === "REFUND" ? "Refund recorded" : "Payment received",
+        message: `${paymentType.replace(/_/g, " ")} of GHC${decimalToNumber(payment.amount).toFixed(2)} was recorded.`,
+        href: `/bookings/${payment.bookingId}`,
+        entity: "Payment",
+        entityId: payment.id,
+        metadata: { amount: decimalToNumber(payment.amount), method: payment.method, paymentType },
       });
     }
 

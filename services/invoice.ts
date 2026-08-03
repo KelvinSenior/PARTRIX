@@ -4,6 +4,7 @@ import { getOrganizationSettings } from "@/services/settings";
 import { logActivity } from "@/services/audit";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { formatAmount, formatDate } from "@/lib/branding";
+import { createNotification } from "@/services/notification";
 import type { BookingDTO } from "@/types/booking";
 import type { PaymentDTO } from "@/types/finance";
 import type { SettingsDTO } from "@/types/settings";
@@ -94,57 +95,80 @@ function buildInvoicePages(data: InvoiceData) {
   const { booking, payments, settings, invoiceNumber, issuedAt } = data;
   const brand = hexToRgb(settings.appearance.brandColor);
   const brandColor = `${brand.r.toFixed(3)} ${brand.g.toFixed(3)} ${brand.b.toFixed(3)}`;
-  const dark = "0.02 0.03 0.08";
+  const ink = "0.07 0.09 0.13";
   const muted = "0.35 0.39 0.45";
+  const soft = "0.96 0.97 0.98";
+  const rule = "0.86 0.88 0.92";
   const paid = payments
     .filter((payment) => payment.status === "COMPLETED")
     .reduce((sum, payment) => sum + payment.amount, 0);
   const customerName = `${booking.customer.firstName} ${booking.customer.lastName}`.trim();
+  const dueDate = booking.returnDate || booking.eventDate;
+  const rentalPeriod = `${formatDate(booking.eventDate, settings)} - ${booking.returnDate ? formatDate(booking.returnDate, settings) : "Open"}`;
+  const paymentStatus = booking.balanceDue <= 0 ? "Paid" : paid > 0 ? "Partially paid" : "Payment due";
+  const businessEmail = settings.business.businessEmail || settings.business.contactEmail || "";
+  const businessPhone = settings.business.businessPhone || settings.business.phone || "";
+  const businessAddress = [
+    settings.business.address,
+    settings.business.city,
+    settings.business.stateProvince,
+    settings.business.country,
+    settings.business.postalCode,
+  ].filter(Boolean).join(", ");
   const pages: string[] = [];
 
   let content = "";
-  let y = pageHeight - 72;
+  let y = pageHeight - 58;
 
-  content += rect(0, pageHeight - 166, pageWidth, 166, dark);
-  content += rect(margin, pageHeight - 98, 74, 6, brandColor);
-  content += text(margin, pageHeight - 76, settings.business.name, 22, "F2", "1 1 1");
-  content += text(margin, pageHeight - 102, "Rental invoice", 11, "F1", "0.74 0.80 0.88");
-  content += text(pageWidth - 216, pageHeight - 74, "INVOICE", 28, "F2", "1 1 1");
-  content += text(pageWidth - 216, pageHeight - 101, invoiceNumber, 10, "F1", "0.74 0.80 0.88");
+  content += text(margin, y, settings.business.name, 18, "F2", ink);
+  content += rect(margin, y - 12, 58, 3, brandColor);
+  content += text(pageWidth - 148, y + 2, "INVOICE", 24, "F2", ink);
+  content += rect(pageWidth - 94, y - 46, 52, 52, soft);
+  content += text(pageWidth - 85, y - 17, "LOGO", 9, "F2", muted);
+  content += text(margin, y - 32, businessAddress, 8, "F1", muted);
+  content += text(margin, y - 46, businessPhone, 8, "F1", muted);
+  content += text(margin + 138, y - 46, businessEmail, 8, "F1", muted);
+  content += text(margin, y - 60, settings.business.website || "", 8, "F1", muted);
+  content += line(margin, y - 78, pageWidth - margin, y - 78, rule, 0.8);
 
-  y = pageHeight - 208;
-  content += text(margin, y, "Bill to", 9, "F2", brandColor);
-  content += text(margin, y - 20, customerName || "Customer", 14, "F2", "0.05 0.07 0.12");
-  content += text(margin, y - 37, booking.customer.company || "", 9, "F1", muted);
-  content += text(margin, y - 54, booking.customer.email || "", 9, "F1", muted);
-  content += text(margin, y - 71, booking.customer.phone || "", 9, "F1", muted);
-  for (const [index, lineText] of wrap(booking.customer.address || "", 42).slice(0, 2).entries()) {
-    content += text(margin, y - 88 - index * 14, lineText, 9, "F1", muted);
-  }
-
-  const metaX = 354;
+  y -= 112;
   const metaRows = [
-    ["Booking", booking.bookingNumber],
-    ["Issued", formatDate(issuedAt, settings)],
-    ["Event", formatDate(booking.eventDate, settings)],
-    ["Return", booking.returnDate ? formatDate(booking.returnDate, settings) : "Open"],
+    ["Invoice number", invoiceNumber],
+    ["Booking number", booking.bookingNumber],
+    ["Issue date", formatDate(issuedAt, settings)],
+    ["Due date", formatDate(dueDate, settings)],
+    ["Payment status", paymentStatus],
   ];
-  content += rect(metaX - 16, y - 104, 198, 122, "0.96 0.98 1");
+
+  content += text(margin, y, "Customer details", 9, "F2", brandColor);
+  content += text(margin, y - 20, customerName || "Customer", 13, "F2", ink);
+  content += text(margin, y - 38, booking.customer.company || "", 9, "F1", muted);
+  content += text(margin, y - 54, booking.customer.email || "", 9, "F1", muted);
+  content += text(margin, y - 70, booking.customer.phone || "", 9, "F1", muted);
+  wrap(booking.customer.address || "", 44).slice(0, 2).forEach((lineText, index) => {
+    content += text(margin, y - 86 - index * 14, lineText, 9, "F1", muted);
+  });
+
+  const metaX = 344;
+  content += rect(metaX - 16, y - 116, 209, 136, "0.985 0.988 0.992");
   metaRows.forEach(([label, value], index) => {
-    const rowY = y - 14 - index * 26;
+    const rowY = y - 4 - index * 24;
     content += text(metaX, rowY, label, 8, "F2", muted);
-    content += text(metaX + 72, rowY, value, 9, "F1", "0.05 0.07 0.12");
+    content += text(metaX + 88, rowY, value, 8.5, "F1", ink);
   });
 
   y -= 148;
-  content += text(margin, y, "Items", 11, "F2", "0.05 0.07 0.12");
-  y -= 24;
-  content += rect(margin, y - 4, pageWidth - margin * 2, 24, "0.06 0.09 0.16");
-  content += text(margin + 12, y + 4, "Description", 8, "F2", "1 1 1");
-  content += text(326, y + 4, "Qty", 8, "F2", "1 1 1");
-  content += text(380, y + 4, "Rate", 8, "F2", "1 1 1");
-  content += text(474, y + 4, "Amount", 8, "F2", "1 1 1");
-  y -= 22;
+  content += text(margin, y, "Rental period", 9, "F2", brandColor);
+  content += text(margin + 100, y, rentalPeriod, 9, "F1", ink);
+  y -= 30;
+  content += text(margin, y, "Itemized rental", 11, "F2", ink);
+  y -= 20;
+  content += rect(margin, y - 6, pageWidth - margin * 2, 26, "0.94 0.96 0.98");
+  content += text(margin + 12, y + 3, "Description", 8, "F2", ink);
+  content += text(322, y + 3, "Qty", 8, "F2", ink);
+  content += text(378, y + 3, "Rate", 8, "F2", ink);
+  content += text(482, y + 3, "Amount", 8, "F2", ink);
+  y -= 26;
 
   booking.bookingItems.forEach((item, index) => {
     if (y < 150) {
@@ -156,12 +180,12 @@ function buildInvoicePages(data: InvoiceData) {
     }
 
     const rowHeight = 42;
-    if (index % 2 === 0) content += rect(margin, y - 26, pageWidth - margin * 2, rowHeight, "0.98 0.99 1");
-    content += text(margin + 12, y, item.inventoryItemName, 9, "F2", "0.05 0.07 0.12");
+    if (index % 2 === 0) content += rect(margin, y - 26, pageWidth - margin * 2, rowHeight, "0.985 0.988 0.992");
+    content += text(margin + 12, y, item.inventoryItemName, 9, "F2", ink);
     if (item.notes) content += text(margin + 12, y - 14, item.notes, 8, "F1", muted);
-    content += text(326, y, item.quantity, 9, "F1", "0.05 0.07 0.12");
-    content += text(380, y, money(item.unitPrice, settings), 9, "F1", "0.05 0.07 0.12");
-    content += text(474, y, money(item.totalPrice, settings), 9, "F2", "0.05 0.07 0.12");
+    content += text(326, y, item.quantity, 9, "F1", ink);
+    content += text(378, y, money(item.unitPrice, settings), 9, "F1", ink);
+    content += text(466, y, money(item.totalPrice, settings), 9, "F2", ink);
     y -= rowHeight;
   });
 
@@ -181,20 +205,20 @@ function buildInvoicePages(data: InvoiceData) {
     const value = Number(rawValue);
     const rowY = y - index * 22;
     if (label === "Total" || label === "Balance due") {
-      content += line(totalsX, rowY + 13, pageWidth - margin, rowY + 13, "0.82 0.86 0.91", 0.7);
+      content += line(totalsX, rowY + 13, pageWidth - margin, rowY + 13, rule, 0.7);
     }
     content += text(totalsX, rowY, label, label === "Balance due" ? 10 : 9, "F2", label === "Balance due" ? brandColor : muted);
-    content += text(474, rowY, value < 0 ? `-${money(Math.abs(value), settings)}` : money(value, settings), label === "Balance due" ? 10 : 9, "F2", "0.05 0.07 0.12");
+    content += text(466, rowY, value < 0 ? `-${money(Math.abs(value), settings)}` : money(value, settings), label === "Balance due" ? 10 : 9, "F2", ink);
   });
 
   const depositY = y - totals.length * 22 - 16;
-  content += rect(margin, depositY - 44, 240, 62, "0.96 0.98 1");
-  content += text(margin + 14, depositY, "Deposit", 9, "F2", brandColor);
-  content += text(margin + 14, depositY - 18, `${money(booking.depositAmount, settings)} required`, 10, "F2", "0.05 0.07 0.12");
+  content += rect(margin, depositY - 44, 250, 62, soft);
+  content += text(margin + 14, depositY, "Refundable deposit", 9, "F2", brandColor);
+  content += text(margin + 14, depositY - 18, `${money(booking.depositAmount, settings)} required`, 10, "F2", ink);
   content += text(margin + 14, depositY - 34, `${money(booking.depositPaid, settings)} paid / ${booking.depositStatus.replace(/_/g, " ")}`, 8, "F1", muted);
 
   if (booking.notes) {
-    content += text(margin, depositY - 78, "Notes", 9, "F2", "0.05 0.07 0.12");
+    content += text(margin, depositY - 78, "Notes", 9, "F2", ink);
     wrap(booking.notes, 95).slice(0, 3).forEach((lineText, index) => {
       content += text(margin, depositY - 96 - index * 14, lineText, 8, "F1", muted);
     });
@@ -264,9 +288,25 @@ export function generateInvoicePdfFromData(data: InvoiceData) {
   return buildPdf(buildInvoicePages(data));
 }
 
-export async function generateInvoicePdf(bookingId: string) {
+export async function generateInvoicePdf(bookingId: string, options?: { notify?: boolean }) {
   const data = await getInvoiceData(bookingId);
   if (!data) return null;
+
+  if (options?.notify !== false) {
+    const user = await requireOrganizationContext();
+    await createNotification({
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "INVOICE",
+      priority: data.booking.balanceDue > 0 ? "INFO" : "SUCCESS",
+      title: "Invoice created",
+      message: `${data.invoiceNumber} was generated for ${data.booking.bookingNumber}.`,
+      href: `/api/bookings/${data.booking.id}/invoice`,
+      entity: "Booking",
+      entityId: data.booking.id,
+      metadata: { invoiceNumber: data.invoiceNumber, balanceDue: data.booking.balanceDue },
+    });
+  }
 
   return {
     data,
@@ -288,7 +328,7 @@ export async function sendInvoiceEmail(options: {
     throw new Error("Invoice email is not configured. Add RESEND_API_KEY and INVOICE_EMAIL_FROM to your environment.");
   }
 
-  const invoice = await generateInvoicePdf(options.bookingId);
+  const invoice = await generateInvoicePdf(options.bookingId, { notify: false });
   if (!invoice) {
     throw new Error("Booking not found.");
   }
@@ -343,6 +383,19 @@ export async function sendInvoiceEmail(options: {
     entityId: data.booking.id,
     details: { invoiceNumber: data.invoiceNumber, recipient },
     level: "INFO",
+  });
+
+  await createNotification({
+    organizationId: user.organizationId!,
+    userId: options.userId ?? user.id,
+    type: "INVOICE",
+    priority: "SUCCESS",
+    title: "Invoice sent",
+    message: `${data.invoiceNumber} was sent to ${recipient}.`,
+    href: `/bookings/${data.booking.id}`,
+    entity: "Booking",
+    entityId: data.booking.id,
+    metadata: { invoiceNumber: data.invoiceNumber, recipient },
   });
 
   return { invoiceNumber: data.invoiceNumber, recipient };

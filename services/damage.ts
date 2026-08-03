@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
+import { createNotification } from "@/services/notification";
 import type { DamageReportDTO, CreateDamagePayload, ResolveDamagePayload } from "@/types/damage";
 
 function serialize(dr: any): DamageReportDTO {
@@ -67,6 +68,19 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
     notes: payload.notes ? payload.notes + '\n' + JSON.stringify(notesExtra) : JSON.stringify(notesExtra),
   }, include: { inventoryItem: true } });
 
+  await createNotification({
+    organizationId: user.organizationId!,
+    userId: reportedById ?? user.id,
+    type: "INVENTORY",
+    priority: dr.severity === "SEVERE" ? "CRITICAL" : "WARNING",
+    title: "Damaged item recorded",
+    message: `${quantity} ${dr.inventoryItem?.name ?? "item"} marked as damaged.`,
+    href: payload.bookingId ? `/bookings/${payload.bookingId}` : "/inventory",
+    entity: "DamageReport",
+    entityId: dr.id,
+    metadata: { inventoryItemId: payload.inventoryItemId, severity: dr.severity },
+  });
+
   // if customer charge provided and booking exists, create a Payment record as a charge
   if (payload.customerCharge && payload.bookingId) {
     await prisma.payment.create({ data: {
@@ -108,6 +122,19 @@ export async function resolveDamageReport(id: string, payload: ResolveDamagePayl
 
   const updates: any = { resolved: true, resolvedAt: new Date() };
   const updated = await prisma.damageReport.update({ where: { id }, data: updates, include: { inventoryItem: true } });
+
+  await createNotification({
+    organizationId: user.organizationId!,
+    userId: user.id,
+    type: "INVENTORY",
+    priority: "SUCCESS",
+    title: "Damage resolved",
+    message: `${updated.inventoryItem?.name ?? "Damaged item"} was resolved.`,
+    href: dr.bookingId ? `/bookings/${dr.bookingId}` : "/inventory",
+    entity: "DamageReport",
+    entityId: updated.id,
+    metadata: { action: payload.action },
+  });
 
   // optionally create a payment charge referenced to booking
   if (payload.customerCharge && dr.bookingId) {

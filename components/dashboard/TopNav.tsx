@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Menu, Plus } from "lucide-react";
 import MobileSidebar from "./MobileSidebar";
 import { appBtnPrimary, appBtnSecondary } from "@/lib/appStyles";
+import NotificationBell from "@/components/notifications/NotificationBell";
 
 export default function TopNav({ user }: { user: SessionUser | null }) {
   const [open, setOpen] = useState(false);
@@ -29,14 +30,17 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition hover:bg-slate-50 dark:border-cyan-200/15 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10 lg:hidden"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white/80 text-slate-700 transition hover:bg-slate-50 dark:border-cyan-200/15 dark:bg-white/5 dark:text-zinc-200 dark:hover:bg-white/10 lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">

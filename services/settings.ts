@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { defaultSettings, settingsSchema } from "@/lib/settingsValidation";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { logActivity } from "@/services/audit";
+import { createNotification } from "@/services/notification";
 import type { SettingsDTO, SettingsPayload } from "@/types/settings";
 
 function mergeSettings(raw: unknown): SettingsDTO {
@@ -91,6 +92,19 @@ export async function updateOrganizationSettings(payload: SettingsPayload): Prom
     entityId: user.organizationId!,
     details: { updatedFields: Object.keys(parsed) },
     level: "INFO",
+  });
+
+  await createNotification({
+    organizationId: user.organizationId!,
+    userId: user.id,
+    type: "SYSTEM",
+    priority: "INFO",
+    title: "Settings updated",
+    message: "Workspace settings were updated.",
+    href: "/settings",
+    entity: "Organization",
+    entityId: user.organizationId!,
+    metadata: { updatedFields: Object.keys(parsed) },
   });
 
   const settings = mergeSettings(updatedOrganization.settings ?? null);

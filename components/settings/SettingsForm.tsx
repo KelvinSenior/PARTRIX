@@ -26,6 +26,36 @@ const themeOptions = [
   { value: "system", label: "System" },
 ];
 
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = false,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <section className="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none sm:p-5">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="flex w-full items-center justify-between gap-4 text-left"
+      >
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3>
+        <span className="rounded-full border border-cyan-200/20 px-3 py-1 text-xs font-semibold text-cyan-700 dark:text-cyan-200">
+          {open ? "Hide" : "Show"}
+        </span>
+      </button>
+      <div className={`grid transition-all duration-300 ${open ? "mt-4 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </section>
+  );
+}
+
 export default function SettingsForm({ initialSettings }: { initialSettings: SettingsDTO }) {
   const [settings, setSettings] = useState(initialSettings);
   const [loading, setLoading] = useState(false);
@@ -102,8 +132,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
         success={success}
       />
 
-      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Rental defaults</h3>
+      <CollapsibleSection title="Rental defaults" defaultOpen>
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Default rental days</span>
@@ -127,10 +156,9 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             </select>
           </label>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Deposit policy</h3>
+      <CollapsibleSection title="Deposit policy">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Required deposit (%)</span>
@@ -168,10 +196,9 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             </select>
           </label>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Payment & invoicing</h3>
+      <CollapsibleSection title="Payment & invoicing">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <label className="block">Accepted payment methods</label>
@@ -234,10 +261,9 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             />
           </label>
         </div>
-      </section>
+      </CollapsibleSection>
 
-      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Notifications & appearance</h3>
+      <CollapsibleSection title="Notifications & appearance">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="space-y-2 text-sm text-slate-700 dark:text-zinc-300">
             <span>Booking reminders</span>
@@ -306,7 +332,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
             />
           </label>
         </div>
-      </section>
+      </CollapsibleSection>
 
       {error ? <p className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-200">{error}</p> : null}
       {success ? <p className="rounded-2xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{success}</p> : null}

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { getOrganizationSettings } from "@/services/settings";
 import { logActivity } from "@/services/audit";
+import { createNotification } from "@/services/notification";
 
 const activeBookingStatuses: string[] = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
 
@@ -290,6 +291,19 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
     level: "INFO",
   });
 
+  await createNotification({
+    organizationId,
+    userId: user.id,
+    type: "BOOKING",
+    priority: "SUCCESS",
+    title: "Booking created",
+    message: `${createdBooking.bookingNumber} was created for ${createdBooking.customer.firstName} ${createdBooking.customer.lastName}.`,
+    href: `/bookings/${createdBooking.id}`,
+    entity: "Booking",
+    entityId: createdBooking.id,
+    metadata: { bookingNumber: createdBooking.bookingNumber, totalAmount: totals.total },
+  });
+
   return serializeBooking(createdBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
 }
 
@@ -460,6 +474,22 @@ export async function returnBookingItems(
       level: "INFO",
     });
 
+    await createNotification({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "INVENTORY",
+      priority: allReturned ? "SUCCESS" : "INFO",
+      title: allReturned ? "Booking returned" : "Items returned",
+      message: allReturned
+        ? `All items for ${booking.bookingNumber} have been returned.`
+        : `A return was recorded for ${booking.bookingNumber}.`,
+      href: `/bookings/${bookingId}`,
+      entity: "Booking",
+      entityId: bookingId,
+      metadata: { returnItems: updates.length },
+    });
+
     return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
   });
 }
@@ -577,6 +607,20 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
       level: "WARNING",
     });
 
+    await createNotification({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "BOOKING",
+      priority: "WARNING",
+      title: "Booking cancelled",
+      message: `${booking.bookingNumber} was cancelled and outstanding inventory was released.`,
+      href: `/bookings/${bookingId}`,
+      entity: "Booking",
+      entityId: bookingId,
+      metadata: { bookingNumber: booking.bookingNumber },
+    });
+
     return serializeBooking(updatedBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
   });
 }
@@ -671,6 +715,20 @@ export async function updateBookingStatus(
       entityId: bookingId,
       details: { from: booking.status, to: newStatus },
       level: "INFO",
+    });
+
+    await createNotification({
+      tx,
+      organizationId: user.organizationId!,
+      userId: user.id,
+      type: "BOOKING",
+      priority: newStatus === "COMPLETED" ? "SUCCESS" : newStatus === "CANCELLED" ? "WARNING" : "INFO",
+      title: "Booking status updated",
+      message: `${booking.bookingNumber} moved from ${booking.status.replace(/_/g, " ")} to ${newStatus.replace(/_/g, " ")}.`,
+      href: `/bookings/${bookingId}`,
+      entity: "Booking",
+      entityId: bookingId,
+      metadata: { from: booking.status, to: newStatus },
     });
 
     return serializeBooking(updated as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
