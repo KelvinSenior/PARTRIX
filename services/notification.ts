@@ -27,26 +27,6 @@ type ListNotificationFilters = {
 
 const fallbackNotifications: NotificationDTO[] = [];
 
-function serializeNotification(notification: any): NotificationDTO {
-  let metadata: Record<string, unknown> = {};
-  if (notification.metadata && typeof notification.metadata === "object") {
-    metadata = notification.metadata as Record<string, unknown>;
-  }
-
-  return {
-    id: notification.id,
-    type: notification.type,
-    priority: notification.priority,
-    title: notification.title,
-    message: notification.message,
-    href: notification.href,
-    entity: notification.entity,
-    entityId: notification.entityId ?? null,
-    metadata,
-    readAt: notification.readAt ? notification.readAt.toISOString() : null,
-    createdAt: notification.createdAt.toISOString(),
-  };
-}
 
 export async function createNotification(input: CreateNotificationInput) {
   if (!input.href) {
@@ -57,13 +37,15 @@ export async function createNotification(input: CreateNotificationInput) {
 }
 
 export async function listNotifications(filters: ListNotificationFilters = {}) {
-  const user = await requireOrganizationContext();
+  await requireOrganizationContext();
   const page = Math.max(filters.page ?? 1, 1);
   const pageSize = Math.min(Math.max(filters.pageSize ?? 20, 5), 100);
 
+  const query = filters.query?.trim().toLowerCase() ?? "";
+
   const filtered = fallbackNotifications.filter((notification) => {
-    const matchesQuery = !filters.query || [notification.title, notification.message, notification.entity]
-      .some((value) => value.toLowerCase().includes(filters.query.toLowerCase()));
+    const matchesQuery = !query || [notification.title, notification.message, notification.entity]
+      .some((value) => value.toLowerCase().includes(query));
     const matchesType = !filters.type || filters.type === "all" || notification.type === filters.type;
     const matchesStatus = !filters.status || filters.status === "all" || (filters.status === "unread" ? !notification.readAt : !!notification.readAt);
     const createdAt = new Date(notification.createdAt);
@@ -84,7 +66,7 @@ export async function listNotifications(filters: ListNotificationFilters = {}) {
   };
 }
 
-export async function markNotificationRead(id: string) {
+export async function markNotificationRead() {
   await requireOrganizationContext();
   return null;
 }
@@ -93,7 +75,7 @@ export async function markAllNotificationsRead() {
   await requireOrganizationContext();
 }
 
-export async function deleteNotification(id: string) {
+export async function deleteNotification() {
   await requireOrganizationContext();
 }
 

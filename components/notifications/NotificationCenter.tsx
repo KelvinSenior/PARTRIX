@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, CheckCheck, Search, Trash2 } from "lucide-react";
 import type { NotificationDTO } from "@/types/notification";
 import { appBtnPrimary, appBtnSecondary, appInput } from "@/lib/appStyles";
+import CollapsibleFilterPanel from "@/components/ui/CollapsibleFilterPanel";
 
 const types = ["all", "BOOKING", "PAYMENT", "INVENTORY", "INVOICE", "ORGANIZATION", "SYSTEM"];
 
@@ -111,19 +112,40 @@ export default function NotificationCenter() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-cyan-200/10 dark:bg-white/[0.045]">
-        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-            <input
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setPage(1);
-              }}
-              className={`${appInput} pl-10`}
-              placeholder="Search notifications"
-            />
+      <section className="sticky top-4 z-20 rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur-xl dark:border-cyan-200/10 dark:bg-[#050816]/90">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+                className={`${appInput} pl-10`}
+                placeholder="Search notifications"
+              />
+            </div>
+            <CollapsibleFilterPanel title="Advanced filters" description="Refine notifications by type, status, and date" activeCount={[type !== "all", status !== "all", from, to].filter(Boolean).length} storageKey="partrix-notifications-filters-open">
+              <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-5">
+                <select value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className={appInput}>
+                  {types.map((item) => <option key={item} value={item}>{item === "all" ? "All types" : item}</option>)}
+                </select>
+                <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className={appInput}>
+                  <option value="all">All statuses</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                </select>
+                <input aria-label="Filter notifications from date" placeholder="From" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={appInput} />
+                <input aria-label="Filter notifications to date" placeholder="To" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={appInput} />
+                <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className={appInput}>
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+              </div>
+            </CollapsibleFilterPanel>
           </div>
           <button type="button" onClick={markAllRead} className={appBtnPrimary}>
             <CheckCheck className="h-4 w-4" />
@@ -134,26 +156,10 @@ export default function NotificationCenter() {
             Clear read
           </button>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-5">
-          <select value={type} onChange={(event) => { setType(event.target.value); setPage(1); }} className={appInput}>
-            {types.map((item) => <option key={item} value={item}>{item === "all" ? "All types" : item}</option>)}
-          </select>
-          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className={appInput}>
-            <option value="all">All statuses</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-          </select>
-          <input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={appInput} />
-          <input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={appInput} />
-          <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className={appInput}>
-            <option value={10}>10 per page</option>
-            <option value={20}>20 per page</option>
-            <option value={50}>50 per page</option>
-          </select>
-        </div>
+
       </section>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-cyan-200/10 dark:bg-white/[0.045]">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-cyan-200/10 dark:bg-white/4.5">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-white/10">
           <div>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{total} notifications</p>
@@ -170,7 +176,7 @@ export default function NotificationCenter() {
         ) : (
           <div className="divide-y divide-slate-200 dark:divide-white/10">
             {notifications.map((notification) => (
-              <div key={notification.id} className="grid gap-3 p-4 transition hover:bg-slate-50 dark:hover:bg-white/[0.025] lg:grid-cols-[1fr_auto]">
+              <div key={notification.id} className="grid gap-3 p-4 transition hover:bg-slate-50 dark:hover:bg-white/2.5 lg:grid-cols-[1fr_auto]">
                 <Link href={notification.href} onClick={() => markRead(notification.id)} className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     {!notification.readAt ? <span className="h-2 w-2 rounded-full bg-cyan-500" /> : null}

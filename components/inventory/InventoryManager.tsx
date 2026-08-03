@@ -497,7 +497,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         ))}
       </section>
 
-      <section className="rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl sm:rounded-3xl">
+      <section className="sticky top-4 z-20 rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl sm:rounded-3xl">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_190px_170px]">
           <label className="relative block">
             <span className="sr-only">Search inventory</span>

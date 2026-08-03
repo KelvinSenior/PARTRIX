@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import type { ActivityLogDTO } from "@/services/audit";
 import { appBtnSecondary, appCardInner, appInput } from "@/lib/appStyles";
+import CollapsibleFilterPanel from "@/components/ui/CollapsibleFilterPanel";
 
 export default function AuditLogPanel({ logs }: { logs: ActivityLogDTO[] }) {
   const [query, setQuery] = useState("");
@@ -38,23 +39,25 @@ export default function AuditLogPanel({ logs }: { logs: ActivityLogDTO[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3">
-        <div className="relative">
+      <div className="sticky top-4 z-20 flex items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white/95 p-3 shadow-sm backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/90">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
           <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} className={`${appInput} pl-10`} placeholder="Search audit log" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <select value={user} onChange={(event) => { setUser(event.target.value); setPage(1); }} className={appInput}>
-            <option value="all">All users</option>
-            {users.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select value={action} onChange={(event) => { setAction(event.target.value); setPage(1); }} className={appInput}>
-            <option value="all">All actions</option>
-            {actions.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={appInput} />
-          <input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={appInput} />
-        </div>
+        <CollapsibleFilterPanel title="Advanced filters" description="Filter by activity user, action, and date" activeCount={[user !== "all", action !== "all", from, to].filter(Boolean).length} storageKey="partrix-audit-filters-open">
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <select value={user} onChange={(event) => { setUser(event.target.value); setPage(1); }} className={appInput}>
+              <option value="all">All users</option>
+              {users.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <select value={action} onChange={(event) => { setAction(event.target.value); setPage(1); }} className={appInput}>
+              <option value="all">All actions</option>
+              {actions.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
+            <input aria-label="Filter audit log from date" placeholder="From" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={appInput} />
+            <input aria-label="Filter audit log to date" placeholder="To" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={appInput} />
+          </div>
+        </CollapsibleFilterPanel>
       </div>
 
       {visibleLogs.length === 0 ? (

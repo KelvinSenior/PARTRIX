@@ -91,7 +91,7 @@ export function formatDate(value: string | Date | null | undefined, settings?: P
 }
 
 export function getBusinessIdentity(settings?: Partial<SettingsDTO> | null) {
-  const business = settings?.business ?? {};
+  const business = (settings?.business ?? {}) as Partial<SettingsDTO["business"]>;
   const addressLines = [business.address, business.city, business.stateProvince, business.postalCode, business.country]
     .filter(Boolean)
     .join(", ");

@@ -269,24 +269,27 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       ),
     );
 
-    return booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>;
+    return {
+      booking: booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>,
+      totals,
+    };
   }, { timeout: 20000, maxWait: 20000 });
 
-  if (!createdBooking) {
+  if (!createdBooking?.booking) {
     throw new Error("Booking creation failed.");
   }
 
   await logActivity({
     organizationId,
     userId: user.id,
-    bookingId: createdBooking.id,
+    bookingId: createdBooking.booking.id,
     action: "Create booking",
     entity: "Booking",
-    entityId: createdBooking.id,
+    entityId: createdBooking.booking.id,
     details: {
-      bookingNumber: createdBooking.bookingNumber,
-      totalAmount: decimalToNumber(createdBooking.totalAmount),
-      depositAmount: decimalToNumber(createdBooking.depositAmount),
+      bookingNumber: createdBooking.booking.bookingNumber,
+      totalAmount: decimalToNumber(createdBooking.booking.totalAmount),
+      depositAmount: decimalToNumber(createdBooking.booking.depositAmount),
     },
     level: "INFO",
   });
@@ -297,14 +300,14 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
     type: "BOOKING",
     priority: "SUCCESS",
     title: "Booking created",
-    message: `${createdBooking.bookingNumber} was created for ${createdBooking.customer.firstName} ${createdBooking.customer.lastName}.`,
-    href: `/bookings/${createdBooking.id}`,
+    message: `${createdBooking.booking.bookingNumber} was created for ${payload.customer.firstName ?? "the customer"} ${payload.customer.lastName ?? ""}`.trim() + ".",
+    href: `/bookings/${createdBooking.booking.id}`,
     entity: "Booking",
-    entityId: createdBooking.id,
-    metadata: { bookingNumber: createdBooking.bookingNumber, totalAmount: totals.total },
+    entityId: createdBooking.booking.id,
+    metadata: { bookingNumber: createdBooking.booking.bookingNumber, totalAmount: createdBooking.totals.total },
   });
 
-  return serializeBooking(createdBooking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
+  return serializeBooking(createdBooking.booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>);
 }
 
 export async function listBookings(opts?: {

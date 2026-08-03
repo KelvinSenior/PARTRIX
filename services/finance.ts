@@ -50,19 +50,26 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
       const booking = await tx.booking.findUnique({ where: { id: payment.bookingId } });
       if (booking) {
         const amount = decimalToNumber(payment.amount);
+        const totalAmount = decimalToNumber(booking.totalAmount);
+        const depositAmount = decimalToNumber(booking.depositAmount);
+        const existingDepositPaid = decimalToNumber(booking.depositPaid);
+        const existingBalanceDue = decimalToNumber(booking.balanceDue);
+        const depositOutstandingBefore = Math.max(0, depositAmount - existingDepositPaid);
+        const rentalOutstandingBefore = Math.max(0, existingBalanceDue - depositOutstandingBefore);
+        const rentalPaidBefore = Math.max(0, totalAmount - rentalOutstandingBefore);
+
         if (payment.type === "SECURITY_DEPOSIT") {
-          const paid = Math.min(
-            decimalToNumber(booking.depositAmount) - decimalToNumber(booking.depositPaid),
-            amount,
-          );
-          const nextDepositPaid = decimalToNumber(booking.depositPaid) + paid;
-          const depositStatus = nextDepositPaid >= decimalToNumber(booking.depositAmount) ? "PAID" : "PENDING";
+          const depositAllocation = Math.min(amount, depositOutstandingBefore);
+          const nextDepositPaid = existingDepositPaid + depositAllocation;
+          const depositStatus = nextDepositPaid >= depositAmount ? "PAID" : "PENDING";
+          const remainingBalance = Math.max(0, totalAmount - rentalPaidBefore + (depositAmount - nextDepositPaid));
+
           await tx.booking.update({
             where: { id: booking.id },
             data: {
               depositPaid: nextDepositPaid.toFixed(2),
               depositStatus,
-              balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - amount).toFixed(2),
+              balanceDue: remainingBalance.toFixed(2),
             } as any,
           });
         } else if (payment.type === "REFUND") {
@@ -71,19 +78,33 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
             amount,
           );
           const nextDepositRefunded = decimalToNumber(booking.depositRefunded) + refunded;
-          const refundStatus = nextDepositRefunded >= decimalToNumber(booking.depositAmount) ? "FORFEITED" : "PARTIAL";
+          const refundStatus = nextDepositRefunded >= depositAmount ? "FORFEITED" : "PARTIAL";
+          const remainingBalance = Math.max(0, totalAmount - rentalPaidBefore + (depositAmount - existingDepositPaid));
           await tx.booking.update({
             where: { id: booking.id },
             data: {
               depositRefunded: nextDepositRefunded.toFixed(2),
               refundStatus,
-              balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - refunded).toFixed(2),
+              balanceDue: remainingBalance.toFixed(2),
             } as any,
           });
         } else {
+          const rentalAllocation = Math.min(amount, Math.max(0, totalAmount - rentalPaidBefore));
+          const remaining = Math.max(0, amount - rentalAllocation);
+          const depositAllocation = Math.min(remaining, depositOutstandingBefore);
+          const nextDepositPaid = existingDepositPaid + depositAllocation;
+          const nextRentalPaid = rentalPaidBefore + rentalAllocation;
+          const nextDepositOutstanding = Math.max(0, depositAmount - nextDepositPaid);
+          const nextRentalOutstanding = Math.max(0, totalAmount - nextRentalPaid);
+          const nextBalanceDue = nextRentalOutstanding + nextDepositOutstanding;
+
           await tx.booking.update({
             where: { id: booking.id },
-            data: { balanceDue: Math.max(0, decimalToNumber(booking.balanceDue) - amount).toFixed(2) } as any,
+            data: {
+              depositPaid: nextDepositPaid.toFixed(2),
+              depositStatus: nextDepositOutstanding > 0 ? "PENDING" : "PAID",
+              balanceDue: nextBalanceDue.toFixed(2),
+            } as any,
           });
         }
       }

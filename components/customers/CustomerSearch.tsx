@@ -16,15 +16,17 @@ export default function CustomerSearch() {
   }
 
   return (
-    <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
-      <Input
-        type="text"
-        placeholder="Search customers by name, email, company..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="flex-1"
-      />
-      <Button type="submit" variant="secondary">
+    <form onSubmit={handleSearch} className="sticky top-4 z-20 flex flex-col gap-3 rounded-2xl border border-zinc-200/80 bg-white/95 p-3 shadow-sm backdrop-blur-xl sm:flex-row sm:items-center dark:border-zinc-800/80 dark:bg-zinc-950/90">
+      <div className="flex-1">
+        <Input
+          type="text"
+          placeholder="Search customers by name, email, company..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full"
+        />
+      </div>
+      <Button type="submit" variant="secondary" className="sm:w-auto">
         Search
       </Button>
     </form>
