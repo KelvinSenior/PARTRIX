@@ -1,22 +1,13 @@
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
+import { maxImageSize, persistInventoryImage } from "@/lib/imageUpload";
 import { validateFileUpload } from "@/lib/securityUtils";
 import { enforceRateLimit } from "@/lib/rateLimiter";
 
 export const runtime = "nodejs";
 
-const allowedTypes = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-  ["image/gif", "gif"],
-]);
-
-const maxImageSize = 5 * 1024 * 1024;
+const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export async function POST(request: Request) {
   // Rate limiting for file uploads
@@ -43,55 +34,17 @@ export async function POST(request: Request) {
     return apiError("Choose an image to upload.", 400);
   }
 
-  // Validate file upload
   const validation = validateFileUpload(file, allowedTypes, maxImageSize);
   if (!validation.valid) {
     return apiError(validation.error || "File validation failed.", 415);
   }
 
-  const extension = allowedTypes.get(file.type);
-  if (!extension) {
-    return apiError("Inventory images must be JPG, PNG, WEBP, or GIF.", 415);
-  }
-
-  // Create upload directory with safe path
-  const uploadsDir = path.join(
-    process.cwd(),
-    "public",
-    "uploads",
-    "inventory",
-  );
-  
-  // Ensure path doesn't escape intended directory
-  const resolvedPath = path.resolve(uploadsDir);
-  const expectedPath = path.resolve(process.cwd(), "public", "uploads", "inventory");
-  if (!resolvedPath.startsWith(expectedPath)) {
-    return apiError("Invalid upload path.", 400);
-  }
-
-  await mkdir(uploadsDir, { recursive: true });
-
-  // Generate secure filename
-  const filename = `${Date.now()}-${randomUUID()}.${extension}`;
-  const destination = path.join(uploadsDir, filename);
-  
-  // Verify destination doesn't escape directory
-  const resolvedDest = path.resolve(destination);
-  if (!resolvedDest.startsWith(resolvedPath)) {
-    return apiError("Invalid file destination.", 400);
-  }
-
-  const bytes = Buffer.from(await file.arrayBuffer());
-
   try {
-    await writeFile(destination, bytes);
+    const imageUrl = await persistInventoryImage(file);
+    return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error("[SECURITY] File write error:", error);
     return apiError("Failed to save file.", 500);
   }
-
-  return NextResponse.json({
-    imageUrl: `/uploads/inventory/${filename}`,
-  });
 }
 

@@ -68,7 +68,7 @@ export default async function DeliveryDetails({ params }: { params: Promise<{ id
         <div className="lg:col-span-2 space-y-6">
           <div className={`${appCard} border border-zinc-800/80 space-y-6`}>
             <div>
-              <h3 className="text-lg font-semibold text-white border-b border-zinc-800 pb-3">Delivery Information</h3>
+              <h3 className="border-b border-zinc-800 pb-3 text-lg font-semibold text-slate-900 dark:text-white">Delivery Information</h3>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">

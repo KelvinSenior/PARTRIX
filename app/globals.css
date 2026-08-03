@@ -90,11 +90,11 @@ body {
   min-height: 3rem;
   width: 100%;
   border-radius: 0.75rem;
-  border: 1px solid rgba(34, 211, 238, 0.15);
-  background: rgba(16, 26, 47, 0.9);
+  border: 1px solid rgba(8, 145, 178, 0.18);
+  background: var(--app-surface);
   padding: 0 0.875rem;
   font-size: 0.875rem;
-  color: #fafafa;
+  color: var(--foreground);
   outline: none;
   transition:
     border-color 150ms ease,
@@ -102,12 +102,25 @@ body {
 }
 
 .field-input::placeholder {
-  color: #71717a;
+  color: var(--muted);
 }
 
 .field-input:focus {
-  border-color: rgba(34, 211, 238, 0.55);
-  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  border-color: rgba(8, 145, 178, 0.5);
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  .field-input {
+    border-color: rgba(34, 211, 238, 0.15);
+    background: rgba(16, 26, 47, 0.9);
+    color: #fafafa;
+  }
+
+  .field-input:focus {
+    border-color: rgba(34, 211, 238, 0.55);
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.15);
+  }
 }
 
 .touch-target {

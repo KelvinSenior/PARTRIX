@@ -57,14 +57,14 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
           <FinanceChart monthly={summary.monthly} />
 
           <div className={appCard}>
-            <h3 className="text-lg font-semibold text-white">Record payment</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
             <div className="mt-4">
               <PaymentForm />
             </div>
           </div>
 
           <div className={appCard}>
-            <h3 className="text-lg font-semibold text-white">Record expense</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record expense</h3>
             <div className="mt-4">
               <ExpenseForm />
             </div>
@@ -73,13 +73,13 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
 
         <div className="space-y-5">
           <div className={appCard}>
-            <h3 className="text-lg font-semibold text-white">Recent payments</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent payments</h3>
             <div className="mt-4 space-y-3 text-sm">
               {payments.slice(0, 8).map((p: any) => (
                 <div key={p.id} className={`${appCardInner} space-y-2`}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="font-medium text-white">GHC{p.amount.toFixed(2)}</div>
+                      <div className="font-medium text-slate-900 dark:text-white">GHC{p.amount.toFixed(2)}</div>
                       <div className="text-xs text-zinc-500">
                         {p.customerName ? `${p.customerName} · ` : ""}
                         {p.type.replace(/_/g, " ")} · {p.method.replace(/_/g, " ")}
@@ -112,12 +112,12 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
           </div>
 
           <div className={appCard}>
-            <h3 className="text-lg font-semibold text-white">Recent expenses</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent expenses</h3>
             <div className="mt-4 space-y-3 text-sm">
               {expenses.slice(0, 8).map((e: { id: string; amount: number; category: string; incurredAt: string | Date; vendor?: string | null }) => (
                 <div key={e.id} className={`${appCardInner} flex items-center justify-between gap-3`}>
                   <div>
-                    <div className="font-medium text-white">GHC{e.amount.toFixed(2)}</div>
+                    <div className="font-medium text-slate-900 dark:text-white">GHC{e.amount.toFixed(2)}</div>
                     <div className="text-xs text-zinc-500">
                       {e.category} • {new Date(e.incurredAt).toLocaleDateString()}
                     </div>
@@ -131,7 +131,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
       </div>
 
       <div className={appCard}>
-        <h3 className="text-lg font-semibold text-white">Customer debts</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Customer debts</h3>
         <div className="mt-4 text-sm text-zinc-300">
           {debts.length === 0 ? (
             <p className="text-zinc-500">No outstanding customer debts.</p>
@@ -148,7 +148,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                 <tbody>
                   {debts.map((d: { customerId: string; customerName: string; email?: string | null; outstanding: number }) => (
                     <tr key={d.customerId} className="border-b border-white/5">
-                      <td className="py-2.5 pr-4 text-white">{d.customerName}</td>
+                      <td className="py-2.5 pr-4 text-slate-900 dark:text-white">{d.customerName}</td>
                       <td className="py-2.5 pr-4 text-zinc-400">{d.email ?? "—"}</td>
                       <td className="py-2.5 font-medium text-cyan-100">GHC{d.outstanding.toFixed(2)}</td>
                     </tr>

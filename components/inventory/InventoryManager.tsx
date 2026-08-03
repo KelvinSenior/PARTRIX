@@ -394,10 +394,10 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-200/75">
             Inventory
           </p>
-          <h1 className="mt-3 text-3xl font-semibold text-white">
+          <h1 className="mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
             Stock control
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-zinc-400">
             Signed in as {user.name ?? user.email}. Track rental stock,
             availability, pricing, images, and damage exposure from one place.
           </p>
@@ -446,12 +446,12 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
             className="rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-zinc-500">
                 {metric.label}
               </p>
-              <metric.icon className="h-4 w-4 text-zinc-500" />
+              <metric.icon className="h-4 w-4 text-slate-500 dark:text-zinc-500" />
             </div>
-            <p className="mt-4 text-3xl font-semibold text-zinc-950 dark:text-zinc-50">
+            <p className="mt-4 text-3xl font-semibold text-slate-900 dark:text-zinc-50">
               {metric.value}
             </p>
           </div>
@@ -472,7 +472,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                 }))
               }
               placeholder="Search by name, SKU, or category"
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
+              className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </label>
 
@@ -616,13 +616,13 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                 <div className="space-y-5 p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-zinc-500">
                         {item.sku}
                       </p>
-                      <h2 className="mt-2 text-xl font-semibold text-zinc-950 dark:text-zinc-50">
+                      <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-zinc-50">
                         {item.name}
                       </h2>
-                      <p className="mt-1 text-sm text-zinc-500">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">
                         {item.category ?? "Uncategorized"}
                       </p>
                     </div>
@@ -646,10 +646,10 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                         key={label}
                         className="rounded-xl bg-zinc-50 p-3 dark:bg-zinc-900"
                       >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-zinc-500">
                           {label}
                         </p>
-                        <p className="mt-2 text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+                        <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-zinc-50">
                           {value}
                         </p>
                       </div>
@@ -658,20 +658,20 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
 
                   <div className="grid gap-3 text-sm sm:grid-cols-3">
                     <div>
-                      <p className="text-zinc-500">Rental</p>
-                      <p className="font-semibold text-zinc-950 dark:text-zinc-50">
+                      <p className="text-slate-500 dark:text-zinc-500">Rental</p>
+                      <p className="font-semibold text-slate-900 dark:text-zinc-50">
                         {formatCurrency(item.rentalPrice)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-zinc-500">Damage fee</p>
-                      <p className="font-semibold text-zinc-950 dark:text-zinc-50">
+                      <p className="text-slate-500 dark:text-zinc-500">Damage fee</p>
+                      <p className="font-semibold text-slate-900 dark:text-zinc-50">
                         {formatCurrency(item.damageFee)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-zinc-500">Utilization</p>
-                      <p className="font-semibold text-zinc-950 dark:text-zinc-50">
+                      <p className="text-slate-500 dark:text-zinc-500">Utilization</p>
+                      <p className="font-semibold text-slate-900 dark:text-zinc-50">
                         {item.utilizationRate}%
                       </p>
                     </div>
@@ -762,12 +762,12 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                 </label>
 
                 <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-zinc-500">
                     Available now
                   </p>
                   <p
                     className={`mt-2 text-3xl font-semibold ${
-                      quantityError ? "text-rose-600" : "text-zinc-950 dark:text-zinc-50"
+                      quantityError ? "text-rose-600" : "text-slate-900 dark:text-zinc-50"
                     }`}
                   >
                     {availablePreview}

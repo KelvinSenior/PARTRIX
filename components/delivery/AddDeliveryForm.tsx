@@ -33,7 +33,7 @@ export default function AddDeliveryForm() {
 
   return (
     <div className={`max-w-2xl ${appCard}`}>
-      <h2 className="text-lg font-semibold text-white">New delivery</h2>
+      <h2 className="text-lg font-semibold text-slate-900 dark:text-white">New delivery</h2>
       <p className="mt-1 text-sm text-zinc-400">
         Link this delivery to an active booking. Driver and vehicle details will be visible to your team.
       </p>

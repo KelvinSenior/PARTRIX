@@ -31,7 +31,7 @@ export default async function SettingsPage() {
       <div className="mx-auto w-full max-w-[1500px]">
         <div className="grid w-full items-stretch gap-5 xl:grid-cols-[1.4fr_0.6fr]">
           <section className={`${appCard} h-full w-full`}>
-            <h2 className="text-lg font-semibold text-white">Workspace settings</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Workspace settings</h2>
             <p className="mt-2 text-sm text-zinc-400">
               Update business, rental, payment, invoice, notification, and appearance preferences for your organization.
             </p>
@@ -42,7 +42,7 @@ export default async function SettingsPage() {
             <div className="mt-6 rounded-2xl border border-rose-400/15 bg-rose-500/8 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-semibold text-white">Sign out</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">Sign out</p>
                   <p className="mt-1 text-sm text-zinc-400">End your current session from this workspace.</p>
                 </div>
                 <LogoutButton className={`${appBtnSecondary} border-rose-400/20 bg-rose-500/10 text-rose-100 hover:bg-rose-500/15`} label="Log out" />
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/75">Audit log</p>
-                <h3 className="mt-2 text-lg font-semibold text-white">Recent activity</h3>
+                <h3 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">Recent activity</h3>
               </div>
               <SettingsRefreshButton />
             </div>
@@ -68,7 +68,7 @@ export default async function SettingsPage() {
                     <div key={log.id} className={`${appCardInner} space-y-2`}>
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-white">{log.action}</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">{log.action}</p>
                           <p className="text-xs uppercase tracking-[0.18em] text-zinc-500">{log.entity}</p>
                         </div>
                         <span className="text-[11px] uppercase tracking-[0.24em] text-zinc-400">{log.level}</span>

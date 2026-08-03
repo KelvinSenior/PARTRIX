@@ -67,7 +67,7 @@ export default async function DamageDetailPage({ params }: { params: Promise<{ i
         <div className="lg:col-span-2">
           <div className={`${appCard} border border-zinc-800/80 space-y-6`}>
             <div>
-              <h3 className="text-lg font-semibold text-white border-b border-zinc-800 pb-3">Incident Details</h3>
+              <h3 className="border-b border-zinc-800 pb-3 text-lg font-semibold text-slate-900 dark:text-white">Incident Details</h3>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
