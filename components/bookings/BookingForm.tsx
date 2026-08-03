@@ -65,8 +65,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<HTMLInputElement>(null);
   const eventDateRef = useRef<HTMLInputElement>(null);
+  const deliveryDateRef = useRef<HTMLInputElement>(null);
+  const returnDateRef = useRef<HTMLInputElement>(null);
   const inventoryPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -196,6 +200,178 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     if (error) setError(null);
   }
 
+  function focusValidationField(field: string) {
+    const focusTargets: Record<string, () => void> = {
+      customer: () => customerSearchRef.current?.focus(),
+      firstName: () => firstNameRef.current?.focus(),
+      lastName: () => lastNameRef.current?.focus(),
+      email: () => emailRef.current?.focus(),
+      phone: () => phoneRef.current?.focus(),
+      eventDate: () => eventDateRef.current?.focus(),
+      deliveryDate: () => deliveryDateRef.current?.focus(),
+      returnDate: () => returnDateRef.current?.focus(),
+      items: () => inventoryPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    };
+
+    const target = focusTargets[field];
+    if (target) {
+      setTimeout(target, 0);
+      return;
+    }
+
+    if (field.startsWith("customer.")) {
+      setTimeout(() => customerSearchRef.current?.focus(), 0);
+    }
+  }
+
+  function getStepForField(field: string) {
+    if (["customer", "firstName", "lastName", "email", "phone"].includes(field)) return 0;
+    if (["eventDate", "deliveryDate", "returnDate"].includes(field)) return 1;
+    if (["items"].includes(field)) return 2;
+    return 0;
+  }
+
+  function collectValidationErrors(stepIndex: number) {
+    const nextErrors: Record<string, string> = {};
+
+    switch (stepIndex) {
+      case 0:
+        if (customerMode === "existing") {
+          if (!selectedCustomerId) {
+            nextErrors.customer = "Please select a customer before continuing.";
+          }
+        } else {
+          if (!firstName.trim()) {
+            nextErrors.firstName = "Please enter the customer's first name.";
+          }
+          if (!lastName.trim()) {
+            nextErrors.lastName = "Please enter the customer's last name.";
+          }
+          if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            nextErrors.email = "Enter a valid email address.";
+          }
+          if (phone.trim() && !/^[\d\s+\-().]*$/.test(phone)) {
+            nextErrors.phone = "Phone number contains invalid characters.";
+          }
+        }
+        break;
+      case 1:
+        if (!eventDate) {
+          nextErrors.eventDate = "Please choose an event date before continuing.";
+        }
+
+        if (deliveryDate && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(deliveryDate)) {
+          nextErrors.deliveryDate = "Delivery date must be a valid date.";
+        }
+
+        if (returnDate && !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(returnDate)) {
+          nextErrors.returnDate = "Return date must be a valid date.";
+        }
+
+        if (eventDate && deliveryDate && !Number.isNaN(Date.parse(deliveryDate)) && !Number.isNaN(Date.parse(eventDate)) && new Date(deliveryDate) > new Date(eventDate)) {
+          nextErrors.deliveryDate = "Delivery date should be on or before the event date.";
+        }
+
+        if (eventDate && returnDate && !Number.isNaN(Date.parse(returnDate)) && !Number.isNaN(Date.parse(eventDate)) && new Date(returnDate) < new Date(eventDate)) {
+          nextErrors.returnDate = "Return date should be on or after the event date.";
+        }
+        break;
+      case 2:
+        if (selectedItems.length === 0) {
+          nextErrors.items = "Choose at least one inventory item before continuing.";
+        }
+        break;
+      default:
+        break;
+    }
+
+    return nextErrors;
+  }
+
+  function validateStep(stepIndex: number) {
+    const nextErrors = collectValidationErrors(stepIndex);
+    setValidationErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      const firstField = Object.keys(nextErrors)[0];
+      setError(nextErrors[firstField]);
+      focusValidationField(firstField);
+      return false;
+    }
+
+    setError(null);
+    return true;
+  }
+
+  function validateBookingBeforeSubmit() {
+    const nextErrors: Record<string, string> = {};
+    const stepsToValidate = [0, 1, 2] as const;
+
+    stepsToValidate.forEach((stepIndex) => {
+      Object.assign(nextErrors, collectValidationErrors(stepIndex));
+    });
+
+    setValidationErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      const firstField = Object.keys(nextErrors)[0];
+      const firstInvalidStep = stepsToValidate.find((stepIndex) => {
+        const errorsForStep = collectValidationErrors(stepIndex);
+        return Object.keys(errorsForStep).some((field) => Boolean(nextErrors[field]));
+      });
+
+      setActiveStep(firstInvalidStep ?? 0);
+      setError(nextErrors[firstField]);
+      focusValidationField(firstField);
+      return false;
+    }
+
+    setError(null);
+    return true;
+  }
+
+  function mapApiValidationErrors(details?: Record<string, unknown>) {
+    const rawFields = details?.fields;
+    if (!rawFields || typeof rawFields !== "object" || Array.isArray(rawFields)) {
+      return {};
+    }
+
+    const nextErrors: Record<string, string> = {};
+
+    Object.entries(rawFields).forEach(([fieldPath, messages]) => {
+      const normalizedPath = fieldPath
+        .replace(/^customer\./, "")
+        .replace(/^booking\./, "")
+        .replace(/^\./, "")
+        .toLowerCase();
+
+      const normalizedField = normalizedPath === "firstname"
+        ? "firstName"
+        : normalizedPath === "lastname"
+          ? "lastName"
+          : normalizedPath === "eventdate"
+            ? "eventDate"
+            : normalizedPath === "deliverydate"
+              ? "deliveryDate"
+              : normalizedPath === "returndate"
+                ? "returnDate"
+                : normalizedPath;
+
+      if (!normalizedField) {
+        return;
+      }
+
+      const fieldMessages = Array.isArray(messages) ? messages : [messages];
+      const firstMessage = fieldMessages.find((message): message is string => typeof message === "string" && message.length > 0);
+
+      if (firstMessage) {
+        nextErrors[normalizedField] = firstMessage;
+      }
+    });
+
+    return nextErrors;
+  }
+
   function clearForm() {
     setActiveStep(0);
     setItems([]);
@@ -248,62 +424,6 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setSuccess("Draft saved locally.");
   }
 
-  function validateStep(stepIndex: number) {
-    const nextErrors: Record<string, string> = {};
-
-    switch (stepIndex) {
-      case 0:
-        if (customerMode === "existing") {
-          if (!selectedCustomerId) {
-            nextErrors.customer = "Please select a customer before continuing.";
-          }
-        } else {
-          if (!firstName.trim()) {
-            nextErrors.firstName = "Please enter the customer's first name.";
-          }
-          if (!lastName.trim()) {
-            nextErrors.lastName = "Please enter the customer's last name.";
-          }
-          if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            nextErrors.email = "Enter a valid email address.";
-          }
-          if (phone.trim() && !/^[\d\s+\-().]*$/.test(phone)) {
-            nextErrors.phone = "Phone number contains invalid characters.";
-          }
-        }
-        break;
-      case 1:
-        if (!eventDate) {
-          nextErrors.eventDate = "Please choose an event date before continuing.";
-        }
-        break;
-      case 2:
-        if (selectedItems.length === 0) {
-          nextErrors.items = "Choose at least one inventory item before continuing.";
-        }
-        break;
-      default:
-        break;
-    }
-
-    setValidationErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
-      const firstField = Object.keys(nextErrors)[0];
-      setError(nextErrors[firstField]);
-      setTimeout(() => {
-        if (firstField === "customer") customerSearchRef.current?.focus();
-        if (firstField === "firstName") firstNameRef.current?.focus();
-        if (firstField === "lastName") lastNameRef.current?.focus();
-        if (firstField === "eventDate") eventDateRef.current?.focus();
-        if (firstField === "items") inventoryPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 0);
-      return false;
-    }
-
-    setError(null);
-    return true;
-  }
-
   function handleNext() {
     if (!validateStep(activeStep)) return;
     setActiveStep((current) => Math.min(current + 1, steps.length - 1));
@@ -317,6 +437,11 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (!validateBookingBeforeSubmit()) {
+      return;
+    }
+
     setSubmitting(true);
 
     const customerPayload = customerMode === "existing"
@@ -351,7 +476,16 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setSubmitting(false);
 
     if (!response.ok) {
-      setError(result?.message ?? "Unable to create booking.");
+      const serverErrors = mapApiValidationErrors(result?.details);
+      if (Object.keys(serverErrors).length > 0) {
+        const firstField = Object.keys(serverErrors)[0];
+        setValidationErrors(serverErrors);
+        setActiveStep(getStepForField(firstField));
+        setError(serverErrors[firstField]);
+        focusValidationField(firstField);
+      } else {
+        setError(result?.message ?? "Unable to create booking.");
+      }
       return;
     }
 
@@ -484,12 +618,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Email
-                    <input type="email" value={email} onChange={(event) => { setEmail(event.target.value); clearValidationError("email"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.email ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.email)} />
+                    <input ref={emailRef} type="email" value={email} onChange={(event) => { setEmail(event.target.value); clearValidationError("email"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.email ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.email)} />
                     {validationErrors.email ? <p className="mt-2 text-sm text-rose-600">{validationErrors.email}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Phone
-                    <input value={phone} onChange={(event) => { setPhone(event.target.value); clearValidationError("phone"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.phone ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.phone)} />
+                    <input ref={phoneRef} value={phone} onChange={(event) => { setPhone(event.target.value); clearValidationError("phone"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.phone ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.phone)} />
                     {validationErrors.phone ? <p className="mt-2 text-sm text-rose-600">{validationErrors.phone}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:col-span-2">
@@ -530,11 +664,13 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 </label>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Delivery date
-                  <input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+                  <input ref={deliveryDateRef} type="date" value={deliveryDate} onChange={(event) => { setDeliveryDate(event.target.value); clearValidationError("deliveryDate"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.deliveryDate ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.deliveryDate)} />
+                  {validationErrors.deliveryDate ? <p className="mt-2 text-sm text-rose-600">{validationErrors.deliveryDate}</p> : null}
                 </label>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                   Return date
-                  <input type="date" value={returnDate} onChange={(event) => setReturnDate(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+                  <input ref={returnDateRef} type="date" value={returnDate} onChange={(event) => { setReturnDate(event.target.value); clearValidationError("returnDate"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.returnDate ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.returnDate)} />
+                  {validationErrors.returnDate ? <p className="mt-2 text-sm text-rose-600">{validationErrors.returnDate}</p> : null}
                 </label>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 sm:col-span-2">
                   Booking status
@@ -561,8 +697,9 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 <input
                   value={inventorySearch}
                   onChange={(event) => setInventorySearch(event.target.value)}
-                  className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                  className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.items ? "border-rose-400" : "border-zinc-200"}`}
                   placeholder="Search by name, SKU or category"
+                  aria-invalid={Boolean(validationErrors.items)}
                 />
               </label>
               {inventory.length === 0 ? (
@@ -588,7 +725,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 ))
               )}
             </div>
-            <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+            <div className={`rounded-3xl border bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950 ${validationErrors.items ? "border-rose-300" : "border-zinc-200"}`}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white">Selected items</p>
                 <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">{selectedItems.length}</span>
