@@ -137,8 +137,35 @@ function toFormState(item: InventoryItemDTO): FormState {
 }
 
 async function readError(response: Response, fallback: string) {
-  const payload = await response.json().catch(() => null);
-  return typeof payload?.message === "string" ? payload.message : fallback;
+  const rawText = await response.text().catch(() => "");
+  let payload: unknown = null;
+
+  if (rawText) {
+    try {
+      payload = JSON.parse(rawText);
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (payload && typeof payload === "object" && "details" in payload) {
+    const details = (payload as { details?: { fields?: Record<string, unknown> } }).details;
+    if (details?.fields && typeof details.fields === "object") {
+      const fieldErrors = Object.values(details.fields);
+      for (const entry of fieldErrors) {
+        if (Array.isArray(entry) && entry[0]) {
+          return String(entry[0]);
+        }
+      }
+    }
+  }
+
+  if (payload && typeof payload === "object" && "message" in payload) {
+    const message = (payload as { message?: unknown }).message;
+    return typeof message === "string" ? message : fallback;
+  }
+
+  return fallback;
 }
 
 function numberValue(value: string) {
@@ -174,6 +201,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -317,6 +345,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
     setFormError(null);
 
     try {
+      setUploadingImage(Boolean(imageFile));
       const imageUrl = await uploadImage();
       const payload = {
         ...form,
@@ -354,6 +383,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
     } catch (caught) {
       setFormError((caught as Error).message);
     } finally {
+      setUploadingImage(false);
       setSaving(false);
     }
   }
@@ -738,9 +768,13 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
               <div className="space-y-4">
                 <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
                   <div className="aspect-square relative">
-                      {imagePreview ? (
-                        <Image src={imagePreview} alt="Inventory preview" fill className="object-cover" />
-                      ) : (
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Inventory preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
                       <div className="flex h-full items-center justify-center">
                         <ImageIcon className="h-12 w-12 text-zinc-400" />
                       </div>
@@ -749,8 +783,8 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                 </div>
 
                 <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900">
-                  <Upload className="h-4 w-4" />
-                  Upload image
+                  {uploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploadingImage ? "Uploading image..." : "Upload image"}
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"

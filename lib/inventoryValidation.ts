@@ -17,6 +17,8 @@ const optionalText = (max: number) =>
     .nullable()
     .transform((value) => value || null);
 
+const optionalImageUrl = optionalText(5_000_000);
+
 export const inventoryItemPayloadSchema = z
   .object({
     sku: z.string().trim().min(1).max(64),
@@ -26,7 +28,7 @@ export const inventoryItemPayloadSchema = z
     rentalPrice: money,
     costPrice: money,
     damageFee: money,
-    imageUrl: optionalText(500),
+    imageUrl: optionalImageUrl,
     totalQuantity: quantity,
     rentedQuantity: quantity,
     damagedQuantity: quantity,
