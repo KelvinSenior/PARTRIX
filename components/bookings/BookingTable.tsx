@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { BookingDTO } from "@/types/booking";
+import type { SettingsDTO } from "@/types/settings";
 import { appCard, appCardInner, appEyebrow, appTitle } from "@/lib/appStyles";
+import { formatAmount } from "@/lib/branding";
 import { Eye } from "lucide-react";
 
 const statusStyles: Record<string, string> = {
@@ -16,7 +18,7 @@ function formatStatus(status: string) {
   return status.replace("_", " ");
 }
 
-export default function BookingTable({ bookings }: { bookings: BookingDTO[] }) {
+export default function BookingTable({ bookings, settings }: { bookings: BookingDTO[]; settings: SettingsDTO }) {
   return (
     <section className={appCard}>
       <div className="mb-5 flex items-center justify-between gap-4">
@@ -93,7 +95,7 @@ export default function BookingTable({ bookings }: { bookings: BookingDTO[] }) {
                     </span>
                   </td>
                   <td className="px-3 py-3.5 font-medium text-slate-900 dark:text-white">
-                    GHC{booking.totalAmount.toFixed(2)}
+                    {formatAmount(booking.totalAmount, settings)}
                   </td>
                   <td className="px-3 py-3.5">
                     <span
@@ -101,7 +103,7 @@ export default function BookingTable({ bookings }: { bookings: BookingDTO[] }) {
                         booking.balanceDue > 0 ? "font-medium text-amber-700 dark:text-amber-200" : "text-emerald-700 dark:text-emerald-300"
                       }
                     >
-                      GHC{booking.balanceDue.toFixed(2)}
+                      {formatAmount(booking.balanceDue, settings)}
                     </span>
                   </td>
                   <td className="px-3 py-3.5">

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { appBtnPrimary, appBtnSecondary, appInput } from "@/lib/appStyles";
 import type { SettingsDTO } from "@/types/settings";
 import type { PaymentMethod } from "@/types/finance";
+import BusinessIdentityForm from "@/components/settings/BusinessIdentityForm";
 
 const paymentMethods = [
   { value: "CASH", label: "Cash" },
@@ -30,8 +31,15 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setSettings(initialSettings);
+    setDirty(false);
+  }, [initialSettings]);
 
   function updateField(path: string, value: any) {
+    setDirty(true);
     setSettings((current) => {
       const next = structuredClone(current) as any;
       const pathParts = path.split(".");
@@ -44,8 +52,13 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
     });
   }
 
-  async function save(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  function handleSettingsChange(nextSettings: SettingsDTO) {
+    setDirty(true);
+    setSettings(nextSettings);
+  }
+
+  async function save(e?: React.FormEvent<HTMLFormElement>) {
+    e?.preventDefault();
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -69,6 +82,7 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
       if (body?.settings) {
         setSettings(body.settings);
       }
+      setDirty(false);
       setSuccess("Settings saved successfully.");
     } catch (err) {
       setError((err as Error).message);
@@ -79,66 +93,14 @@ export default function SettingsForm({ initialSettings }: { initialSettings: Set
 
   return (
     <form onSubmit={save} className="space-y-8">
-      <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white">Business profile</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
-            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Business name</span>
-            <input
-              value={settings.business.name}
-              onChange={(e) => updateField("business.name", e.target.value)}
-              placeholder="Business name"
-              className={appInput}
-            />
-          </label>
-          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
-            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Workspace slug</span>
-            <input
-              value={settings.business.slug}
-              onChange={(e) =>
-                updateField(
-                  "business.slug",
-                  e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""),
-                )
-              }
-              placeholder="workspace-slug"
-              className={appInput}
-              autoComplete="off"
-            />
-          </label>
-          <p className="sm:col-span-2 text-sm text-slate-500 dark:text-zinc-400">
-            This slug identifies your workspace for signup and team joins. Share it with staff so they can join the same Partrix workspace.
-          </p>
-          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
-            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Contact email</span>
-            <input
-              value={settings.business.contactEmail ?? ""}
-              onChange={(e) => updateField("business.contactEmail", e.target.value)}
-              placeholder="Contact email"
-              type="email"
-              className={appInput}
-            />
-          </label>
-          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300">
-            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Phone number</span>
-            <input
-              value={settings.business.phone ?? ""}
-              onChange={(e) => updateField("business.phone", e.target.value)}
-              placeholder="Phone number"
-              className={appInput}
-            />
-          </label>
-          <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-zinc-300 sm:col-span-2">
-            <span className="block text-sm font-medium text-slate-700 dark:text-zinc-300">Address</span>
-            <input
-              value={settings.business.address ?? ""}
-              onChange={(e) => updateField("business.address", e.target.value)}
-              placeholder="Address"
-              className={appInput}
-            />
-          </label>
-        </div>
-      </section>
+      <BusinessIdentityForm
+        settings={settings}
+        onChange={handleSettingsChange}
+        onSave={() => void save()}
+        saving={loading}
+        error={error}
+        success={success}
+      />
 
       <section className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-slate-950/50 dark:shadow-none">
         <h3 className="text-base font-semibold text-slate-900 dark:text-white">Rental defaults</h3>

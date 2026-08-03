@@ -2,6 +2,7 @@
 
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { formatAmount } from "@/lib/branding";
 import {
   AlertTriangle,
   Boxes,
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import type { SessionUser } from "@/types/auth";
+import type { SettingsDTO } from "@/types/settings";
 import type {
   InventoryAvailabilityFilter,
   InventoryItemDTO,
@@ -109,13 +111,8 @@ const stockStateStyles = {
   retired: "bg-zinc-200 text-zinc-700",
 };
 
-const moneyFormatter = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-function formatCurrency(value: number) {
-  return `GHC${moneyFormatter.format(value)}`;
+function formatCurrency(value: number, settings?: SettingsDTO | null) {
+  return formatAmount(value, settings);
 }
 
 function toFormState(item: InventoryItemDTO): FormState {
@@ -204,6 +201,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currencySettings, setCurrencySettings] = useState<SettingsDTO | null>(null);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -244,6 +242,17 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
     setData(result);
     setLoading(false);
   }, [queryString]);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.settings) {
+          setCurrencySettings(data.settings);
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -690,13 +699,13 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                     <div>
                       <p className="text-slate-500 dark:text-zinc-500">Rental</p>
                       <p className="font-semibold text-slate-900 dark:text-zinc-50">
-                        {formatCurrency(item.rentalPrice)}
+                        {formatCurrency(item.rentalPrice, currencySettings)}
                       </p>
                     </div>
                     <div>
                       <p className="text-slate-500 dark:text-zinc-500">Damage fee</p>
                       <p className="font-semibold text-slate-900 dark:text-zinc-50">
-                        {formatCurrency(item.damageFee)}
+                        {formatCurrency(item.damageFee, currencySettings)}
                       </p>
                     </div>
                     <div>

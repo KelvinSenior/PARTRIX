@@ -45,7 +45,7 @@ export default async function BookingsPage({
         <Suspense>
           <BookingFilters />
         </Suspense>
-        <BookingTable bookings={bookingsResult.bookings} />
+        <BookingTable bookings={bookingsResult.bookings} settings={settings} />
       </div>
     </AppShell>
   );

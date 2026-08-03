@@ -10,7 +10,9 @@ import DateFilter from "@/components/dashboard/DateFilter";
 import PaymentForm from "@/components/dashboard/PaymentForm";
 import ExpenseForm from "@/components/dashboard/ExpenseForm";
 import { getFinanceSummary, listPayments, listExpenses, getCustomerDebts } from "@/services/finance";
+import { getOrganizationSettings } from "@/services/settings";
 import { appBtnSecondary, appCard, appCardInner } from "@/lib/appStyles";
+import { formatAmount } from "@/lib/branding";
 
 export default async function FinancePage({ searchParams }: { searchParams?: { start?: string; end?: string } }) {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -23,6 +25,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
   const payments = await listPayments(start, end);
   const expenses = await listExpenses(start, end);
   const debts = await getCustomerDebts();
+  const settings = await getOrganizationSettings();
 
   const query = searchParams?.start || searchParams?.end
     ? `?${new URLSearchParams({ start: searchParams?.start ?? "", end: searchParams?.end ?? "" }).toString()}`
@@ -50,7 +53,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
         }
       />
 
-      <FinanceCards totals={summary.totals} />
+      <FinanceCards totals={summary.totals} settings={settings} />
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="space-y-5">
@@ -79,7 +82,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                 <div key={p.id} className={`${appCardInner} space-y-2`}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <div className="font-medium text-slate-900 dark:text-white">GHC{p.amount.toFixed(2)}</div>
+                      <div className="font-medium text-slate-900 dark:text-white">{formatAmount(p.amount, settings)}</div>
                       <div className="text-xs text-zinc-500">
                         {p.customerName ? `${p.customerName} · ` : ""}
                         {p.type.replace(/_/g, " ")} · {p.method.replace(/_/g, " ")}
@@ -117,7 +120,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
               {expenses.slice(0, 8).map((e: { id: string; amount: number; category: string; incurredAt: string | Date; vendor?: string | null }) => (
                 <div key={e.id} className={`${appCardInner} flex items-center justify-between gap-3`}>
                   <div>
-                    <div className="font-medium text-slate-900 dark:text-white">GHC{e.amount.toFixed(2)}</div>
+                    <div className="font-medium text-slate-900 dark:text-white">{formatAmount(e.amount, settings)}</div>
                     <div className="text-xs text-zinc-500">
                       {e.category} • {new Date(e.incurredAt).toLocaleDateString()}
                     </div>
@@ -150,7 +153,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                     <tr key={d.customerId} className="border-b border-white/5">
                       <td className="py-2.5 pr-4 text-slate-900 dark:text-white">{d.customerName}</td>
                       <td className="py-2.5 pr-4 text-zinc-400">{d.email ?? "—"}</td>
-                      <td className="py-2.5 font-medium text-cyan-100">GHC{d.outstanding.toFixed(2)}</td>
+                      <td className="py-2.5 font-medium text-cyan-100">{formatAmount(d.outstanding, settings)}</td>
                     </tr>
                   ))}
                 </tbody>

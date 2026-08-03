@@ -24,8 +24,18 @@ export const settingsSchema = z.object({
       .min(1, "Workspace slug is required.")
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only."),
     contactEmail: optionalEmail,
+    businessEmail: optionalEmail,
     phone: optionalTrimmedString,
+    businessPhone: optionalTrimmedString,
     address: optionalTrimmedString,
+    city: optionalTrimmedString,
+    stateProvince: optionalTrimmedString,
+    country: optionalTrimmedString,
+    postalCode: optionalTrimmedString,
+    website: optionalUrl,
+    taxId: optionalTrimmedString,
+    logoUrl: optionalUrl,
+    logoData: optionalTrimmedString,
   }),
   rental: z.object({
     defaultRentalTermDays: z
@@ -64,6 +74,20 @@ export const settingsSchema = z.object({
     theme: z.enum(["light", "dark", "system"]),
     logoUrl: optionalUrl,
   }),
+  localization: z.object({
+    currency: z.object({
+      name: z.string().trim().min(1),
+      isoCode: z.string().trim().min(1),
+      symbol: z.string().trim().min(1),
+      symbolPosition: z.enum(["before", "after"]),
+      decimalPlaces: z.number().int().min(0).max(6),
+      decimalSeparator: z.string().trim().min(1),
+      thousandsSeparator: z.string().trim().min(1),
+      locale: z.string().trim().min(1),
+    }),
+    timeZone: z.string().trim().min(1),
+    dateFormat: z.enum(["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]),
+  }),
 });
 
 export const defaultSettings = {
@@ -71,8 +95,18 @@ export const defaultSettings = {
     name: "Your Partrix Workspace",
     slug: "your-workspace",
     contactEmail: "",
+    businessEmail: "",
     phone: "",
+    businessPhone: "",
     address: "",
+    city: "",
+    stateProvince: "",
+    country: "",
+    postalCode: "",
+    website: "",
+    taxId: "",
+    logoUrl: "",
+    logoData: "",
   },
   rental: {
     defaultRentalTermDays: 7,
@@ -101,5 +135,19 @@ export const defaultSettings = {
     brandColor: "#22D3EE",
     theme: "dark",
     logoUrl: "",
+  },
+  localization: {
+    currency: {
+      name: "US Dollar",
+      isoCode: "USD",
+      symbol: "$",
+      symbolPosition: "before",
+      decimalPlaces: 2,
+      decimalSeparator: ".",
+      thousandsSeparator: ",",
+      locale: "en-US",
+    },
+    timeZone: "UTC",
+    dateFormat: "DD/MM/YYYY",
   },
 } as const;

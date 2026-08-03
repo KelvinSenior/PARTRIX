@@ -3,6 +3,7 @@ import { listPayments } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
 import { logActivity } from "@/services/audit";
 import { requireOrganizationContext } from "@/lib/tenant";
+import { formatAmount, formatDate } from "@/lib/branding";
 import type { BookingDTO } from "@/types/booking";
 import type { PaymentDTO } from "@/types/finance";
 import type { SettingsDTO } from "@/types/settings";
@@ -19,8 +20,8 @@ const pageWidth = 595;
 const pageHeight = 842;
 const margin = 42;
 
-function money(value: number) {
-  return `GHC ${value.toFixed(2)}`;
+function money(value: number, settings: SettingsDTO) {
+  return formatAmount(value, settings);
 }
 
 function safeText(value: unknown) {
@@ -124,9 +125,9 @@ function buildInvoicePages(data: InvoiceData) {
   const metaX = 354;
   const metaRows = [
     ["Booking", booking.bookingNumber],
-    ["Issued", issuedAt.toLocaleDateString("en-US")],
-    ["Event", new Date(booking.eventDate).toLocaleDateString("en-US")],
-    ["Return", booking.returnDate ? new Date(booking.returnDate).toLocaleDateString("en-US") : "Open"],
+    ["Issued", formatDate(issuedAt, settings)],
+    ["Event", formatDate(booking.eventDate, settings)],
+    ["Return", booking.returnDate ? formatDate(booking.returnDate, settings) : "Open"],
   ];
   content += rect(metaX - 16, y - 104, 198, 122, "0.96 0.98 1");
   metaRows.forEach(([label, value], index) => {
@@ -159,8 +160,8 @@ function buildInvoicePages(data: InvoiceData) {
     content += text(margin + 12, y, item.inventoryItemName, 9, "F2", "0.05 0.07 0.12");
     if (item.notes) content += text(margin + 12, y - 14, item.notes, 8, "F1", muted);
     content += text(326, y, item.quantity, 9, "F1", "0.05 0.07 0.12");
-    content += text(380, y, money(item.unitPrice), 9, "F1", "0.05 0.07 0.12");
-    content += text(474, y, money(item.totalPrice), 9, "F2", "0.05 0.07 0.12");
+    content += text(380, y, money(item.unitPrice, settings), 9, "F1", "0.05 0.07 0.12");
+    content += text(474, y, money(item.totalPrice, settings), 9, "F2", "0.05 0.07 0.12");
     y -= rowHeight;
   });
 
@@ -183,14 +184,14 @@ function buildInvoicePages(data: InvoiceData) {
       content += line(totalsX, rowY + 13, pageWidth - margin, rowY + 13, "0.82 0.86 0.91", 0.7);
     }
     content += text(totalsX, rowY, label, label === "Balance due" ? 10 : 9, "F2", label === "Balance due" ? brandColor : muted);
-    content += text(474, rowY, value < 0 ? `-${money(Math.abs(value))}` : money(value), label === "Balance due" ? 10 : 9, "F2", "0.05 0.07 0.12");
+    content += text(474, rowY, value < 0 ? `-${money(Math.abs(value), settings)}` : money(value, settings), label === "Balance due" ? 10 : 9, "F2", "0.05 0.07 0.12");
   });
 
   const depositY = y - totals.length * 22 - 16;
   content += rect(margin, depositY - 44, 240, 62, "0.96 0.98 1");
   content += text(margin + 14, depositY, "Deposit", 9, "F2", brandColor);
-  content += text(margin + 14, depositY - 18, `${money(booking.depositAmount)} required`, 10, "F2", "0.05 0.07 0.12");
-  content += text(margin + 14, depositY - 34, `${money(booking.depositPaid)} paid / ${booking.depositStatus.replace(/_/g, " ")}`, 8, "F1", muted);
+  content += text(margin + 14, depositY - 18, `${money(booking.depositAmount, settings)} required`, 10, "F2", "0.05 0.07 0.12");
+  content += text(margin + 14, depositY - 34, `${money(booking.depositPaid, settings)} paid / ${booking.depositStatus.replace(/_/g, " ")}`, 8, "F1", muted);
 
   if (booking.notes) {
     content += text(margin, depositY - 78, "Notes", 9, "F2", "0.05 0.07 0.12");
@@ -312,7 +313,7 @@ export async function sendInvoiceEmail(options: {
         <div style="font-family:Arial,sans-serif;color:#111827;line-height:1.5">
           <h2 style="margin:0 0 12px">Invoice ${data.invoiceNumber}</h2>
           <p>${options.message?.trim() || `Thank you for booking with ${data.settings.business.name}. Your invoice is attached as a PDF.`}</p>
-          <p><strong>Booking:</strong> ${data.booking.bookingNumber}<br/><strong>Balance due:</strong> ${money(data.booking.balanceDue)}</p>
+          <p><strong>Booking:</strong> ${data.booking.bookingNumber}<br/><strong>Balance due:</strong> ${money(data.booking.balanceDue, data.settings)}</p>
         </div>
       `,
       attachments: [

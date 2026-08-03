@@ -13,6 +13,7 @@ import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
 import { ArrowLeft, Package, CreditCard } from "lucide-react";
 import { listPayments } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
+import { formatAmount } from "@/lib/branding";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -131,7 +132,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
       <div className="grid gap-5 xl:grid-cols-[1.9fr_0.9fr]">
         <div className="space-y-5">
           {/* Items */}
-          <BookingItemEditor booking={booking} />
+          <BookingItemEditor booking={booking} settings={settings} />
 
           {/* Payments */}
           <section className={appCard}>
@@ -146,7 +147,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 bookingPayments.map((p) => (
                   <div key={p.id} className={`${appCardInner} flex items-center justify-between gap-3 text-sm`}>
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-white">GHC{p.amount.toFixed(2)}</p>
+                      <p className="font-semibold text-slate-900 dark:text-white">{formatAmount(p.amount, settings)}</p>
                       <p className="text-xs text-slate-600 dark:text-zinc-500">
                         {p.method.replace("_", " ")} ·{" "}
                         {p.processedAt
@@ -190,30 +191,30 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <div key={label} className="flex justify-between text-slate-600 dark:text-zinc-400">
                   <span>{label}</span>
                   <span className={value < 0 ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-zinc-200"}>
-                    {value < 0 ? `-GHC${Math.abs(value).toFixed(2)}` : `GHC${value.toFixed(2)}`}
+                    {value < 0 ? `-${formatAmount(Math.abs(value), settings)}` : formatAmount(value, settings)}
                   </span>
                 </div>
               ))}
               <div className="my-2 border-t border-white/10" />
               <div className="flex justify-between font-semibold">
                 <span className="text-slate-700 dark:text-zinc-300">Total</span>
-                <span className="text-slate-900 dark:text-white">GHC{booking.totalAmount.toFixed(2)}</span>
+                <span className="text-slate-900 dark:text-white">{formatAmount(booking.totalAmount, settings)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refundable deposit amount</span>
-                <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositAmount.toFixed(2)}</span>
+                <span className="text-emerald-700 dark:text-emerald-200">{formatAmount(booking.depositAmount, settings)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refundable deposit paid</span>
-                <span className="text-emerald-700 dark:text-emerald-200">GHC{booking.depositPaid.toFixed(2)}</span>
+                <span className="text-emerald-700 dark:text-emerald-200">{formatAmount(booking.depositPaid, settings)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refundable deposit refunded</span>
-                <span className="text-amber-700 dark:text-amber-200">GHC{booking.depositRefunded.toFixed(2)}</span>
+                <span className="text-amber-700 dark:text-amber-200">{formatAmount(booking.depositRefunded, settings)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refundable deposit outstanding</span>
-                <span className="text-cyan-700 dark:text-cyan-200">GHC{booking.depositOutstanding.toFixed(2)}</span>
+                <span className="text-cyan-700 dark:text-cyan-200">{formatAmount(booking.depositOutstanding, settings)}</span>
               </div>
               <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                 <span>Refundable deposit status</span>
@@ -229,7 +230,7 @@ export default async function BookingDetailPage({ params }: PageProps) {
                 <span
                   className={booking.balanceDue > 0 ? "text-amber-200" : "text-emerald-200"}
                 >
-                  GHC{booking.balanceDue.toFixed(2)}
+                  {formatAmount(booking.balanceDue, settings)}
                 </span>
               </div>
             </div>

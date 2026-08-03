@@ -12,6 +12,8 @@ import { listBookings } from "@/services/booking";
 import { listDeliveries } from "@/services/delivery";
 import { getFinanceSummary } from "@/services/finance";
 import { listInventoryItems } from "@/services/inventory";
+import { getOrganizationSettings } from "@/services/settings";
+import { formatAmount } from "@/lib/branding";
 
 export default async function DashboardPage() {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -20,11 +22,12 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [bookingsResult, deliveriesResult, financeSummary, inventoryResult] = await Promise.all([
+  const [bookingsResult, deliveriesResult, financeSummary, inventoryResult, settings] = await Promise.all([
     listBookings(),
     listDeliveries(),
     getFinanceSummary(),
     listInventoryItems({ search: "", category: "", status: "all", availability: "all", sort: "name" }),
+    getOrganizationSettings(),
   ]);
 
   const activeBookings = bookingsResult.bookings.filter((b) =>
@@ -47,13 +50,13 @@ export default async function DashboardPage() {
     <AppShell user={user}>
       <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatsCard icon="briefcase" label="Active bookings" value={activeBookings.toString()} change={bookingChange} />
-        <StatsCard icon="wallet" label="Revenue" value={`GHC${(totalRevenue / 1000).toFixed(1)}k`} change={revenueChange} highlight />
+        <StatsCard icon="wallet" label="Revenue" value={formatAmount(totalRevenue, settings)} change={revenueChange} highlight />
         <StatsCard icon="package" label="Inventory alerts" value={inventoryAlerts.toString()} change={alertChange} />
         <StatsCard icon="truck" label="Pending deliveries" value={pendingDeliveries.toString()} change={deliveryChange} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
-        <RevenueChart financeSummary={financeSummary} />
+        <RevenueChart financeSummary={financeSummary} settings={settings} />
         <QuickActions />
       </div>
 

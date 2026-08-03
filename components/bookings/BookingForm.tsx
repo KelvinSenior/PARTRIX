@@ -7,6 +7,7 @@ import type { InventoryItemDTO } from "@/types/inventory";
 import type { SettingsDTO } from "@/types/settings";
 import PremiumButton from "@/components/ui/PremiumButton";
 import PremiumCard from "@/components/ui/PremiumCard";
+import { formatAmount } from "@/lib/branding";
 import {
   ArrowLeft,
   ArrowRight,
@@ -579,7 +580,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                       <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">{item.category ?? "Inventory item"}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-zinc-500">
                         <span className="rounded-full bg-cyan-50 px-2 py-1 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">{item.availableQuantity} available</span>
-                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">GHC{item.rentalPrice.toFixed(2)}</span>
+                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">{formatAmount(item.rentalPrice, activeSettings)}</span>
                       </div>
                     </div>
                     <div className="ml-3 rounded-2xl bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">Add</div>
@@ -635,19 +636,19 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Items subtotal</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.subtotal.toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{formatAmount(bookingTotals.subtotal, activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Fees</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{(Number(deliveryFee) + Number(setupFee)).toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{formatAmount(Number(deliveryFee) + Number(setupFee), activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Refundable deposit</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.deposit.toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{formatAmount(bookingTotals.deposit, activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Amount due now</p>
-                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">GHC{bookingTotals.balance.toFixed(2)}</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{formatAmount(bookingTotals.balance, activeSettings)}</p>
                 </div>
               </div>
             </div>
@@ -678,11 +679,11 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Refundable deposit</p>
-                  <p className="mt-1">GHC{bookingTotals.deposit.toFixed(2)} at {activeSettings.deposit.requiredDepositPercent}%</p>
+                  <p className="mt-1">{formatAmount(bookingTotals.deposit, activeSettings)} at {activeSettings.deposit.requiredDepositPercent}%</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Amount due now</p>
-                  <p className="mt-1">GHC{bookingTotals.balance.toFixed(2)}</p>
+                  <p className="mt-1">{formatAmount(bookingTotals.balance, activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Booking status</p>
@@ -719,7 +720,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Pricing</p>
-                  <p className="mt-1">Subtotal GHC{bookingTotals.subtotal.toFixed(2)} · Refundable deposit GHC{bookingTotals.deposit.toFixed(2)} · Amount due now GHC{bookingTotals.balance.toFixed(2)}</p>
+                  <p className="mt-1">Subtotal {formatAmount(bookingTotals.subtotal, activeSettings)} · Refundable deposit {formatAmount(bookingTotals.deposit, activeSettings)} · Amount due now {formatAmount(bookingTotals.balance, activeSettings)}</p>
                 </div>
               </div>
             </div>

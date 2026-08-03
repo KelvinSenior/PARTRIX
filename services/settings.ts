@@ -6,7 +6,7 @@ import type { SettingsDTO, SettingsPayload } from "@/types/settings";
 
 function mergeSettings(raw: unknown): SettingsDTO {
   if (!raw || typeof raw !== "object") {
-return JSON.parse(JSON.stringify(defaultSettings)) as SettingsDTO;
+    return JSON.parse(JSON.stringify(defaultSettings)) as SettingsDTO;
   }
 
   const safeRaw = raw as Partial<SettingsDTO>;
@@ -39,6 +39,14 @@ return JSON.parse(JSON.stringify(defaultSettings)) as SettingsDTO;
     appearance: {
       ...defaultSettings.appearance,
       ...safeRaw.appearance,
+    },
+    localization: {
+      currency: {
+        ...defaultSettings.localization.currency,
+        ...safeRaw.localization?.currency,
+      },
+      timeZone: safeRaw.localization?.timeZone ?? defaultSettings.localization.timeZone,
+      dateFormat: safeRaw.localization?.dateFormat ?? defaultSettings.localization.dateFormat,
     },
   };
 }

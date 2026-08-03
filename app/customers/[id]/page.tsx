@@ -5,6 +5,8 @@ import Sidebar from "@/components/dashboard/Sidebar";
 import TopNav from "@/components/dashboard/TopNav";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { getCustomerDetail, getCustomerBookings, getCustomerAnalytics } from "@/services/customer";
+import { getOrganizationSettings } from "@/services/settings";
+import { formatAmount } from "@/lib/branding";
 
 export default async function CustomerDetailsPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const { id } = await Promise.resolve(params);
@@ -16,6 +18,7 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
 
   const bookings = await getCustomerBookings(id);
   const analytics = await getCustomerAnalytics(id);
+  const settings = await getOrganizationSettings();
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
@@ -40,9 +43,9 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
 
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <StatsCard icon="package" label="Total Bookings" value={analytics.totalBookings.toString()} change="+0%" />
-              <StatsCard icon="dollarSign" label="Total Spent" value={`GHC${analytics.totalRevenue.toLocaleString()}`} change="+0%" highlight />
-              <StatsCard icon="wallet" label="Total Paid" value={`GHC${analytics.totalPaid.toLocaleString()}`} change="+0%" />
-              <StatsCard icon="receipt" label="Outstanding" value={`GHC${analytics.totalOutstanding.toLocaleString()}`} change="+0%" />
+              <StatsCard icon="dollarSign" label="Total Spent" value={formatAmount(analytics.totalRevenue, settings)} change="+0%" highlight />
+              <StatsCard icon="wallet" label="Total Paid" value={formatAmount(analytics.totalPaid, settings)} change="+0%" />
+              <StatsCard icon="receipt" label="Outstanding" value={formatAmount(analytics.totalOutstanding, settings)} change="+0%" />
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
@@ -75,7 +78,7 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                 <div className="mt-4 space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
                   <div>
                     <span className="text-zinc-600 dark:text-zinc-400">Average Order Value</span>
-                    <p className="font-semibold text-zinc-950 dark:text-zinc-50">GHC{analytics.avgOrderValue.toFixed(2)}</p>
+                    <p className="font-semibold text-zinc-950 dark:text-zinc-50">{formatAmount(analytics.avgOrderValue, settings)}</p>
                   </div>
                   <div>
                     <span className="text-zinc-600 dark:text-zinc-400">Last Booking</span>
@@ -112,8 +115,8 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                           </td>
                           <td className="py-3">{new Date(b.eventDate).toLocaleDateString()}</td>
                           <td className="py-3">{b.itemCount}</td>
-                          <td className="py-3">GHC{b.totalAmount.toFixed(2)}</td>
-                          <td className="py-3">GHC{b.balanceDue.toFixed(2)}</td>
+                          <td className="py-3">{formatAmount(b.totalAmount, settings)}</td>
+                          <td className="py-3">{formatAmount(b.balanceDue, settings)}</td>
                           <td className="py-3">
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               b.status === "COMPLETED"

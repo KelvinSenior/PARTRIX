@@ -2,9 +2,11 @@
 
 import { motion } from "framer-motion";
 import type { FinanceSummary } from "@/types/finance";
+import type { SettingsDTO } from "@/types/settings";
 import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
+import { formatAmount } from "@/lib/branding";
 
-export default function RevenueChart({ financeSummary }: { financeSummary?: FinanceSummary }) {
+export default function RevenueChart({ financeSummary, settings }: { financeSummary?: FinanceSummary; settings: SettingsDTO }) {
   // Get last 6 months of data
   const monthlyData = financeSummary?.monthly.slice(-6) ?? [];
   const hasData = monthlyData.length > 0;
@@ -38,7 +40,7 @@ export default function RevenueChart({ financeSummary }: { financeSummary?: Fina
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className={appEyebrow}>Revenue</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">GHC{(totalRevenue / 1000).toFixed(1)}k</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-950 dark:text-white">{formatAmount(totalRevenue, settings)}</h2>
         </div>
         <span className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${isPositive ? "border-emerald-300/70 bg-emerald-100 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/15 dark:text-emerald-200" : "border-rose-300/70 bg-rose-100 text-rose-700 dark:border-rose-400/25 dark:bg-rose-400/15 dark:text-rose-200"}`}>
           {isPositive ? "+" : ""}{changePercent}% vs last month

@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PencilLine, Save } from "lucide-react";
 import type { BookingDTO } from "@/types/booking";
+import type { SettingsDTO } from "@/types/settings";
 import PremiumButton from "@/components/ui/PremiumButton";
 import { appCard, appCardInner, appEyebrow } from "@/lib/appStyles";
+import { formatAmount } from "@/lib/branding";
 
 type DraftItem = {
   quantity: number;
@@ -13,7 +15,7 @@ type DraftItem = {
   notes: string;
 };
 
-export default function BookingItemEditor({ booking }: { booking: BookingDTO }) {
+export default function BookingItemEditor({ booking, settings }: { booking: BookingDTO; settings: SettingsDTO }) {
   const router = useRouter();
   const [drafts, setDrafts] = useState<Record<string, DraftItem>>(() => Object.fromEntries(
     booking.bookingItems.map((item) => [
@@ -111,7 +113,7 @@ export default function BookingItemEditor({ booking }: { booking: BookingDTO }) 
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">{item.inventoryItemName}</p>
                   <p className="mt-1 text-xs text-slate-600 dark:text-zinc-500">
-                    Line total GHC{item.totalPrice.toFixed(2)} · Unit price GHC{item.unitPrice.toFixed(2)}
+                    Line total {formatAmount(item.totalPrice, settings)} · Unit price {formatAmount(item.unitPrice, settings)}
                   </p>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/70 bg-cyan-50 px-3 py-1 text-xs font-semibold text-cyan-700 dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200">
@@ -156,7 +158,7 @@ export default function BookingItemEditor({ booking }: { booking: BookingDTO }) 
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-                <p className="text-sm text-slate-600 dark:text-zinc-400">Subtotal impact: GHC{(draft.quantity * item.unitPrice - draft.discount).toFixed(2)}</p>
+                <p className="text-sm text-slate-600 dark:text-zinc-400">Subtotal impact: {formatAmount(draft.quantity * item.unitPrice - draft.discount, settings)}</p>
                 <PremiumButton type="button" variant="primary" size="md" onClick={() => saveItem(item.id)} isLoading={savingId === item.id} disabled={!canEdit}>
                   <Save className="h-4 w-4" /> Save
                 </PremiumButton>
@@ -167,7 +169,7 @@ export default function BookingItemEditor({ booking }: { booking: BookingDTO }) 
       </div>
 
       <div className="mt-5 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-slate-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-        Total of editable items: <span className="font-semibold text-slate-900 dark:text-white">GHC{itemSummary.toFixed(2)}</span>
+        Total of editable items: <span className="font-semibold text-slate-900 dark:text-white">{formatAmount(itemSummary, settings)}</span>
       </div>
     </section>
   );
