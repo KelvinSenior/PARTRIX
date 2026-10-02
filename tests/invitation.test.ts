@@ -57,6 +57,7 @@ describe("single-use organization invitations", () => {
     expect(tx.user.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ role: "STAFF", organizationId: "org-a" }),
     }));
+    expect(tx.organization.create).not.toHaveBeenCalled();
   });
 
   it("rejects expired invitations without creating an account", async () => {
@@ -82,6 +83,50 @@ describe("single-use organization invitations", () => {
     tx.organizationInvitation.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(registerUser({ invitationToken: token, name: "Taylor User", email: "taylor@example.com", password: "SecurePassword!42" }))
       .rejects.toThrow("This invitation is invalid or expired.");
+    expect(tx.user.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects revoked and previously accepted invitations", async () => {
+    tx.organizationInvitation.findUnique.mockResolvedValueOnce({
+      id: "invite-a",
+      organizationId: "org-a",
+      email: "taylor@example.com",
+      role: "STAFF",
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: new Date(),
+      acceptedAt: null,
+    });
+    await expect(registerUser({ invitationToken: token, name: "Taylor User", email: "taylor@example.com", password: "SecurePassword!42" }))
+      .rejects.toThrow("This invitation is invalid or expired.");
+
+    tx.organizationInvitation.findUnique.mockResolvedValueOnce({
+      id: "invite-a",
+      organizationId: "org-a",
+      email: "taylor@example.com",
+      role: "STAFF",
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      acceptedAt: new Date(),
+    });
+    await expect(registerUser({ invitationToken: token, name: "Taylor User", email: "taylor@example.com", password: "SecurePassword!42" }))
+      .rejects.toThrow("This invitation is invalid or expired.");
+    expect(tx.user.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects invitations that attempt to grant administrator privileges", async () => {
+    tx.organizationInvitation.findUnique.mockResolvedValueOnce({
+      id: "invite-a",
+      organizationId: "org-a",
+      email: "taylor@example.com",
+      role: "ADMIN",
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      acceptedAt: null,
+    });
+
+    await expect(registerUser({ invitationToken: token, name: "Taylor User", email: "taylor@example.com", password: "SecurePassword!42" }))
+      .rejects.toThrow("This invitation is invalid or expired.");
+    expect(tx.organizationInvitation.updateMany).not.toHaveBeenCalled();
     expect(tx.user.create).not.toHaveBeenCalled();
   });
 });

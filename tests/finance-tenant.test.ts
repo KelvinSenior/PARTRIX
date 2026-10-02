@@ -99,15 +99,25 @@ describe("financial tenant isolation", () => {
     await recordPayment({ bookingId: "b09a7cd3-6d18-4c8e-8656-000000000001", amount: 50, method: "CASH" }, "user-a");
 
     expect(tx.booking.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "booking-a" },
+      where: { id: "booking-a", organizationId: "org-a" },
       data: expect.objectContaining({ depositPaid: "0.00", balanceDue: "70.00" }),
     }));
   });
 
   it("excludes security deposits and refunds from rental revenue", async () => {
-    prisma.payment.findMany.mockResolvedValue([{ amount: decimal(100), processedAt: new Date("2026-09-29T00:00:00.000Z") }]);
-    await getFinanceSummary();
+    prisma.payment.findMany.mockResolvedValue([
+      { amount: decimal(0.1), processedAt: new Date("2026-09-29T00:00:00.000Z") },
+      { amount: decimal(0.2), processedAt: new Date("2026-09-29T00:00:00.000Z") },
+    ]);
+    prisma.expense.findMany.mockResolvedValue([
+      { amount: decimal(0.1), incurredAt: new Date("2026-09-29T00:00:00.000Z") },
+      { amount: decimal(0.2), incurredAt: new Date("2026-09-29T00:00:00.000Z") },
+    ]);
+    prisma.booking.findMany.mockResolvedValue([{ balanceDue: decimal(0.1) }, { balanceDue: decimal(0.2) }]);
+    const summary = await getFinanceSummary();
 
+    expect(summary.totals).toEqual({ revenue: 0.3, expenses: 0.3, profit: 0, outstanding: 0.3 });
+    expect(summary.monthly).toEqual([{ month: "2026-09", revenue: 0.3, expenses: 0.3, profit: 0 }]);
     expect(prisma.payment.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ organizationId: "org-a", type: "RENTAL", status: "COMPLETED" }),
     }));

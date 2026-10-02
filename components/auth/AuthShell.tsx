@@ -28,19 +28,19 @@ export default function AuthShell({ title, subtitle, cardTitle, cardSubtitle, fo
           <p className="mt-3 text-sm text-slate-600 dark:text-zinc-300">
             Inventory, bookings, logistics, and finance visibility in one enterprise-ready command center.
           </p>
-          <div className="mt-8 space-y-4">
+          <div className="mt-8 space-y-3">
             <div className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4 dark:border-cyan-200/15 dark:bg-slate-950/40">
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Today revenue</p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-700 dark:text-cyan-200">GHC18,420</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Booking workflows</p>
+              <p className="mt-2 text-lg font-semibold text-cyan-800 dark:text-cyan-200">Reservations, schedules, and returns</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 dark:border-zinc-700/70 dark:bg-slate-950/45">
-                <p className="text-xs text-slate-500 dark:text-zinc-400">Active bookings</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">124</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Inventory control</p>
+                <p className="mt-2 text-base font-semibold text-slate-900 dark:text-white">Availability and stock</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 dark:border-zinc-700/70 dark:bg-slate-950/45">
-                <p className="text-xs text-slate-500 dark:text-zinc-400">Inventory health</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">96%</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400">Financial records</p>
+                <p className="mt-2 text-base font-semibold text-slate-900 dark:text-white">Payments and expenses</p>
               </div>
             </div>
           </div>

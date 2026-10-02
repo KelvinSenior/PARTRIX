@@ -11,6 +11,17 @@ function decimalToNumber(value: any): number {
   return Number(value.toString());
 }
 
+function decimalToCents(value: unknown): number {
+  if (value == null) return 0;
+  const normalized = typeof value === "object" && "toString" in value
+    ? value.toString()
+    : String(value);
+  const match = normalized.match(/^(-?)(\d+)(?:\.(\d{1,2}))?$/);
+  if (!match) throw new Error("Monetary values must have at most two decimal places.");
+  const cents = Number(match[2]) * 100 + Number((match[3] ?? "").padEnd(2, "0"));
+  return match[1] ? -cents : cents;
+}
+
 function serializeCustomer(customer: any): CustomerDTO {
   return {
     id: customer.id,
@@ -79,7 +90,7 @@ export async function updateCustomer(id: string, payload: CustomerPayload): Prom
   };
 
   const customer = await prisma.customer.update({
-    where: { id },
+    where: { id, organizationId: user.organizationId! },
     data: {
       firstName: normalizedPayload.firstName,
       lastName: normalizedPayload.lastName ?? undefined,
@@ -106,7 +117,7 @@ export async function deleteCustomer(id: string): Promise<boolean> {
       throw new Error("Customers with booking history cannot be deleted.");
     }
 
-    await prisma.customer.delete({ where: { id } });
+    await prisma.customer.deleteMany({ where: { id, organizationId: user.organizationId! } });
     return true;
   } catch {
     return false;
@@ -165,8 +176,8 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetailDTO |
     ...serializeCustomer(customer),
     bookingCount,
     ...(canReadFinance ? {
-      totalSpent: customer.bookings.reduce((sum, booking) => sum + decimalToNumber(booking.totalAmount), 0),
-      outstandingBalance: customer.bookings.reduce((sum, booking) => sum + decimalToNumber(booking.balanceDue), 0),
+      totalSpent: customer.bookings.reduce((sum, booking) => sum + decimalToCents(booking.totalAmount), 0) / 100,
+      outstandingBalance: customer.bookings.reduce((sum, booking) => sum + decimalToCents(booking.balanceDue), 0) / 100,
     } : {}),
     lastBookingDate,
   };
@@ -216,12 +227,12 @@ export async function getCustomerAnalytics(id: string) {
   });
 
   const totalBookings = bookings.length;
-  const totalRevenue = bookings.reduce((sum, b) => sum + decimalToNumber(b.totalAmount), 0);
-  const totalPaid = bookings.reduce((sum, b) => {
-    const paid = b.payments.reduce((s, p) => s + (p.type === "REFUND" ? -1 : 1) * decimalToNumber(p.amount), 0);
-    return sum + paid;
-  }, 0);
-  const totalOutstanding = bookings.reduce((sum, b) => sum + decimalToNumber(b.balanceDue), 0);
+  const totalRevenue = bookings.reduce((sum, booking) => sum + decimalToCents(booking.totalAmount), 0) / 100;
+  const totalPaid = bookings.reduce((sum, booking) => sum + booking.payments.reduce(
+    (paymentSum, payment) => paymentSum + (payment.type === "REFUND" ? -1 : 1) * decimalToCents(payment.amount),
+    0,
+  ), 0) / 100;
+  const totalOutstanding = bookings.reduce((sum, booking) => sum + decimalToCents(booking.balanceDue), 0) / 100;
   const avgOrderValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
 
   // Bookings by status

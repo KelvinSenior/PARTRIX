@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { expensePayloadSchema, paymentPayloadSchema } from "@/lib/financeValidation";
+import { expensePayloadSchema, parseFinanceDateRange, paymentPayloadSchema } from "@/lib/financeValidation";
 
 describe("financial request validation", () => {
   it("rejects negative and over-precision payment amounts", () => {
     const base = { method: "CASH", bookingId: null };
     expect(paymentPayloadSchema.safeParse({ ...base, amount: -1 }).success).toBe(false);
     expect(paymentPayloadSchema.safeParse({ ...base, amount: 1.239 }).success).toBe(false);
+    expect(paymentPayloadSchema.safeParse({ ...base, amount: 10_000_000_000 }).success).toBe(false);
   });
 
   it("requires a booking for refunds and rejects unsupported payment methods", () => {
@@ -25,5 +26,19 @@ describe("financial request validation", () => {
       amount: 0,
       incurredAt: "2026-09-29T00:00:00.000Z",
     }).success).toBe(false);
+  });
+
+  it("rejects invalid or reversed finance date filters", () => {
+    expect(parseFinanceDateRange("not-a-date", undefined).success).toBe(false);
+    expect(parseFinanceDateRange("2026-10-02", "2026-10-01").success).toBe(false);
+  });
+
+  it("includes the entire final day for date-only finance filters", () => {
+    const range = parseFinanceDateRange("2026-10-01", "2026-10-01");
+    expect(range.success).toBe(true);
+    if (range.success) {
+      expect(range.start?.toISOString()).toBe("2026-10-01T00:00:00.000Z");
+      expect(range.end?.toISOString()).toBe("2026-10-01T23:59:59.999Z");
+    }
   });
 });

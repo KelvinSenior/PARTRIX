@@ -3,7 +3,7 @@ import { z } from "zod";
 const monetaryAmount = z.number()
   .finite()
   .positive()
-  .max(99_999_999_999.99)
+  .max(9_999_999_999.99)
   .refine((amount) => Number.isInteger(amount * 100), "Use no more than two decimal places.");
 
 const optionalText = (maximum: number) => z.preprocess(
@@ -41,6 +41,38 @@ export const expensePayloadSchema = z.object({
     context.addIssue({ code: "custom", path: ["incurredAt"], message: "Enter a valid expense date." });
   }
 });
+
+const financeDateInput = z.union([z.iso.date(), z.iso.datetime({ offset: true })]);
+
+const financeDateRangeSchema = z.object({
+  start: z.preprocess((value) => value === "" || value == null ? undefined : value, financeDateInput.optional()),
+  end: z.preprocess((value) => value === "" || value == null ? undefined : value, financeDateInput.optional()),
+}).superRefine((range, context) => {
+  if (!range.start || !range.end) return;
+  const start = financeDateBoundary(range.start, false);
+  const end = financeDateBoundary(range.end, true);
+  if (start > end) {
+    context.addIssue({ code: "custom", path: ["end"], message: "End date must be on or after the start date." });
+  }
+});
+
+function financeDateBoundary(value: string, isEnd: boolean) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return new Date(`${value}T${isEnd ? "23:59:59.999" : "00:00:00.000"}Z`);
+  }
+  return new Date(value);
+}
+
+export function parseFinanceDateRange(start?: string | null, end?: string | null) {
+  const parsed = financeDateRangeSchema.safeParse({ start, end });
+  if (!parsed.success) return { success: false as const, error: parsed.error };
+
+  return {
+    success: true as const,
+    start: parsed.data.start ? financeDateBoundary(parsed.data.start, false) : undefined,
+    end: parsed.data.end ? financeDateBoundary(parsed.data.end, true) : undefined,
+  };
+}
 
 export type ValidPaymentPayload = z.infer<typeof paymentPayloadSchema>;
 export type ValidExpensePayload = z.infer<typeof expensePayloadSchema>;

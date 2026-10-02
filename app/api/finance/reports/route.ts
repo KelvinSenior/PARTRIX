@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError } from "@/lib/apiErrors";
+import { apiError, apiErrorFromException } from "@/lib/apiErrors";
 import { hasPermission } from "@/lib/rolePolicy";
 import { getFinanceSummary, getCustomerDebts } from "@/services/finance";
+import { parseFinanceDateRange } from "@/lib/financeValidation";
 
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
@@ -10,14 +11,14 @@ export async function GET(request: Request) {
   if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view financial reports.", 403);
 
   const url = new URL(request.url);
-  const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;
-  const end = url.searchParams.get("end") ? new Date(url.searchParams.get("end") as string) : undefined;
+  const range = parseFinanceDateRange(url.searchParams.get("start"), url.searchParams.get("end"));
+  if (!range.success) return apiError("Invalid date range.", 400, { fields: range.error.flatten().fieldErrors });
 
   try {
-    const summary = await getFinanceSummary(start, end);
+    const summary = await getFinanceSummary(range.start, range.end);
     const debts = await getCustomerDebts();
     return NextResponse.json({ summary, debts });
   } catch (err) {
-    return apiError((err as Error).message ?? "Could not produce finance report.", 500);
+    return apiErrorFromException(err, "Could not produce finance report.");
   }
 }

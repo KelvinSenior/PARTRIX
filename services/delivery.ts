@@ -33,11 +33,17 @@ export async function createDelivery(payload: DeliveryPayload): Promise<Delivery
   const user = await requirePermission("deliveries:write");
 
   // Verify the booking belongs to this org
-  const booking = await prisma.booking.findFirst({
-    where: { id: payload.bookingId, organizationId: user.organizationId! },
-    select: { id: true, customerId: true },
-  });
-  if (!booking || booking.customerId !== payload.customerId) throw new Error("Booking not found.");
+  const [booking, customer] = await Promise.all([
+    prisma.booking.findFirst({
+      where: { id: payload.bookingId, organizationId: user.organizationId! },
+      select: { id: true, customerId: true },
+    }),
+    prisma.customer.findFirst({
+      where: { id: payload.customerId, organizationId: user.organizationId! },
+      select: { id: true },
+    }),
+  ]);
+  if (!booking || !customer || booking.customerId !== payload.customerId) throw new Error("Booking not found.");
 
   const delivery = await prisma.delivery.create({
     data: {
@@ -96,7 +102,7 @@ export async function updateDeliveryStatus(
   if (status === "COMPLETED") data.pickupAt = new Date();
 
   const updated = await prisma.delivery.update({
-    where: { id },
+    where: { id, organizationId: user.organizationId! },
     data,
     include,
   });
@@ -128,7 +134,7 @@ export async function updateDelivery(
   }
 
   const updated = await prisma.delivery.update({
-    where: { id },
+    where: { id, organizationId: user.organizationId! },
     data,
     include,
   });

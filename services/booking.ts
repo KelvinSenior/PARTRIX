@@ -124,6 +124,7 @@ async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: an
 
 async function getOverlappingReservedQuantities(
   itemIds: string[],
+  organizationId: string,
   eventDate: Date,
   returnDate: Date,
   tx: any,
@@ -131,8 +132,10 @@ async function getOverlappingReservedQuantities(
 ) {
   const bookings = await tx.bookingItem.findMany({
     where: {
+      organizationId,
       inventoryItemId: { in: itemIds },
       booking: {
+        organizationId,
         ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
         status: { in: activeBookingStatuses as string[] },
         eventDate: { lte: returnDate },
@@ -223,7 +226,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       throw new Error("One or more inventory items are invalid.");
     }
 
-    const reservedAmounts = await getOverlappingReservedQuantities(itemIds, eventDate, returnDate, tx);
+    const reservedAmounts = await getOverlappingReservedQuantities(itemIds, organizationId, eventDate, returnDate, tx);
 
     const itemsData = payload.items.map((item) => {
       const inventoryItem = inventoryItems.find((record) => record.id === item.inventoryItemId);
@@ -296,7 +299,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
     await Promise.all(
       payload.items.map((item) =>
         tx.inventoryItem.update({
-          where: { id: item.inventoryItemId },
+          where: { id: item.inventoryItemId, organizationId },
           data: {
             availableQuantity: { decrement: item.quantity },
             rentedQuantity: { increment: item.quantity },
@@ -471,7 +474,7 @@ export async function returnBookingItems(
     await Promise.all(
       updates.map((update) =>
         tx.bookingItem.update({
-          where: { id: update.bookingItem.id },
+          where: { id: update.bookingItem.id, organizationId: user.organizationId! },
           data: { returnedQuantity: { increment: update.quantity } } as any,
         }),
       ),
@@ -480,7 +483,7 @@ export async function returnBookingItems(
     await Promise.all(
       updates.map((update) =>
         tx.inventoryItem.update({
-          where: { id: update.bookingItem.inventoryItemId },
+          where: { id: update.bookingItem.inventoryItemId, organizationId: user.organizationId! },
           data: {
             availableQuantity: { increment: update.quantity },
             rentedQuantity: { decrement: update.quantity },
@@ -490,7 +493,7 @@ export async function returnBookingItems(
     );
 
     const updatedBookingItems = await tx.bookingItem.findMany({
-      where: { bookingId },
+      where: { bookingId, organizationId: user.organizationId! },
       include: { inventoryItem: true },
     }) as any[];
 
@@ -501,7 +504,7 @@ export async function returnBookingItems(
     const finalStatus = allReturned ? "COMPLETED" : booking.status;
 
     const updatedBooking = await tx.booking.update({
-      where: { id: bookingId },
+      where: { id: bookingId, organizationId: user.organizationId! },
       data: {
         status: finalStatus,
       },
@@ -603,6 +606,7 @@ export async function updateBookingItems(
     const inventoryById = new Map(inventoryItems.map((item: any) => [item.id, item]));
     const reservedAmounts = await getOverlappingReservedQuantities(
       submittedItemIds,
+      organizationId,
       updatedEventDate,
       reservationEnd,
       tx,
@@ -661,7 +665,7 @@ export async function updateBookingItems(
     for (const [inventoryItemId, delta] of quantityDeltas) {
       if (!delta) continue;
       await tx.inventoryItem.update({
-        where: { id: inventoryItemId },
+        where: { id: inventoryItemId, organizationId },
         data: {
           availableQuantity: { decrement: delta },
           rentedQuantity: { increment: delta },
@@ -672,7 +676,7 @@ export async function updateBookingItems(
     const retainedBookingItemIds = new Set(itemChanges.flatMap((item) => item.existing ? [item.existing.id] : []));
     for (const oldItem of booking.bookingItems as any[]) {
       if (!retainedBookingItemIds.has(oldItem.id)) {
-        await tx.bookingItem.delete({ where: { id: oldItem.id } });
+        await tx.bookingItem.delete({ where: { id: oldItem.id, organizationId } });
       }
     }
     for (const item of itemChanges) {
@@ -685,7 +689,7 @@ export async function updateBookingItems(
         notes: item.notes,
       };
       if (item.existing) {
-        await tx.bookingItem.update({ where: { id: item.existing.id }, data });
+        await tx.bookingItem.update({ where: { id: item.existing.id, organizationId }, data });
       } else {
         await tx.bookingItem.create({
           data: { organizationId, bookingId, ...data },
@@ -709,7 +713,7 @@ export async function updateBookingItems(
     const balanceDueCents = nextDepositOutstandingCents + nextRentalOutstandingCents;
 
     const updatedBooking = await tx.booking.update({
-      where: { id: bookingId },
+      where: { id: bookingId, organizationId },
       data: {
         ...(changes.eventDate ? { eventDate: updatedEventDate } : {}),
         ...(changes.returnDate !== undefined ? { returnDate: updatedReturnDate } : {}),
@@ -752,7 +756,7 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
       }
 
       return tx.inventoryItem.update({
-        where: { id: item.inventoryItemId },
+        where: { id: item.inventoryItemId, organizationId: user.organizationId! },
         data: {
           availableQuantity: { increment: outstanding },
           rentedQuantity: { decrement: outstanding },
@@ -763,7 +767,7 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
     await Promise.all(restoreActions.filter(Boolean));
 
     const updatedBooking = await tx.booking.update({
-      where: { id: bookingId },
+      where: { id: bookingId, organizationId: user.organizationId! },
       data: { status: "CANCELLED" },
       include: {
         customer: true,
@@ -824,14 +828,14 @@ export async function updateBookingStatus(
         if (outstanding > 0) {
           if (newStatus === "COMPLETED") {
             await tx.bookingItem.update({
-              where: { id: item.id },
+              where: { id: item.id, organizationId: user.organizationId! },
               data: { returnedQuantity: item.quantity },
             });
           }
 
           if (wasActive) {
             await tx.inventoryItem.update({
-              where: { id: item.inventoryItemId },
+              where: { id: item.inventoryItemId, organizationId: user.organizationId! },
               data: {
                 availableQuantity: { increment: outstanding },
                 rentedQuantity: { decrement: outstanding },
@@ -846,7 +850,7 @@ export async function updateBookingStatus(
     ) {
       const itemIds = booking.bookingItems.map((item) => item.inventoryItemId);
       const reservationEnd = booking.returnDate ?? booking.eventDate;
-      const reservedAmounts = await getOverlappingReservedQuantities(itemIds, booking.eventDate, reservationEnd, tx, bookingId);
+      const reservedAmounts = await getOverlappingReservedQuantities(itemIds, user.organizationId!, booking.eventDate, reservationEnd, tx, bookingId);
       const inventoryItems = await tx.inventoryItem.findMany({
         where: { id: { in: itemIds }, organizationId: user.organizationId! },
       });
@@ -866,13 +870,13 @@ export async function updateBookingStatus(
 
         if (booking.status === "COMPLETED") {
           await tx.bookingItem.update({
-            where: { id: item.id },
+            where: { id: item.id, organizationId: user.organizationId! },
             data: { returnedQuantity: 0 },
           });
         }
 
         await tx.inventoryItem.update({
-          where: { id: item.inventoryItemId },
+          where: { id: item.inventoryItemId, organizationId: user.organizationId! },
           data: {
             availableQuantity: { decrement: outstanding },
             rentedQuantity: { increment: outstanding },
@@ -882,7 +886,7 @@ export async function updateBookingStatus(
     }
 
     const updated = await tx.booking.update({
-      where: { id: bookingId },
+      where: { id: bookingId, organizationId: user.organizationId! },
       data: { status: newStatus },
       include: {
         customer: true,

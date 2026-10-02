@@ -98,7 +98,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
           const remainingBalanceCents = Math.max(0, rentalOutstandingBefore + depositAmountCents - nextDepositPaidCents);
 
           await tx.booking.update({
-            where: { id: booking.id },
+            where: { id: booking.id, organizationId: user.organizationId! },
             data: {
               depositPaid: centsToDecimal(nextDepositPaidCents),
               depositStatus,
@@ -111,7 +111,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
           const refundStatus = nextDepositRefundedCents >= depositAmountCents ? "APPROVED" : "PARTIAL";
           const remainingBalanceCents = rentalOutstandingBefore + depositOutstandingBefore;
           await tx.booking.update({
-            where: { id: booking.id },
+            where: { id: booking.id, organizationId: user.organizationId! },
             data: {
               depositRefunded: centsToDecimal(nextDepositRefundedCents),
               depositStatus: nextDepositRefundedCents >= depositAmountCents ? "REFUNDED" : "PARTIALLY_REFUNDED",
@@ -130,7 +130,7 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
           const nextBalanceDue = nextRentalOutstanding + nextDepositOutstanding;
 
           await tx.booking.update({
-            where: { id: booking.id },
+            where: { id: booking.id, organizationId: user.organizationId! },
             data: {
               depositPaid: centsToDecimal(nextDepositPaidCents),
               depositStatus: nextDepositOutstanding > 0 ? "PENDING" : "PAID",
@@ -309,35 +309,44 @@ export async function getFinanceSummary(start?: Date, end?: Date): Promise<Finan
   const payments = await prisma.payment.findMany({ where: { ...where, status: "COMPLETED", type: "RENTAL", processedAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
   const expenses = await prisma.expense.findMany({ where: { ...where, incurredAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
 
-  const revenue = payments.reduce((s, p) => s + decimalToNumber(p.amount), 0);
-  const expenseTotal = expenses.reduce((s, e) => s + decimalToNumber(e.amount), 0);
-  const profit = revenue - expenseTotal;
+  const revenueCents = payments.reduce((sum, payment) => sum + toCents(payment.amount), 0);
+  const expenseCents = expenses.reduce((sum, expense) => sum + toCents(expense.amount), 0);
 
   // outstanding - sum of booking.balanceDue > 0
   const outstandingBookings = await prisma.booking.findMany({ where: { ...where, balanceDue: { gt: 0 } as any } as any, select: { balanceDue: true } as any });
-  const outstanding = outstandingBookings.reduce((s, b) => s + decimalToNumber(b.balanceDue), 0);
+  const outstandingCents = outstandingBookings.reduce((sum, booking) => sum + toCents(booking.balanceDue), 0);
 
   // monthly analytics: naive grouping by YYYY-MM
-  const monthsMap: Record<string, { revenue: number; expenses: number }> = {};
+  const monthsMap: Record<string, { revenueCents: number; expenseCents: number }> = {};
 
   for (const p of payments) {
     const key = p.processedAt ? new Date(p.processedAt).toISOString().slice(0, 7) : "unknown";
-    monthsMap[key] = monthsMap[key] || { revenue: 0, expenses: 0 };
-    monthsMap[key].revenue += decimalToNumber(p.amount);
+    monthsMap[key] = monthsMap[key] || { revenueCents: 0, expenseCents: 0 };
+    monthsMap[key].revenueCents += toCents(p.amount);
   }
 
   for (const e of expenses) {
     const key = e.incurredAt ? new Date(e.incurredAt).toISOString().slice(0, 7) : "unknown";
-    monthsMap[key] = monthsMap[key] || { revenue: 0, expenses: 0 };
-    monthsMap[key].expenses += decimalToNumber(e.amount);
+    monthsMap[key] = monthsMap[key] || { revenueCents: 0, expenseCents: 0 };
+    monthsMap[key].expenseCents += toCents(e.amount);
   }
 
   const monthly = Object.entries(monthsMap)
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([month, v]) => ({ month, revenue: v.revenue, expenses: v.expenses, profit: v.revenue - v.expenses }));
+    .map(([month, totals]) => ({
+      month,
+      revenue: totals.revenueCents / 100,
+      expenses: totals.expenseCents / 100,
+      profit: (totals.revenueCents - totals.expenseCents) / 100,
+    }));
 
   return {
-    totals: { revenue, expenses: expenseTotal, profit, outstanding },
+    totals: {
+      revenue: revenueCents / 100,
+      expenses: expenseCents / 100,
+      profit: (revenueCents - expenseCents) / 100,
+      outstanding: outstandingCents / 100,
+    },
     monthly,
   };
 }
@@ -345,14 +354,17 @@ export async function getFinanceSummary(start?: Date, end?: Date): Promise<Finan
 export async function getCustomerDebts(): Promise<Array<{ customerId: string; customerName: string; email: string | null; outstanding: number }>> {
   const user = await requirePermission("finance:read");
   const bookings = await prisma.booking.findMany({ where: { organizationId: user.organizationId!, balanceDue: { gt: 0 } as any }, include: { customer: true } as any }) as any[];
-  const map: Record<string, { customerId: string; customerName: string; email: string | null; outstanding: number }> = {};
+  const map: Record<string, { customerId: string; customerName: string; email: string | null; outstandingCents: number }> = {};
 
   for (const b of bookings) {
     const cid = b.customer.id as string;
     const name = `${b.customer.firstName} ${b.customer.lastName}`;
-    map[cid] = map[cid] || { customerId: cid, customerName: name, email: b.customer.email ?? null, outstanding: 0 };
-    map[cid].outstanding += decimalToNumber(b.balanceDue);
+    map[cid] = map[cid] || { customerId: cid, customerName: name, email: b.customer.email ?? null, outstandingCents: 0 };
+    map[cid].outstandingCents += toCents(b.balanceDue);
   }
 
-  return Object.values(map);
+  return Object.values(map).map(({ outstandingCents, ...debt }) => ({
+    ...debt,
+    outstanding: outstandingCents / 100,
+  }));
 }

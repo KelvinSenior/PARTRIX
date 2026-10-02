@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createDamageReport, listDamageReports } from "@/services/damage";
 import { createDamageSchema } from "@/lib/damageValidation";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError, validationError } from "@/lib/apiErrors";
+import { apiError, apiErrorFromException, validationError } from "@/lib/apiErrors";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   try {
     const dr = await createDamageReport(parsed.data, user.id);
     return NextResponse.json({ damage: dr }, { status: 201 });
-  } catch (err: any) {
-    return apiError(err.message ?? "Error", 500);
+  } catch (error) {
+    return apiErrorFromException(error, "Damage report could not be created.");
   }
 }

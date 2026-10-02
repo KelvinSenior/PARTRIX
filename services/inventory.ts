@@ -263,7 +263,7 @@ export async function updateInventoryItem(
   }
 
   const item = await prisma.inventoryItem.update({
-    where: { id },
+    where: { id, organizationId: user.organizationId! },
     data: toPrismaData(data),
   });
 
@@ -292,5 +292,5 @@ export async function deleteInventoryItem(id: string) {
     return;
   }
 
-  await prisma.inventoryItem.delete({ where: { id } });
+  await prisma.inventoryItem.deleteMany({ where: { id, organizationId: user.organizationId! } });
 }

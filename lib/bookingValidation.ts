@@ -1,15 +1,18 @@
 import { z } from "zod";
 
+export const bookingMoneySchema = z.number()
+  .finite()
+  .min(0)
+  .max(9_999_999_999.99)
+  .refine((amount) => Number.isInteger(amount * 100), "Use no more than two decimal places.");
+
 export const bookingItemSchema = z.object({
   inventoryItemId: z.string().uuid({ message: "Select a valid inventory item." }),
   quantity: z
     .number({ message: "Quantity must be a number." })
     .int({ message: "Quantity must be a whole number." })
     .positive({ message: "Quantity must be at least 1." }),
-  discount: z
-    .number({ message: "Discount must be a number." })
-    .min(0, { message: "Discount cannot be negative." })
-    .default(0),
+  discount: bookingMoneySchema.default(0),
   notes: z.string().max(250, "Item notes cannot be longer than 250 characters.").optional(),
 });
 
@@ -53,9 +56,9 @@ export const bookingPayloadSchema = z
       { message: "Return date must be a valid date." },
     ),
     status: z.literal("PENDING").default("PENDING"),
-    deliveryFee: z.number().min(0, "Delivery fee cannot be negative.").default(0),
-    setupFee: z.number().min(0, "Setup fee cannot be negative.").default(0),
-    discount: z.number().min(0, "Discount cannot be negative.").default(0),
+    deliveryFee: bookingMoneySchema.default(0),
+    setupFee: bookingMoneySchema.default(0),
+    discount: bookingMoneySchema.default(0),
     notes: z.string().max(1000, "Booking notes cannot exceed 1000 characters.").optional(),
     items: z.array(bookingItemSchema).min(1, "Add at least one inventory item to the booking."),
   })

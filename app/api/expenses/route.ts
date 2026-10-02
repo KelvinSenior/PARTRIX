@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError, apiErrorFromException } from "@/lib/apiErrors";
-import { expensePayloadSchema } from "@/lib/financeValidation";
+import { expensePayloadSchema, parseFinanceDateRange } from "@/lib/financeValidation";
 import { hasPermission } from "@/lib/rolePolicy";
 import { recordExpense, listExpenses } from "@/services/finance";
 
@@ -11,10 +11,10 @@ export async function GET(request: Request) {
   if (!hasPermission(user.role, "expenses:read")) return apiError("You do not have permission to view expenses.", 403);
 
   const url = new URL(request.url);
-  const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;
-  const end = url.searchParams.get("end") ? new Date(url.searchParams.get("end") as string) : undefined;
+  const range = parseFinanceDateRange(url.searchParams.get("start"), url.searchParams.get("end"));
+  if (!range.success) return apiError("Invalid date range.", 400, { fields: range.error.flatten().fieldErrors });
 
-  const expenses = await listExpenses(start, end);
+  const expenses = await listExpenses(range.start, range.end);
   return NextResponse.json({ expenses });
 }
 

@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rolePolicy";
 import { getFinanceSummary } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
 import { formatAmount } from "@/lib/branding";
+import { parseFinanceDateRange } from "@/lib/financeValidation";
 
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
@@ -12,8 +13,9 @@ export async function GET(request: Request) {
   if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view financial reports.", 403);
 
   const url = new URL(request.url);
-  const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;
-  const end = url.searchParams.get("end") ? new Date(url.searchParams.get("end") as string) : undefined;
+  const range = parseFinanceDateRange(url.searchParams.get("start"), url.searchParams.get("end"));
+  if (!range.success) return apiError("Invalid date range.", 400, { fields: range.error.flatten().fieldErrors });
+  const { start, end } = range;
 
   const summary = await getFinanceSummary(start, end);
   const settings = await getOrganizationSettings();

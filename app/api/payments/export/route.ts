@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
 import { hasPermission } from "@/lib/rolePolicy";
+import { parseFinanceDateRange } from "@/lib/financeValidation";
 import { listPayments } from "@/services/finance";
 
 export async function GET(request: Request) {
@@ -10,10 +11,10 @@ export async function GET(request: Request) {
   if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to export payments.", 403);
 
   const url = new URL(request.url);
-  const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;
-  const end = url.searchParams.get("end") ? new Date(url.searchParams.get("end") as string) : undefined;
+  const range = parseFinanceDateRange(url.searchParams.get("start"), url.searchParams.get("end"));
+  if (!range.success) return apiError("Invalid date range.", 400, { fields: range.error.flatten().fieldErrors });
 
-  const payments = await listPayments(start, end);
+  const payments = await listPayments(range.start, range.end);
 
   const rows = ["id,bookingId,amount,method,status,transactionReference,processedAt,notes,createdAt"];
   for (const p of payments) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError, validationError } from "@/lib/apiErrors";
+import { bookingMoneySchema } from "@/lib/bookingValidation";
 import { getBooking, returnBookingItems, cancelBooking, updateBookingStatus, updateBookingItems } from "@/services/booking";
 
 const bookingUpdateSchema = z.object({
@@ -23,7 +24,7 @@ const bookingUpdateSchema = z.object({
         bookingItemId: z.string().uuid({ message: "Select a valid booking item." }).optional(),
         inventoryItemId: z.string().uuid({ message: "Select a valid inventory item." }),
         quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
-        discount: z.number().finite().min(0).optional(),
+        discount: bookingMoneySchema.optional(),
         notes: z.string().max(250).nullable().optional(),
       }),
     ).min(1, "A booking must include at least one item."),

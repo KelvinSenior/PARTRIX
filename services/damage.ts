@@ -58,12 +58,12 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
     // mark as lost: reduce total and available
     const newTotal = Math.max(0, item.totalQuantity - quantity);
     const newAvailable = Math.max(0, item.availableQuantity - quantity);
-    await prisma.inventoryItem.update({ where: { id: item.id }, data: { totalQuantity: newTotal, availableQuantity: newAvailable } });
+    await prisma.inventoryItem.update({ where: { id: item.id, organizationId: user.organizationId! }, data: { totalQuantity: newTotal, availableQuantity: newAvailable } });
   } else {
     // damaged: decrement available, increment damaged
     const newAvailable = Math.max(0, item.availableQuantity - quantity);
     const newDamaged = item.damagedQuantity + quantity;
-    await prisma.inventoryItem.update({ where: { id: item.id }, data: { availableQuantity: newAvailable, damagedQuantity: newDamaged } });
+    await prisma.inventoryItem.update({ where: { id: item.id, organizationId: user.organizationId! }, data: { availableQuantity: newAvailable, damagedQuantity: newDamaged } });
   }
 
   const notesExtra: any = {};
@@ -93,18 +93,6 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
     metadata: { inventoryItemId: payload.inventoryItemId, severity: dr.severity },
   });
 
-  // if customer charge provided and booking exists, create a Payment record as a charge
-  if (payload.customerCharge && payload.bookingId) {
-    await prisma.payment.create({ data: {
-      organizationId: user.organizationId!,
-      bookingId: payload.bookingId,
-      amount: payload.customerCharge as any,
-      method: 'CASH',
-      status: 'COMPLETED',
-      processedAt: new Date(),
-    } });
-  }
-
   return serialize(dr);
 }
 
@@ -121,7 +109,7 @@ export async function resolveDamageReport(id: string, payload: ResolveDamagePayl
     const qty = dr.quantity;
     const newDamaged = Math.max(0, item.damagedQuantity - qty);
     const newAvailable = item.availableQuantity + qty;
-    await prisma.inventoryItem.update({ where: { id: item.id }, data: { damagedQuantity: newDamaged, availableQuantity: newAvailable } });
+    await prisma.inventoryItem.update({ where: { id: item.id, organizationId: user.organizationId! }, data: { damagedQuantity: newDamaged, availableQuantity: newAvailable } });
   }
 
   if (payload.action === 'mark_lost') {
@@ -129,11 +117,18 @@ export async function resolveDamageReport(id: string, payload: ResolveDamagePayl
     const newTotal = Math.max(0, item.totalQuantity - qty);
     const newDamaged = Math.max(0, item.damagedQuantity - qty);
     const newAvailable = Math.max(0, item.availableQuantity - qty);
-    await prisma.inventoryItem.update({ where: { id: item.id }, data: { totalQuantity: newTotal, damagedQuantity: newDamaged, availableQuantity: newAvailable } });
+    await prisma.inventoryItem.update({ where: { id: item.id, organizationId: user.organizationId! }, data: { totalQuantity: newTotal, damagedQuantity: newDamaged, availableQuantity: newAvailable } });
   }
 
-  const updates: any = { resolved: true, resolvedAt: new Date() };
-  const updated = await prisma.damageReport.update({ where: { id }, data: updates, include: { inventoryItem: true } });
+  const chargeNote = payload.customerCharge == null
+    ? null
+    : `Customer charge assessed: ${payload.customerCharge.toFixed(2)}`;
+  const updates: any = {
+    resolved: true,
+    resolvedAt: new Date(),
+    ...(chargeNote ? { notes: [dr.notes, chargeNote].filter(Boolean).join("\n") } : {}),
+  };
+  const updated = await prisma.damageReport.update({ where: { id, organizationId: user.organizationId! }, data: updates, include: { inventoryItem: true } });
 
   await createNotification({
     organizationId: user.organizationId!,
@@ -147,18 +142,6 @@ export async function resolveDamageReport(id: string, payload: ResolveDamagePayl
     entityId: updated.id,
     metadata: { action: payload.action },
   });
-
-  // optionally create a payment charge referenced to booking
-  if (payload.customerCharge && dr.bookingId) {
-    await prisma.payment.create({ data: {
-      organizationId: user.organizationId!,
-      bookingId: dr.bookingId,
-      amount: payload.customerCharge as any,
-      method: 'CASH',
-      status: 'COMPLETED',
-      processedAt: new Date(),
-    } });
-  }
 
   return serialize(updated);
 }

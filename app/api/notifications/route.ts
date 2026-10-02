@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError } from "@/lib/apiErrors";
+import { apiError, apiErrorFromException } from "@/lib/apiErrors";
 import { z } from "zod";
 import { deleteReadNotifications, listNotifications, markAllNotificationsRead } from "@/services/notification";
 
@@ -46,8 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to load notifications.";
-    return apiError(message, 500);
+    return apiErrorFromException(error, "Unable to load notifications.");
   }
 }
 
@@ -64,8 +63,7 @@ export async function PATCH(request: Request) {
 
     return apiError("Unsupported notification action.", 400);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to update notifications.";
-    return apiError(message, 500);
+    return apiErrorFromException(error, "Unable to update notifications.");
   }
 }
 
@@ -82,7 +80,6 @@ export async function DELETE(request: Request) {
 
     return apiError("Choose a notification delete scope.", 400);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to delete notifications.";
-    return apiError(message, 500);
+    return apiErrorFromException(error, "Unable to delete notifications.");
   }
 }

@@ -46,10 +46,10 @@ const features = [
   },
 ];
 
-const metrics = [
-  { label: "Active bookings", value: "124", detail: "+18 this week" },
-  { label: "Inventory health", value: "96%", detail: "live availability" },
-  { label: "Payments captured", value: "GHC18.4k", detail: "today" },
+const operationHighlights = [
+  { label: "Booking workflows", value: "Reservations and returns", detail: "Track every stage" },
+  { label: "Inventory operations", value: "Availability and stock", detail: "Maintain item visibility" },
+  { label: "Financial records", value: "Payments and expenses", detail: "Use workspace settings" },
 ];
 
 const fadeUp = {
@@ -141,22 +141,22 @@ export default function LandingPage() {
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-200/80">Control center</p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Today&apos;s operations</h2>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">Operational overview</h2>
               </div>
               <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-100">
-                Live
+                Platform areas
               </span>
             </div>
 
             <div className="grid gap-3">
-              {metrics.map((metric) => (
+              {operationHighlights.map((metric) => (
                 <div
                   key={metric.label}
                   className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-white/10 dark:bg-[#050816]/60"
                 >
                   <div>
                     <p className="text-xs text-slate-500 dark:text-[#94A3B8]">{metric.label}</p>
-                    <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-white">{metric.value}</p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">{metric.value}</p>
                   </div>
                   <span className="text-xs font-medium text-cyan-700 dark:text-cyan-200">{metric.detail}</span>
                 </div>

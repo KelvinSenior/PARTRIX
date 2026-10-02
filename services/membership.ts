@@ -27,7 +27,7 @@ export async function changeMemberRole(id: string, role: "MANAGER" | "STAFF") {
     if (!member) return false;
     if (organization?.ownerId === id) throw new Error("The workspace owner cannot be demoted.");
 
-    await tx.user.update({ where: { id: member.id }, data: { role } });
+    await tx.user.update({ where: { id: member.id, organizationId: user.organizationId! }, data: { role } });
     return true;
   });
 }
@@ -48,7 +48,7 @@ export async function removeOrganizationMember(id: string) {
     if (!member) return false;
     if (organization?.ownerId === id) throw new Error("The workspace owner cannot be removed.");
 
-    await tx.user.delete({ where: { id: member.id } });
+    await tx.user.deleteMany({ where: { id: member.id, organizationId: user.organizationId! } });
     return true;
   });
 }

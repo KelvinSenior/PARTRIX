@@ -21,6 +21,7 @@ vi.mock("@/services/audit", () => ({ logActivity: vi.fn() }));
 vi.mock("@/services/notification", () => ({ createNotification: vi.fn() }));
 
 import { updateBookingItems, updateBookingStatus } from "@/services/booking";
+import { bookingMoneySchema } from "@/lib/bookingValidation";
 
 const decimal = (value: number) => ({ toString: () => value.toFixed(2), toNumber: () => value });
 let existingBooking: ReturnType<typeof createBookingFixture>;
@@ -85,8 +86,14 @@ describe("booking item reservation edits", () => {
     await updateBookingItems("booking-a", {
       items: [{ bookingItemId: "booking-item-a", inventoryItemId: "item-a", quantity: 4 }],
     });
+    expect(tx.bookingItem.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        organizationId: "org-a",
+        booking: expect.objectContaining({ organizationId: "org-a" }),
+      }),
+    }));
     expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: "item-a" },
+      where: { id: "item-a", organizationId: "org-a" },
       data: { availableQuantity: { decrement: 2 }, rentedQuantity: { increment: 2 } },
     });
     expect(tx.booking.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -94,12 +101,18 @@ describe("booking item reservation edits", () => {
     }));
   });
 
+  it("rejects booking amounts that exceed Decimal(12,2) or contain fractional cents", () => {
+    expect(bookingMoneySchema.safeParse(9_999_999_999.99).success).toBe(true);
+    expect(bookingMoneySchema.safeParse(10_000_000_000).success).toBe(false);
+    expect(bookingMoneySchema.safeParse(1.239).success).toBe(false);
+  });
+
   it("releases stock when quantity decreases", async () => {
     await updateBookingItems("booking-a", {
       items: [{ bookingItemId: "booking-item-a", inventoryItemId: "item-a", quantity: 1 }],
     });
     expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: "item-a" },
+      where: { id: "item-a", organizationId: "org-a" },
       data: { availableQuantity: { decrement: -1 }, rentedQuantity: { increment: -1 } },
     });
   });
@@ -115,15 +128,15 @@ describe("booking item reservation edits", () => {
     });
 
     expect(tx.inventoryItem.update).toHaveBeenNthCalledWith(1, {
-      where: { id: "item-a" },
+      where: { id: "item-a", organizationId: "org-a" },
       data: { availableQuantity: { decrement: -2 }, rentedQuantity: { increment: -2 } },
     });
     expect(tx.inventoryItem.update).toHaveBeenNthCalledWith(2, {
-      where: { id: "item-b" },
+      where: { id: "item-b", organizationId: "org-a" },
       data: { availableQuantity: { decrement: 3 }, rentedQuantity: { increment: 3 } },
     });
     expect(tx.bookingItem.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "booking-item-a" },
+      where: { id: "booking-item-a", organizationId: "org-a" },
       data: expect.objectContaining({ inventoryItemId: "item-b", unitPrice: "20.00", totalPrice: "60.00" }),
     }));
   });
@@ -161,11 +174,11 @@ describe("booking item reservation edits", () => {
     await updateBookingStatus("booking-a", "PENDING");
 
     expect(tx.bookingItem.update).toHaveBeenCalledWith({
-      where: { id: "booking-item-a" },
+      where: { id: "booking-item-a", organizationId: "org-a" },
       data: { returnedQuantity: 0 },
     });
     expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: "item-a" },
+      where: { id: "item-a", organizationId: "org-a" },
       data: { availableQuantity: { decrement: 2 }, rentedQuantity: { increment: 2 } },
     });
   });

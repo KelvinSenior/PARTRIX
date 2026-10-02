@@ -61,7 +61,7 @@ export default function DamageResolveForm({ damageReportId }: { damageReportId: 
 
       <div>
         <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Customer Charge ($) <span className="text-zinc-500 font-normal">(optional)</span>
+          Customer Charge Assessment <span className="text-zinc-500 font-normal">(optional)</span>
         </label>
         <input
           type="number"
@@ -72,7 +72,7 @@ export default function DamageResolveForm({ damageReportId }: { damageReportId: 
           className={appInput}
         />
         <p className="mt-1.5 text-xs text-zinc-500">
-          Records a charge/payment linked to the booking if the report is associated with one.
+          Records an assessment in this damage report only. It is not recorded as a collected payment.
         </p>
       </div>
 

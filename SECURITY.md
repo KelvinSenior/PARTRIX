@@ -15,18 +15,17 @@ This document outlines the security measures implemented in Partrix to protect a
   - At least one lowercase letter (a-z)
   - At least one number (0-9)
   - At least one special character (@$!%*?&^#)
-- **Common Password Prevention**: Blocks 50+ common passwords and patterns
+- **Common Password Prevention**: Rejects a maintained set of common passwords and common keyboard/sequential/repetition patterns
 
 ### Password Hashing
 - **Algorithm**: bcryptjs with 12 salt rounds
 - **Protection**: Constant-time comparison prevents timing attacks
-- **Migration Path**: Old passwords can be rehashed on next login
 
 ### JWT Token Management
 - **Algorithm**: HS256 with 32-character minimum secret
 - **Expiration**: 7 days (consider reducing to 24 hours in production)
-- **Issuer Validation**: All tokens validated against the legacy-compatible `rentflow` issuer
-- **Algorithm Verification**: Tokens must have `issuer: "rentflow"` to preserve existing session compatibility
+- **Issuer Validation**: Accepts the current `partrix` issuer and legacy `rentflow` tokens
+- **Signing Algorithm**: Tokens are signed with the `jsonwebtoken` default HS256 algorithm
 
 ### Session Management
 - **HTTP-Only Cookies**: Prevents XSS token theft
@@ -40,14 +39,30 @@ This document outlines the security measures implemented in Partrix to protect a
 ## 2. Authorization & Access Control ✅
 
 ### Role-Based Access Control (RBAC)
-```
-ADMIN    - Full system access
-MANAGER  - Department-level management
-STAFF    - Limited operational access
-```
+Permissions are enforced by server services using the current database-backed organization membership. UI visibility is not an authorization boundary.
+
+| Capability | ADMIN | MANAGER | STAFF |
+| --- | --- | --- | --- |
+| Read/create/edit/return bookings | Yes | Yes | Yes |
+| Cancel bookings or change status | Yes | Yes | No |
+| Read/write/delete customers | Yes | Yes | Read/write |
+| Read/write/delete inventory | Yes | Yes | Read only |
+| Read/report/resolve damage | Yes | Yes | Read/report |
+| Read/write deliveries | Yes | Yes | Yes |
+| Read financial reports, payments, and expenses | Yes | Yes | No |
+| Record payments and expenses | Yes | Yes | Yes |
+| Record refunds | Yes | No | No |
+| Read settings | Yes | Yes | Yes |
+| Change settings and business identity | Yes | No | No |
+| Invite/remove/change member roles | Yes | No | No |
+| Manage own notifications | Yes | Yes | Yes |
+| Read audit history | Yes | Yes | No |
+
+`MANAGER` inherits the ADMIN policy except `settings:manage`, `members:manage`, and `finance:refund`. Notifications are always scoped to the authenticated recipient and organization.
 
 ### Implementation Points
-- **Middleware**: `proxy.ts` enforces role checks
+- **Proxy**: `proxy.ts` applies HTTPS redirects and request-boundary headers; it does not enforce roles
+- **Server Authorization**: API routes and services check the current database-backed user role and organization
 - **Route Guards**: `ProtectedPage.tsx` client-side validation
 - **API Endpoints**: `getAuthenticatedUser()` verifies auth status
 - **Admin Routes**: `/admin` only accessible to `ADMIN` role
@@ -134,12 +149,12 @@ X-Content-Type-Options: nosniff - Prevents MIME sniffing
 X-XSS-Protection: 0 - Disable legacy XSS filter
 Referrer-Policy: strict-origin-when-cross-origin
 Permissions-Policy: Disabled geolocation, camera, microphone
-Strict-Transport-Security: 63 days (production only)
+Strict-Transport-Security: 2 years (production only)
 X-Permitted-Cross-Domain-Policies: none
 ```
 
 ### CSP Details
-- **Strict in Production**: No inline scripts allowed
+- **Production policy**: Currently permits inline and eval scripts/styles; this is defense in depth, not a strict XSS boundary
 - **Permissive in Development**: Allows localhost for hot reload
 - **Frame-ancestors: none**: Prevents embedding in iframes
 
@@ -150,7 +165,7 @@ X-Permitted-Cross-Domain-Policies: none
 ### AUTH_COOKIE_OPTIONS
 ```typescript
 {
-  name: "rentflow_token", // legacy-compatible cookie name
+  name: "partrix_token",
   httpOnly: true,      // ✅ Prevents XSS theft
   secure: true,        // ✅ HTTPS only (production)
   sameSite: "strict",  // ✅ Prevents CSRF
@@ -196,11 +211,13 @@ RATE_LIMIT_MAX_REQUESTS: positive integer
 4. **Directory Traversal Prevention**: Path resolution validation
 5. **Rate Limiting**: Max uploads per time window
 
+Inventory images are public content: non-Vercel deployments store them under `public/uploads/inventory`, while Vercel deployments store data URLs in the database. Do not upload private documents or sensitive customer files through this endpoint.
+
 ### Upload Endpoint (`/api/inventory/upload`)
 - Requires authentication
 - Validates file contents
 - Generates secure filenames
-- Stores outside public web root when possible
+- Stores public inventory image content as described above
 - Implements rate limiting
 
 ---

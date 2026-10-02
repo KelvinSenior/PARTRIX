@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError, validationError } from "@/lib/apiErrors";
+import { apiError, apiErrorFromException, validationError } from "@/lib/apiErrors";
 import { getDamageReport, resolveDamageReport } from "@/services/damage";
 import { resolveDamageSchema } from "@/lib/damageValidation";
 
@@ -36,7 +36,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const updated = await resolveDamageReport(parsedId.data, parsed.data);
     if (!updated) return apiError("Not found.", 404);
     return NextResponse.json({ damage: updated });
-  } catch (err: any) {
-    return apiError(err.message ?? "Error", 500);
+  } catch (error) {
+    return apiErrorFromException(error, "Damage report could not be resolved.");
   }
 }

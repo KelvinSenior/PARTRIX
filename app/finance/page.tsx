@@ -14,13 +14,16 @@ import { getOrganizationSettings } from "@/services/settings";
 import { appBtnSecondary, appCard, appCardInner } from "@/lib/appStyles";
 import { formatAmount } from "@/lib/branding";
 import { hasPermission } from "@/lib/rolePolicy";
+import { parseFinanceDateRange } from "@/lib/financeValidation";
 
-export default async function FinancePage({ searchParams }: { searchParams?: { start?: string; end?: string } }) {
+export default async function FinancePage({ searchParams }: { searchParams: Promise<{ start?: string; end?: string }> }) {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
   if (!user) redirect("/login");
 
-  const start = searchParams?.start ? new Date(searchParams.start) : undefined;
-  const end = searchParams?.end ? new Date(searchParams.end) : undefined;
+  const filters = await searchParams;
+  const range = parseFinanceDateRange(filters.start, filters.end);
+  if (!range.success) redirect("/finance");
+  const { start, end } = range;
 
   const canReadFinance = hasPermission(user.role, "finance:read");
   const canReadExpenses = hasPermission(user.role, "expenses:read");
@@ -35,8 +38,8 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
     getOrganizationSettings(),
   ]);
 
-  const query = searchParams?.start || searchParams?.end
-    ? `?${new URLSearchParams({ start: searchParams?.start ?? "", end: searchParams?.end ?? "" }).toString()}`
+  const query = filters.start || filters.end
+    ? `?${new URLSearchParams({ start: filters.start ?? "", end: filters.end ?? "" }).toString()}`
     : "";
 
   return (
@@ -50,7 +53,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
         actions={
           canReadFinance || canReadExpenses ? (
             <div className="flex flex-wrap items-center gap-2">
-              <DateFilter start={searchParams?.start} end={searchParams?.end} />
+              <DateFilter start={filters.start} end={filters.end} />
               {canReadFinance ? <>
                 <a href={`/api/payments/export${query}`} className={appBtnSecondary}>
                   Export payments
