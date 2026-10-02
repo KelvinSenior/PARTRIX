@@ -23,8 +23,8 @@ export interface CustomerDTO {
 
 export interface CustomerDetailDTO extends CustomerDTO {
   bookingCount: number;
-  totalSpent: number;
-  outstandingBalance: number;
+  totalSpent?: number;
+  outstandingBalance?: number;
   lastBookingDate: string | null;
 }
 

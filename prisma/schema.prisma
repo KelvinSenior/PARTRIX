@@ -17,6 +17,7 @@ model Organization {
   ownerId        String?         @db.Uuid
   settings       Json?
   users          User[]
+  invitations    OrganizationInvitation[]
   customers      Customer[]
   inventoryItems InventoryItem[]
   bookings       Booking[]
@@ -48,6 +49,7 @@ model User {
   damageReports  DamageReport[]
   activityLogs   ActivityLog[]
   notifications  Notification[]
+  createdInvitations OrganizationInvitation[] @relation("InvitationCreatedBy")
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -136,6 +138,7 @@ model Booking {
   updatedAt       DateTime       @updatedAt
 
   @@unique([organizationId, bookingNumber])
+  @@unique([id, organizationId])
   @@index([bookingNumber])
   @@index([organizationId])
   @@index([customerId])
@@ -168,7 +171,7 @@ model Payment {
   id                   String        @id @default(uuid()) @db.Uuid
   organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   organizationId       String        @db.Uuid
-  booking              Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking              Booking?      @relation(fields: [bookingId, organizationId], references: [id, organizationId], onDelete: Cascade)
   bookingId            String?       @db.Uuid
   amount               Decimal       @db.Decimal(12, 2)
   method               PaymentMethod
@@ -198,7 +201,7 @@ model Expense {
   incurredAt     DateTime
   vendor         String?
   receiptUrl     String?
-  booking        Booking?        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  booking        Booking?        @relation(fields: [bookingId, organizationId], references: [id, organizationId], onDelete: Cascade)
   bookingId      String?         @db.Uuid
   createdBy      User?           @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdById    String?         @db.Uuid
@@ -295,12 +298,32 @@ model Notification {
   entity         String
   entityId       String?
   metadata       Json?
+  dedupeKey      String?
   readAt         DateTime?
   createdAt      DateTime             @default(now())
 
   @@index([organizationId, readAt, createdAt])
   @@index([organizationId, type, createdAt])
   @@index([userId])
+  @@unique([organizationId, userId, dedupeKey])
+}
+
+model OrganizationInvitation {
+  id             String       @id @default(uuid()) @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String       @db.Uuid
+  createdBy      User         @relation("InvitationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  createdById    String       @db.Uuid
+  email          String
+  role           UserRole
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, email, expiresAt])
+  @@index([organizationId, revokedAt, acceptedAt])
 }
 
 enum UserRole {

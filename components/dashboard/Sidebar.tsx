@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { primaryNavItems, isNavActive } from "@/lib/navConfig";
+import { isNavActive } from "@/lib/navConfig";
 import PartrixLogo from "@/components/brand/PartrixLogo";
+import type { UserRole } from "@/types/auth";
+import { getNavItemsForRole } from "@/lib/navConfig";
 
-export default function Sidebar() {
+export default function Sidebar({ role }: { role: UserRole }) {
   const pathname = usePathname() || "/";
+  const navItems = getNavItemsForRole(role);
 
   return (
     <aside className="hidden w-full shrink-0 flex-col overflow-hidden rounded-[30px] border border-slate-300/90 bg-slate-50/95 p-3 shadow-[0_0_0_1px_rgba(15,23,42,0.06),0_24px_70px_rgba(15,23,42,0.14)] lg:flex lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:min-h-0 dark:border-cyan-200/10 dark:bg-[#060b1a]/95">
@@ -27,7 +30,7 @@ export default function Sidebar() {
         </div>
 
         <nav className="mt-1 flex flex-1 flex-col gap-1.5 overflow-y-auto rounded-2xl border border-slate-200/80 bg-slate-50/90 p-2 shadow-inner dark:border-white/10 dark:bg-white/[0.04]" aria-label="Sidebar">
-          {primaryNavItems.map((item) => {
+          {navItems.map((item) => {
             const active = isNavActive(pathname, item.href);
             const Icon = item.icon;
             return (

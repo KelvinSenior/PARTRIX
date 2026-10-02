@@ -7,6 +7,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import { getCustomerDetail, getCustomerBookings, getCustomerAnalytics } from "@/services/customer";
 import { getOrganizationSettings } from "@/services/settings";
 import { formatAmount } from "@/lib/branding";
+import { hasPermission } from "@/lib/rolePolicy";
 
 export default async function CustomerDetailsPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   const { id } = await Promise.resolve(params);
@@ -16,14 +17,15 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
   const customer = await getCustomerDetail(id);
   if (!customer) redirect("/customers");
 
+  const canReadFinance = hasPermission(user.role, "finance:read");
   const bookings = await getCustomerBookings(id);
-  const analytics = await getCustomerAnalytics(id);
+  const analytics = canReadFinance ? await getCustomerAnalytics(id) : null;
   const settings = await getOrganizationSettings();
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="mx-auto grid min-h-screen max-w-450 gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
-        <Sidebar />
+        <Sidebar role={user.role} />
 
         <section className="space-y-6">
           <TopNav user={user} />
@@ -41,11 +43,13 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
               </a>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <StatsCard icon="package" label="Total Bookings" value={analytics.totalBookings.toString()} change="+0%" />
-              <StatsCard icon="dollarSign" label="Total Spent" value={formatAmount(analytics.totalRevenue, settings)} change="+0%" highlight />
-              <StatsCard icon="wallet" label="Total Paid" value={formatAmount(analytics.totalPaid, settings)} change="+0%" />
-              <StatsCard icon="receipt" label="Outstanding" value={formatAmount(analytics.totalOutstanding, settings)} change="+0%" />
+            <div className={`grid gap-6 sm:grid-cols-2 ${canReadFinance ? "lg:grid-cols-4" : "lg:grid-cols-1"}`}>
+              <StatsCard icon="package" label="Total Bookings" value={customer.bookingCount.toString()} />
+              {analytics ? <>
+                <StatsCard icon="dollarSign" label="Total Spent" value={formatAmount(analytics.totalRevenue, settings)} highlight />
+                <StatsCard icon="wallet" label="Total Paid" value={formatAmount(analytics.totalPaid, settings)} />
+                <StatsCard icon="receipt" label="Outstanding" value={formatAmount(analytics.totalOutstanding, settings)} />
+              </> : null}
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
@@ -73,7 +77,7 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                 </div>
               </div>
 
-              <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
+              {analytics ? <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
                 <h3 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">Analytics</h3>
                 <div className="mt-4 space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
                   <div>
@@ -85,7 +89,7 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                     <p className="font-medium text-zinc-950 dark:text-zinc-50">{customer.lastBookingDate ? new Date(customer.lastBookingDate).toLocaleDateString() : "No bookings yet"}</p>
                   </div>
                 </div>
-              </div>
+              </div> : null}
             </div>
 
             <div className="rounded-4xl border border-zinc-200/80 bg-white/95 p-6 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950/85">
@@ -100,8 +104,10 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                         <th className="pb-2 text-left">Booking #</th>
                         <th className="pb-2 text-left">Date</th>
                         <th className="pb-2 text-left">Items</th>
-                        <th className="pb-2 text-left">Total</th>
-                        <th className="pb-2 text-left">Balance</th>
+                        {canReadFinance ? <>
+                          <th className="pb-2 text-left">Total</th>
+                          <th className="pb-2 text-left">Balance</th>
+                        </> : null}
                         <th className="pb-2 text-left">Status</th>
                       </tr>
                     </thead>
@@ -115,8 +121,10 @@ export default async function CustomerDetailsPage({ params }: { params: Promise<
                           </td>
                           <td className="py-3">{new Date(b.eventDate).toLocaleDateString()}</td>
                           <td className="py-3">{b.itemCount}</td>
-                          <td className="py-3">{formatAmount(b.totalAmount, settings)}</td>
-                          <td className="py-3">{formatAmount(b.balanceDue, settings)}</td>
+                          {canReadFinance ? <>
+                            <td className="py-3">{formatAmount(b.totalAmount ?? 0, settings)}</td>
+                            <td className="py-3">{formatAmount(b.balanceDue ?? 0, settings)}</td>
+                          </> : null}
                           <td className="py-3">
                             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
                               b.status === "COMPLETED"

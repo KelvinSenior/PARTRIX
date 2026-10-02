@@ -2,7 +2,7 @@ import { getBooking } from "@/services/booking";
 import { listPayments } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
 import { logActivity } from "@/services/audit";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import { formatAmount, formatDate } from "@/lib/branding";
 import { createNotification } from "@/services/notification";
 import type { BookingDTO } from "@/types/booking";
@@ -267,6 +267,7 @@ function buildPdf(pages: string[]) {
 }
 
 export async function getInvoiceData(bookingId: string): Promise<InvoiceData | null> {
+  await requirePermission("finance:read");
   const [booking, settings, payments] = await Promise.all([
     getBooking(bookingId),
     getOrganizationSettings(),
@@ -293,7 +294,7 @@ export async function generateInvoicePdf(bookingId: string, options?: { notify?:
   if (!data) return null;
 
   if (options?.notify !== false) {
-    const user = await requireOrganizationContext();
+    const user = await requirePermission("finance:read");
     await createNotification({
       organizationId: user.organizationId!,
       userId: user.id,
@@ -373,7 +374,7 @@ export async function sendInvoiceEmail(options: {
     throw new Error(errorMessage);
   }
 
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("finance:read");
   await logActivity({
     organizationId: user.organizationId!,
     userId: options.userId ?? user.id,

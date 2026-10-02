@@ -4,6 +4,7 @@ import { apiError } from "@/lib/apiErrors";
 import { maxImageSize, persistInventoryImage } from "@/lib/imageUpload";
 import { validateFileUpload } from "@/lib/securityUtils";
 import { enforceRateLimit } from "@/lib/rateLimiter";
+import { hasPermission } from "@/lib/rolePolicy";
 
 export const runtime = "nodejs";
 
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return apiError("You must be signed in to upload inventory images.", 401);
+  }
+  if (!hasPermission(user.role, "inventory:write")) {
+    return apiError("You do not have permission to modify inventory.", 403);
   }
 
   const formData = await request.formData().catch(() => null);

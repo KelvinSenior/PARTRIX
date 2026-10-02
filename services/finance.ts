@@ -1,8 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/services/audit";
 import { getOrganizationSettings } from "@/services/settings";
 import { createNotification } from "@/services/notification";
+import { formatAmount } from "@/lib/branding";
+import { expensePayloadSchema, paymentPayloadSchema } from "@/lib/financeValidation";
+import { InvalidOperationError, NotFoundError } from "@/lib/domainErrors";
 import type { PaymentPayload, PaymentDTO, ExpensePayload, ExpenseDTO, FinanceSummary } from "@/types/finance";
 
 function decimalToNumber(value: any): number {
@@ -13,22 +16,53 @@ function decimalToNumber(value: any): number {
   return Number(value.toString());
 }
 
+function toCents(value: number | string | { toString: () => string }): number {
+  const normalized = typeof value === "object" ? value.toString() : String(value);
+  const match = normalized.match(/^(-?)(\d+)(?:\.(\d{1,2}))?$/);
+  if (!match) throw new InvalidOperationError("Monetary values must have at most two decimal places.");
+  const cents = Number(match[2]) * 100 + Number((match[3] ?? "").padEnd(2, "0"));
+  return match[1] ? -cents : cents;
+}
+
+function centsToDecimal(cents: number) {
+  return (cents / 100).toFixed(2);
+}
+
 export async function recordPayment(payload: PaymentPayload, processedById?: string | null): Promise<PaymentDTO> {
-  const user = await requireOrganizationContext();
+  payload = paymentPayloadSchema.parse(payload);
+  const user = await requirePermission(payload.type === "REFUND" ? "finance:refund" : "finance:record");
   const settings = await getOrganizationSettings();
 
   if (!settings.payment.acceptedMethods.includes(payload.method)) {
-    throw new Error("This payment method is not enabled in workspace settings.");
+    throw new InvalidOperationError("This payment method is not enabled in workspace settings.");
   }
 
   if (settings.payment.requireTransactionReference && !payload.transactionReference?.trim()) {
-    throw new Error("Transaction reference is required by workspace settings.");
+    throw new InvalidOperationError("Transaction reference is required by workspace settings.");
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const now = new Date();
-
     const paymentType = payload.type ?? "RENTAL";
+    const booking = payload.bookingId
+      ? await tx.booking.findFirst({ where: { id: payload.bookingId, organizationId: user.organizationId! } })
+      : null;
+    if (payload.bookingId && !booking) {
+      throw new NotFoundError("Booking not found.");
+    }
+    if (paymentType === "REFUND" && !booking) {
+      throw new NotFoundError("Booking not found.");
+    }
+
+    const amountCents = toCents(payload.amount);
+    if (booking) {
+      const depositPaidCents = toCents(booking.depositPaid);
+      const depositRefundedCents = toCents(booking.depositRefunded);
+      if (paymentType === "REFUND" && amountCents > depositPaidCents - depositRefundedCents) {
+        throw new InvalidOperationError("Refund exceeds the refundable deposit balance.");
+      }
+    }
+
     const payment = await tx.payment.create({
       data: {
         organizationId: user.organizationId!,
@@ -47,69 +81,67 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
 
     // If this payment is tied to a booking, update booking financial fields.
     if (payment.bookingId) {
-      const booking = await tx.booking.findUnique({ where: { id: payment.bookingId } });
       if (booking) {
-        const amount = decimalToNumber(payment.amount);
-        const totalAmount = decimalToNumber(booking.totalAmount);
-        const depositAmount = decimalToNumber(booking.depositAmount);
-        const existingDepositPaid = decimalToNumber(booking.depositPaid);
-        const existingBalanceDue = decimalToNumber(booking.balanceDue);
-        const depositOutstandingBefore = Math.max(0, depositAmount - existingDepositPaid);
-        const rentalOutstandingBefore = Math.max(0, existingBalanceDue - depositOutstandingBefore);
-        const rentalPaidBefore = Math.max(0, totalAmount - rentalOutstandingBefore);
+        const totalAmountCents = toCents(booking.totalAmount);
+        const depositAmountCents = toCents(booking.depositAmount);
+        const existingDepositPaidCents = toCents(booking.depositPaid);
+        const existingDepositRefundedCents = toCents(booking.depositRefunded);
+        const existingBalanceDueCents = toCents(booking.balanceDue);
+        const depositOutstandingBefore = Math.max(0, depositAmountCents - existingDepositPaidCents);
+        const rentalOutstandingBefore = Math.max(0, existingBalanceDueCents - depositOutstandingBefore);
+        const rentalPaidBefore = Math.max(0, totalAmountCents - rentalOutstandingBefore);
 
         if (payment.type === "SECURITY_DEPOSIT") {
-          const depositAllocation = Math.min(amount, depositOutstandingBefore);
-          const nextDepositPaid = existingDepositPaid + depositAllocation;
-          const depositStatus = nextDepositPaid >= depositAmount ? "PAID" : "PENDING";
-          const remainingBalance = Math.max(0, totalAmount - rentalPaidBefore + (depositAmount - nextDepositPaid));
+          const depositAllocation = Math.min(amountCents, depositOutstandingBefore);
+          const nextDepositPaidCents = existingDepositPaidCents + depositAllocation;
+          const depositStatus = nextDepositPaidCents >= depositAmountCents ? "PAID" : "PENDING";
+          const remainingBalanceCents = Math.max(0, rentalOutstandingBefore + depositAmountCents - nextDepositPaidCents);
 
           await tx.booking.update({
             where: { id: booking.id },
             data: {
-              depositPaid: nextDepositPaid.toFixed(2),
+              depositPaid: centsToDecimal(nextDepositPaidCents),
               depositStatus,
-              balanceDue: remainingBalance.toFixed(2),
+              balanceDue: centsToDecimal(remainingBalanceCents),
             } as any,
           });
         } else if (payment.type === "REFUND") {
-          const refunded = Math.min(
-            decimalToNumber(booking.depositPaid) - decimalToNumber(booking.depositRefunded),
-            amount,
-          );
-          const nextDepositRefunded = decimalToNumber(booking.depositRefunded) + refunded;
-          const refundStatus = nextDepositRefunded >= depositAmount ? "FORFEITED" : "PARTIAL";
-          const remainingBalance = Math.max(0, totalAmount - rentalPaidBefore + (depositAmount - existingDepositPaid));
+          const refundableCents = Math.max(0, existingDepositPaidCents - existingDepositRefundedCents);
+          const nextDepositRefundedCents = existingDepositRefundedCents + Math.min(refundableCents, amountCents);
+          const refundStatus = nextDepositRefundedCents >= depositAmountCents ? "APPROVED" : "PARTIAL";
+          const remainingBalanceCents = rentalOutstandingBefore + depositOutstandingBefore;
           await tx.booking.update({
             where: { id: booking.id },
             data: {
-              depositRefunded: nextDepositRefunded.toFixed(2),
+              depositRefunded: centsToDecimal(nextDepositRefundedCents),
+              depositStatus: nextDepositRefundedCents >= depositAmountCents ? "REFUNDED" : "PARTIALLY_REFUNDED",
               refundStatus,
-              balanceDue: remainingBalance.toFixed(2),
+              balanceDue: centsToDecimal(remainingBalanceCents),
             } as any,
           });
         } else {
-          const rentalAllocation = Math.min(amount, Math.max(0, totalAmount - rentalPaidBefore));
-          const remaining = Math.max(0, amount - rentalAllocation);
+          const rentalAllocation = Math.min(amountCents, Math.max(0, totalAmountCents - rentalPaidBefore));
+          const remaining = Math.max(0, amountCents - rentalAllocation);
           const depositAllocation = Math.min(remaining, depositOutstandingBefore);
-          const nextDepositPaid = existingDepositPaid + depositAllocation;
+          const nextDepositPaidCents = existingDepositPaidCents + depositAllocation;
           const nextRentalPaid = rentalPaidBefore + rentalAllocation;
-          const nextDepositOutstanding = Math.max(0, depositAmount - nextDepositPaid);
-          const nextRentalOutstanding = Math.max(0, totalAmount - nextRentalPaid);
+          const nextDepositOutstanding = Math.max(0, depositAmountCents - nextDepositPaidCents);
+          const nextRentalOutstanding = Math.max(0, totalAmountCents - nextRentalPaid);
           const nextBalanceDue = nextRentalOutstanding + nextDepositOutstanding;
 
           await tx.booking.update({
             where: { id: booking.id },
             data: {
-              depositPaid: nextDepositPaid.toFixed(2),
+              depositPaid: centsToDecimal(nextDepositPaidCents),
               depositStatus: nextDepositOutstanding > 0 ? "PENDING" : "PAID",
-              balanceDue: nextBalanceDue.toFixed(2),
+              balanceDue: centsToDecimal(nextBalanceDue),
             } as any,
           });
         }
       }
 
       await logActivity({
+        tx,
         organizationId: user.organizationId!,
         userId: processedById ?? null,
         bookingId: payment.bookingId,
@@ -125,19 +157,6 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
         level: "INFO",
       });
 
-      await createNotification({
-        tx,
-        organizationId: user.organizationId!,
-        userId: processedById ?? user.id,
-        type: "PAYMENT",
-        priority: paymentType === "REFUND" ? "INFO" : "SUCCESS",
-        title: paymentType === "REFUND" ? "Refund recorded" : "Payment received",
-        message: `${paymentType.replace(/_/g, " ")} of GHC${decimalToNumber(payment.amount).toFixed(2)} was recorded.`,
-        href: `/bookings/${payment.bookingId}`,
-        entity: "Payment",
-        entityId: payment.id,
-        metadata: { amount: decimalToNumber(payment.amount), method: payment.method, paymentType },
-      });
     }
 
     return {
@@ -155,10 +174,27 @@ export async function recordPayment(payload: PaymentPayload, processedById?: str
       createdAt: payment.createdAt.toISOString(),
     };
   });
+
+  if (result.bookingId) {
+    await createNotification({
+      organizationId: user.organizationId!,
+      userId: processedById ?? user.id,
+      type: "PAYMENT",
+      priority: result.type === "REFUND" ? "INFO" : "SUCCESS",
+      title: result.type === "REFUND" ? "Refund recorded" : "Payment received",
+      message: `${result.type.replace(/_/g, " ")} of ${formatAmount(result.amount, settings)} was recorded.`,
+      href: `/bookings/${result.bookingId}`,
+      entity: "Payment",
+      entityId: result.id,
+      metadata: { amount: result.amount, method: result.method, paymentType: result.type },
+    });
+  }
+
+  return result;
 }
 
 export async function listPayments(start?: Date, end?: Date) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("finance:read");
   const where: any = { organizationId: user.organizationId! };
   if (start || end) where.processedAt = {};
   if (start) where.processedAt.gte = start;
@@ -189,19 +225,29 @@ export async function listPayments(start?: Date, end?: Date) {
 }
 
 export async function recordExpense(payload: ExpensePayload, createdById?: string | null): Promise<ExpenseDTO> {
-  const user = await requireOrganizationContext();
-  const expense = await prisma.expense.create({
-    data: {
-      organizationId: user.organizationId!,
-      category: payload.category as any,
-      amount: payload.amount.toString(),
-      incurredAt: new Date(payload.incurredAt),
-      vendor: payload.vendor ?? null,
-      receiptUrl: payload.receiptUrl ?? null,
-      bookingId: payload.bookingId ?? null,
-      createdById: createdById ?? null,
-      notes: payload.notes ?? null,
-    } as any,
+  payload = expensePayloadSchema.parse(payload);
+  const user = await requirePermission("expenses:record");
+  const expense = await prisma.$transaction(async (tx) => {
+    if (payload.bookingId) {
+      const booking = await tx.booking.findFirst({
+        where: { id: payload.bookingId, organizationId: user.organizationId! },
+        select: { id: true },
+      });
+      if (!booking) throw new NotFoundError("Booking not found.");
+    }
+    return tx.expense.create({
+      data: {
+        organizationId: user.organizationId!,
+        category: payload.category as any,
+        amount: payload.amount.toFixed(2),
+        incurredAt: new Date(payload.incurredAt),
+        vendor: payload.vendor ?? null,
+        receiptUrl: payload.receiptUrl ?? null,
+        bookingId: payload.bookingId ?? null,
+        createdById: createdById ?? null,
+        notes: payload.notes ?? null,
+      } as any,
+    });
   });
 
   await logActivity({
@@ -235,7 +281,7 @@ export async function recordExpense(payload: ExpensePayload, createdById?: strin
 }
 
 export async function listExpenses(start?: Date, end?: Date) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("expenses:read");
   const where: any = { organizationId: user.organizationId! };
   if (start || end) where.incurredAt = {};
   if (start) where.incurredAt.gte = start;
@@ -258,9 +304,9 @@ export async function listExpenses(start?: Date, end?: Date) {
 }
 
 export async function getFinanceSummary(start?: Date, end?: Date): Promise<FinanceSummary> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("finance:read");
   const where = { organizationId: user.organizationId! };
-  const payments = await prisma.payment.findMany({ where: { ...where, status: "COMPLETED", processedAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
+  const payments = await prisma.payment.findMany({ where: { ...where, status: "COMPLETED", type: "RENTAL", processedAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
   const expenses = await prisma.expense.findMany({ where: { ...where, incurredAt: { gte: start ?? new Date(0), lte: end ?? new Date() } } as any });
 
   const revenue = payments.reduce((s, p) => s + decimalToNumber(p.amount), 0);
@@ -297,7 +343,7 @@ export async function getFinanceSummary(start?: Date, end?: Date): Promise<Finan
 }
 
 export async function getCustomerDebts(): Promise<Array<{ customerId: string; customerName: string; email: string | null; outstanding: number }>> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("finance:read");
   const bookings = await prisma.booking.findMany({ where: { organizationId: user.organizationId!, balanceDue: { gt: 0 } as any }, include: { customer: true } as any }) as any[];
   const map: Record<string, { customerId: string; customerName: string; email: string | null; outstanding: number }> = {};
 

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import { createNotification } from "@/services/notification";
 import type { DamageReportDTO, CreateDamagePayload, ResolveDamagePayload } from "@/types/damage";
 
@@ -22,19 +22,31 @@ function serialize(dr: any): DamageReportDTO {
 }
 
 export async function listDamageReports() {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("damage:read");
   const rows = await prisma.damageReport.findMany({ where: { organizationId: user.organizationId! }, include: { inventoryItem: true } });
   return rows.map(serialize);
 }
 
 export async function getDamageReport(id: string) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("damage:read");
   const row = await prisma.damageReport.findFirst({ where: { id, organizationId: user.organizationId! }, include: { inventoryItem: true } });
   return row ? serialize(row) : null;
 }
 
 export async function createDamageReport(payload: CreateDamagePayload, reportedById?: string | null) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("damage:report");
+
+  if (payload.bookingId) {
+    const booking = await prisma.booking.findFirst({
+      where: {
+        id: payload.bookingId,
+        organizationId: user.organizationId!,
+        bookingItems: { some: { inventoryItemId: payload.inventoryItemId } },
+      },
+      select: { id: true },
+    });
+    if (!booking) throw new Error("Booking not found.");
+  }
 
   // adjust inventory quantities
   const item = await prisma.inventoryItem.findFirst({ where: { id: payload.inventoryItemId, organizationId: user.organizationId! } });
@@ -97,7 +109,7 @@ export async function createDamageReport(payload: CreateDamagePayload, reportedB
 }
 
 export async function resolveDamageReport(id: string, payload: ResolveDamagePayload) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("damage:resolve");
   const dr = await prisma.damageReport.findFirst({ where: { id, organizationId: user.organizationId! } });
   if (!dr) return null;
 

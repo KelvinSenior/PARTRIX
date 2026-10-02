@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import type { DeliveryDTO, DeliveryPayload, DeliveryStatus } from "@/types/delivery";
 
 function serialize(d: any): DeliveryDTO {
@@ -30,13 +30,14 @@ const include = {
 };
 
 export async function createDelivery(payload: DeliveryPayload): Promise<DeliveryDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("deliveries:write");
 
   // Verify the booking belongs to this org
   const booking = await prisma.booking.findFirst({
     where: { id: payload.bookingId, organizationId: user.organizationId! },
+    select: { id: true, customerId: true },
   });
-  if (!booking) throw new Error("Booking not found.");
+  if (!booking || booking.customerId !== payload.customerId) throw new Error("Booking not found.");
 
   const delivery = await prisma.delivery.create({
     data: {
@@ -57,7 +58,7 @@ export async function createDelivery(payload: DeliveryPayload): Promise<Delivery
 }
 
 export async function listDeliveries(): Promise<DeliveryDTO[]> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("deliveries:read");
 
   const deliveries = await prisma.delivery.findMany({
     where: { organizationId: user.organizationId! },
@@ -69,7 +70,7 @@ export async function listDeliveries(): Promise<DeliveryDTO[]> {
 }
 
 export async function getDelivery(id: string): Promise<DeliveryDTO | null> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("deliveries:read");
 
   const delivery = await prisma.delivery.findFirst({
     where: { id, organizationId: user.organizationId! },
@@ -83,7 +84,7 @@ export async function updateDeliveryStatus(
   id: string,
   status: DeliveryStatus,
 ): Promise<DeliveryDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("deliveries:write");
 
   const existing = await prisma.delivery.findFirst({
     where: { id, organizationId: user.organizationId! },
@@ -107,7 +108,7 @@ export async function updateDelivery(
   id: string,
   patch: Partial<DeliveryPayload & { status: DeliveryStatus }>,
 ): Promise<DeliveryDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("deliveries:write");
 
   const existing = await prisma.delivery.findFirst({
     where: { id, organizationId: user.organizationId! },

@@ -5,12 +5,15 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&^#])[A-Za-z\d
 const passwordErrorMsg =
   "Password must be at least 12 characters and contain uppercase, lowercase, number, and special character (@$!%*?&^#).";
 
-const optionalOrganizationSlug = z.preprocess(
-  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
-  z.string().trim().min(1, "Workspace slug must not be empty.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use lowercase letters, numbers, and hyphens only.").optional(),
-);
-
 export const signupPayloadSchema = z.object({
+  organizationName: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().trim().min(1, "Business name is required.").max(100, "Business name cannot exceed 100 characters.").optional(),
+  ),
+  invitationToken: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.string().regex(/^[a-f0-9]{64}$/, "Invalid invitation.").optional(),
+  ),
   name: z
     .string()
     .trim()
@@ -30,7 +33,10 @@ export const signupPayloadSchema = z.object({
       (password) => !isCommonPassword(password),
       "This password is too common. Choose a more unique password.",
     ),
-  organizationSlug: optionalOrganizationSlug,
+}).superRefine((payload, context) => {
+  if (!payload.invitationToken && !payload.organizationName) {
+    context.addIssue({ code: "custom", path: ["organizationName"], message: "Business name is required." });
+  }
 });
 
 export const loginPayloadSchema = z.object({

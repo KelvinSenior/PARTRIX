@@ -32,6 +32,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) return apiError(parsedId.error.issues[0].message, 400);
 
-  await deleteNotification(parsedId.data);
+  const deleted = await deleteNotification(parsedId.data);
+  if (!deleted.count) return apiError("Notification not found.", 404);
   return NextResponse.json({ success: true });
 }

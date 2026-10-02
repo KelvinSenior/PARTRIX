@@ -6,13 +6,12 @@ import { Building2, Lock, Mail, Phone, User } from "lucide-react";
 import AuthInput from "@/components/auth/AuthInput";
 import AuthPrimaryButton from "@/components/auth/AuthPrimaryButton";
 
-export default function SignupForm({ initialError }: { initialError?: string }) {
+export default function SignupForm({ initialError, invitationToken }: { initialError?: string; invitationToken?: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(initialError ?? null);
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState("");
   const [ownerName, setOwnerName] = useState("");
-  const [organizationSlug, setOrganizationSlug] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -23,8 +22,8 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
   function goNextStep() {
     setError(null);
 
-    if (step === 1 && (!businessName.trim() || !ownerName.trim())) {
-      setError("Business name and owner name are required.");
+    if (step === 1 && ((!invitationToken && !businessName.trim()) || !ownerName.trim())) {
+      setError(invitationToken ? "Your name is required." : "Business name and owner name are required.");
       return;
     }
 
@@ -89,9 +88,10 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
       ) : null}
 
       <input type="hidden" name="name" value={ownerName} />
+      <input type="hidden" name="organizationName" value={invitationToken ? "" : businessName} />
+      <input type="hidden" name="invitationToken" value={invitationToken ?? ""} />
       <input type="hidden" name="email" value={email} />
       <input type="hidden" name="password" value={password} />
-      <input type="hidden" name="organizationSlug" value={organizationSlug} />
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -104,32 +104,25 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
         >
           {step === 1 ? (
             <>
+              {invitationToken ? null : (
+                <AuthInput
+                  label="Business name"
+                  icon={Building2}
+                  type="text"
+                  placeholder="Aurora Event Rentals"
+                  value={businessName}
+                  onChange={(event) => setBusinessName(event.target.value)}
+                  required
+                />
+              )}
               <AuthInput
-                label="Business name"
-                icon={Building2}
-                type="text"
-                placeholder="Aurora Event Rentals"
-                value={businessName}
-                onChange={(event) => setBusinessName(event.target.value)}
-                required
-              />
-              <AuthInput
-                label="Owner name"
+                label={invitationToken ? "Your name" : "Owner name"}
                 icon={User}
                 type="text"
                 placeholder="Alex Morgan"
                 value={ownerName}
                 onChange={(event) => setOwnerName(event.target.value)}
                 required
-              />
-              <AuthInput
-                label="Workspace slug (optional)"
-                icon={Building2}
-                type="text"
-                placeholder="acme-rentals"
-                value={organizationSlug}
-                onChange={(event) => setOrganizationSlug(event.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""))}
-                hint="Enter an existing workspace slug to join that team. Leave it blank to create a new one."
               />
             </>
           ) : null}
@@ -193,7 +186,7 @@ export default function SignupForm({ initialError }: { initialError?: string }) 
               />
               <h3 className="mt-4 text-xl font-semibold text-cyan-700 dark:text-cyan-100">Account details ready</h3>
               <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">
-                You are one tap away from activating your Partrix workspace.
+                {invitationToken ? "Your invited account is ready to activate." : "You are one tap away from activating your Partrix workspace."}
               </p>
             </div>
           ) : null}

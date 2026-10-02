@@ -7,9 +7,11 @@ import { getOrganizationSettings } from "@/services/settings";
 import { listActivityLogs } from "@/services/audit";
 import { appCard, appBtnSecondary } from "@/lib/appStyles";
 import SettingsForm from "@/components/settings/SettingsForm";
+import TeamMembersPanel from "@/components/settings/TeamMembersPanel";
 import LogoutButton from "@/components/auth/LogoutButton";
 import SettingsRefreshButton from "@/components/settings/SettingsRefreshButton";
 import AuditLogPanel from "@/components/settings/AuditLogPanel";
+import { hasPermission } from "@/lib/rolePolicy";
 
 export default async function SettingsPage() {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -19,7 +21,10 @@ export default async function SettingsPage() {
   }
 
   const settings = await getOrganizationSettings();
-  const activityLogs = await listActivityLogs();
+  const canManageSettings = hasPermission(user.role, "settings:manage");
+  const canManageMembers = hasPermission(user.role, "members:manage");
+  const canReadAudit = hasPermission(user.role, "audit:read");
+  const activityLogs = canReadAudit ? await listActivityLogs() : [];
 
   return (
     <AppShell user={user} showFab={false}>
@@ -37,8 +42,16 @@ export default async function SettingsPage() {
               Update business, rental, payment, invoice, notification, and appearance preferences for your organization.
             </p>
             <div className="mt-6">
-              <SettingsForm initialSettings={settings} />
+              {canManageSettings ? (
+                <SettingsForm initialSettings={settings} />
+              ) : (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-zinc-300">
+                  Workspace settings can only be changed by an administrator.
+                </p>
+              )}
             </div>
+
+            <TeamMembersPanel canManageMembers={canManageMembers} />
 
             <div className="mt-6 rounded-2xl border border-rose-400/15 bg-rose-500/8 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -51,7 +64,7 @@ export default async function SettingsPage() {
             </div>
           </section>
 
-          <section className={`${appCard} h-full w-full`}>
+          {canReadAudit ? <section className={`${appCard} h-full w-full`}>
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/75">Audit log</p>
@@ -63,7 +76,7 @@ export default async function SettingsPage() {
             <div className="mt-5">
               <AuditLogPanel logs={activityLogs} />
             </div>
-          </section>
+          </section> : null}
         </div>
       </div>
     </AppShell>

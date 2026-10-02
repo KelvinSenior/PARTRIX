@@ -20,13 +20,15 @@ const bookingUpdateSchema = z.object({
   items: z
     .array(
       z.object({
-        bookingItemId: z.string().uuid({ message: "Select a valid booking item." }),
+        bookingItemId: z.string().uuid({ message: "Select a valid booking item." }).optional(),
+        inventoryItemId: z.string().uuid({ message: "Select a valid inventory item." }),
         quantity: z.number().int().positive({ message: "Quantity must be at least 1." }),
-        discount: z.number().min(0).optional(),
-        notes: z.string().nullable().optional(),
+        discount: z.number().finite().min(0).optional(),
+        notes: z.string().max(250).nullable().optional(),
       }),
-    )
-    .optional(),
+    ).min(1, "A booking must include at least one item."),
+  eventDate: z.string().datetime({ offset: true }).optional(),
+  returnDate: z.string().datetime({ offset: true }).nullable().optional(),
   status: z
     .enum(["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"])
     .optional(),
@@ -101,7 +103,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       if (!payload.data.items) {
         return apiError("Items are required for updateItems action.", 400);
       }
-      const booking = await updateBookingItems(parsedId.data, payload.data.items);
+      const booking = await updateBookingItems(parsedId.data, {
+        items: payload.data.items,
+        eventDate: payload.data.eventDate,
+        returnDate: payload.data.returnDate,
+      });
       return NextResponse.json({ booking });
     }
 

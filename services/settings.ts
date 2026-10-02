@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { defaultSettings, settingsSchema } from "@/lib/settingsValidation";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import { logActivity } from "@/services/audit";
 import { createNotification } from "@/services/notification";
 import type { SettingsDTO, SettingsPayload } from "@/types/settings";
@@ -53,7 +53,7 @@ function mergeSettings(raw: unknown): SettingsDTO {
 }
 
 export async function getOrganizationSettings(): Promise<SettingsDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("settings:read");
   const organization = await prisma.organization.findUnique({
     where: { id: user.organizationId! },
     select: { name: true, slug: true, settings: true },
@@ -72,7 +72,7 @@ export async function getOrganizationSettings(): Promise<SettingsDTO> {
 
 export async function updateOrganizationSettings(payload: SettingsPayload): Promise<SettingsDTO> {
   const parsed = settingsSchema.parse(payload);
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("settings:manage");
 
   const updatedOrganization = await prisma.organization.update({
     where: { id: user.organizationId! },

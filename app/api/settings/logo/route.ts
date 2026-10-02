@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
 import { requireOrganizationContext } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { hasPermission } from "@/lib/rolePolicy";
 
 const allowedTypes = new Set(["image/png", "image/jpeg", "image/jpg", "image/svg+xml"]);
 const maxSizeBytes = 5 * 1024 * 1024;
@@ -10,8 +11,12 @@ const maxSizeBytes = 5 * 1024 * 1024;
 export async function POST(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "settings:manage")) return apiError("You do not have permission to manage workspace settings.", 403);
 
   const org = await requireOrganizationContext();
+  const existing = await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } });
+  const settings = (existing?.settings as Record<string, unknown> | null) ?? {};
+  const business = (settings.business as Record<string, unknown> | null) ?? {};
   const formData = await request.formData();
   const file = formData.get("file");
 
@@ -34,16 +39,7 @@ export async function POST(request: Request) {
   await prisma.organization.update({
     where: { id: org.organizationId! },
     data: {
-      settings: {
-        ...(typeof (await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } }))?.settings === "object" ? ((await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } }))?.settings as object) : {}),
-        business: {
-          ...(typeof (await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } }))?.settings === "object"
-            ? ((await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } }))?.settings as Record<string, unknown>).business ?? {}
-            : {}),
-          logoData: dataUrl,
-          logoUrl: "",
-        },
-      } as any,
+      settings: { ...settings, business: { ...business, logoData: dataUrl, logoUrl: "" } } as any,
     },
   });
 
@@ -53,6 +49,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "settings:manage")) return apiError("You do not have permission to manage workspace settings.", 403);
 
   const org = await requireOrganizationContext();
   const existing = await prisma.organization.findUnique({ where: { id: org.organizationId! }, select: { settings: true } });

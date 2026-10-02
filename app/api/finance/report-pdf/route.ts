@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
+import { hasPermission } from "@/lib/rolePolicy";
 import { getFinanceSummary } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
 import { formatAmount } from "@/lib/branding";
@@ -8,6 +9,7 @@ import { formatAmount } from "@/lib/branding";
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view financial reports.", 403);
 
   // Build report HTML (reuse summary generator)
   const url = new URL(request.url);
@@ -45,9 +47,9 @@ export async function GET(request: Request) {
     const message = `PDF generation not available on this server. Install 'puppeteer' to enable PDF export.`;
     const payload = `<html><body><h2>PDF generation unavailable</h2><p>${message}</p><hr/>${html}</body></html>`;
     return new NextResponse(payload, { status: 501, headers: { 'Content-Type': 'text/html' } });
-  } catch (err) {
+  } catch {
     // If puppeteer isn't installed or fails, return HTML and a note
-    const message = `PDF generation not available on this server. Install 'puppeteer' to enable PDF export.\n\n${(err as Error).message ?? ''}`;
+    const message = "PDF generation is temporarily unavailable.";
     const payload = `<html><body><h2>PDF generation unavailable</h2><p>${message}</p><hr/>${html}</body></html>`;
     return new NextResponse(payload, { status: 501, headers: { 'Content-Type': 'text/html' } });
   }

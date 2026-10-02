@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { primaryNavItems, isNavActive } from "@/lib/navConfig";
+import { getNavItemsForRole, isNavActive } from "@/lib/navConfig";
+import type { UserRole } from "@/types/auth";
 
-export default function MobileSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function MobileSidebar({ open, onClose, role }: { open: boolean; onClose: () => void; role: UserRole }) {
   const pathname = usePathname() || "/";
+  const navItems = getNavItemsForRole(role);
 
   return (
     <AnimatePresence>
@@ -47,7 +49,7 @@ export default function MobileSidebar({ open, onClose }: { open: boolean; onClos
             </div>
 
             <nav className="flex flex-col gap-1 overflow-y-auto pb-4 overscroll-contain">
-              {primaryNavItems.map((item) => {
+              {navItems.map((item) => {
                 const active = isNavActive(pathname, item.href);
                 const Icon = item.icon;
                 return (

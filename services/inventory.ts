@@ -1,6 +1,6 @@
 import type { InventoryItem, Prisma } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 import { createNotification } from "@/services/notification";
 import type { InventoryItemPayload } from "@/lib/inventoryValidation";
 import type {
@@ -193,7 +193,7 @@ function toPrismaData(data: InventoryItemPayload) {
 export async function listInventoryItems(
   filters: InventoryListFilters,
 ): Promise<InventoryListResponse> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("inventory:read");
   const tenantWhere = { organizationId: user.organizationId!, ...buildWhere(filters) };
 
   const [records, categoryRows] = await Promise.all([
@@ -223,13 +223,13 @@ export async function listInventoryItems(
 }
 
 export async function getInventoryItem(id: string) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("inventory:read");
   const item = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
   return item ? serializeInventoryItem(item) : null;
 }
 
 export async function createInventoryItem(data: InventoryItemPayload) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("inventory:write");
   const item = await prisma.inventoryItem.create({
     data: { organizationId: user.organizationId!, ...toPrismaData(data) },
   });
@@ -256,7 +256,7 @@ export async function updateInventoryItem(
   id: string,
   data: InventoryItemPayload,
 ) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("inventory:write");
   const existing = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
   if (!existing) {
     throw new Error("Inventory item not found in this workspace.");
@@ -286,7 +286,7 @@ export async function updateInventoryItem(
 }
 
 export async function deleteInventoryItem(id: string) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("inventory:delete");
   const existing = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
   if (!existing) {
     return;

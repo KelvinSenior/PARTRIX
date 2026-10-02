@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { createHash, randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/jwt";
 import { SessionUser, UserRole } from "@/types/auth";
@@ -53,41 +54,12 @@ export async function verifyPassword(password: string, hash: string) {
 /**
  * Register a new user with validation
  */
-async function resolveOrganizationForSignup(options: {
-  organizationSlug?: string | null;
-  organizationId?: string | null;
-  fallbackName: string;
-}) {
-  if (options.organizationId) {
-    return prisma.organization.findUnique({ where: { id: options.organizationId } });
-  }
-
-  const normalizedSlug = options.organizationSlug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") ?? "";
-
-  if (normalizedSlug) {
-    const existingOrganization = await prisma.organization.findUnique({ where: { slug: normalizedSlug } });
-    if (existingOrganization) {
-      return existingOrganization;
-    }
-  }
-
-  const slug = normalizedSlug || `${options.fallbackName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}-${Date.now().toString(36)}`;
-
-  return prisma.organization.create({
-    data: {
-      name: options.fallbackName,
-      slug,
-    },
-  });
-}
-
 export async function registerUser(options: {
+  organizationName?: string;
   email: string;
   password: string;
   name: string;
-  role?: UserRole;
-  organizationSlug?: string | null;
-  organizationId?: string | null;
+  invitationToken?: string;
 }) {
   const normalizedEmail = options.email.trim().toLowerCase();
 
@@ -103,26 +75,67 @@ export async function registerUser(options: {
   // Hash password with strong parameters
   const passwordHash = await hashPassword(options.password);
 
-  const organization = await resolveOrganizationForSignup({
-    organizationSlug: options.organizationSlug,
-    organizationId: options.organizationId,
-    fallbackName: `${options.name.trim()}'s Workspace`,
-  });
+  const user = await prisma.$transaction(async (tx) => {
+    let organizationId: string;
+    let role: UserRole;
 
-  if (!organization) {
-    throw new Error("Unable to resolve or create an organization for this account.");
-  }
+    if (options.invitationToken) {
+      const tokenHash = createHash("sha256").update(options.invitationToken).digest("hex");
+      const invitation = await tx.organizationInvitation.findUnique({ where: { tokenHash } });
+      const now = new Date();
+      if (
+        !invitation || invitation.email.toLowerCase() !== normalizedEmail ||
+        invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= now ||
+        invitation.role === "ADMIN"
+      ) {
+        throw new Error("This invitation is invalid or expired.");
+      }
 
-  // Create user with ACTIVE status
-  const user = await prisma.user.create({
-    data: {
-      email: normalizedEmail,
-      password: passwordHash,
-      name: options.name.trim(),
-      role: options.role ?? "STAFF",
-      status: "ACTIVE",
-      organizationId: organization.id,
-    },
+      const consumed = await tx.organizationInvitation.updateMany({
+        where: {
+          id: invitation.id,
+          acceptedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { acceptedAt: now },
+      });
+      if (consumed.count !== 1) {
+        throw new Error("This invitation is invalid or expired.");
+      }
+
+      organizationId = invitation.organizationId;
+      role = invitation.role;
+    } else {
+      if (!options.organizationName?.trim()) {
+        throw new Error("Business name is required.");
+      }
+      const organizationName = options.organizationName.trim();
+      const slugBase = organizationName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const organization = await tx.organization.create({
+        data: { name: organizationName, slug: `${slugBase}-${randomUUID().slice(0, 8)}` },
+      });
+      organizationId = organization.id;
+      role = "ADMIN";
+    }
+
+    const createdUser = await tx.user.create({
+      data: {
+        email: normalizedEmail,
+        password: passwordHash,
+        name: options.name.trim(),
+        role,
+        status: "ACTIVE",
+        organizationId,
+      },
+    });
+    if (!options.invitationToken) {
+      await tx.organization.update({
+        where: { id: organizationId },
+        data: { ownerId: createdUser.id },
+      });
+    }
+    return createdUser;
   });
 
   return user;

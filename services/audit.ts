@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
 
 export interface ActivityLogParams {
   organizationId: string;
@@ -44,7 +44,7 @@ export async function logActivity(params: ActivityLogParams): Promise<void> {
 }
 
 export async function listActivityLogs(): Promise<ActivityLogDTO[]> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("audit:read");
 
   const logs = await prisma.activityLog.findMany({
     where: { organizationId: user.organizationId! },

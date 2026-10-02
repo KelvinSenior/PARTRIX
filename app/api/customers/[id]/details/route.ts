@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
+import { hasPermission } from "@/lib/rolePolicy";
 import { getCustomerDetail, getCustomerBookings, getCustomerAnalytics } from "@/services/customer";
 
 const idSchema = z.string().uuid({ message: "Invalid customer ID." });
@@ -13,6 +14,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view customer financial details.", 403);
 
   const detail = await getCustomerDetail(parsedId.data);
   if (!detail) return apiError("Customer not found.", 404);

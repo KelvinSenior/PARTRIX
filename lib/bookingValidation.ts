@@ -52,7 +52,7 @@ export const bookingPayloadSchema = z
       (value) => value === null || value === undefined || !Number.isNaN(Date.parse(value)),
       { message: "Return date must be a valid date." },
     ),
-    status: z.enum(["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]),
+    status: z.literal("PENDING").default("PENDING"),
     deliveryFee: z.number().min(0, "Delivery fee cannot be negative.").default(0),
     setupFee: z.number().min(0, "Setup fee cannot be negative.").default(0),
     discount: z.number().min(0, "Discount cannot be negative.").default(0),

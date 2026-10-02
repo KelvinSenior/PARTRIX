@@ -3,11 +3,11 @@ import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError, prismaErrorCode, validationError } from "@/lib/apiErrors";
 import { getOrganizationSettings, updateOrganizationSettings } from "@/services/settings";
 import { settingsSchema } from "@/lib/settingsValidation";
+import { hasPermission } from "@/lib/rolePolicy";
 
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
-
   const settings = await getOrganizationSettings();
   return NextResponse.json({ settings });
 }
@@ -15,6 +15,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "settings:manage")) return apiError("You do not have permission to manage workspace settings.", 403);
 
   const body = await request.json().catch(() => null);
   if (!body) return apiError("Invalid JSON payload.", 400);

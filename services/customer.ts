@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { requireOrganizationContext } from "@/lib/tenant";
+import { requirePermission } from "@/lib/permissions";
+import { hasPermission } from "@/lib/rolePolicy";
 import type { CustomerPayload, CustomerDTO, CustomerDetailDTO, CustomerSearchParams } from "@/types/customer";
 
 function decimalToNumber(value: any): number {
@@ -26,7 +27,7 @@ function serializeCustomer(customer: any): CustomerDTO {
 }
 
 export async function createCustomer(payload: CustomerPayload): Promise<CustomerDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:write");
 
   const normalizedPayload = {
     firstName: payload.firstName.trim(),
@@ -55,13 +56,13 @@ export async function createCustomer(payload: CustomerPayload): Promise<Customer
 }
 
 export async function getCustomer(id: string): Promise<CustomerDTO | null> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:read");
   const customer = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
   return customer ? serializeCustomer(customer) : null;
 }
 
 export async function updateCustomer(id: string, payload: CustomerPayload): Promise<CustomerDTO> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:write");
   const existing = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
   if (!existing) {
     throw new Error("Customer not found in this workspace.");
@@ -95,10 +96,14 @@ export async function updateCustomer(id: string, payload: CustomerPayload): Prom
 
 export async function deleteCustomer(id: string): Promise<boolean> {
   try {
-    const user = await requireOrganizationContext();
+    const user = await requirePermission("customers:delete");
     const existing = await prisma.customer.findFirst({ where: { id, organizationId: user.organizationId! } });
     if (!existing) {
       return false;
+    }
+
+    if (await prisma.booking.count({ where: { customerId: id, organizationId: user.organizationId! } })) {
+      throw new Error("Customers with booking history cannot be deleted.");
     }
 
     await prisma.customer.delete({ where: { id } });
@@ -109,7 +114,7 @@ export async function deleteCustomer(id: string): Promise<boolean> {
 }
 
 export async function listCustomers(params: CustomerSearchParams = {}): Promise<{ customers: CustomerDTO[]; total: number }> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:read");
   const { query, sortBy = "createdAt", order = "desc", limit = 20, offset = 0 } = params;
 
   const where: any = { organizationId: user.organizationId! };
@@ -138,7 +143,8 @@ export async function listCustomers(params: CustomerSearchParams = {}): Promise<
 }
 
 export async function getCustomerDetail(id: string): Promise<CustomerDetailDTO | null> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:read");
+  const canReadFinance = hasPermission(user.role, "finance:read");
   const customer = await prisma.customer.findFirst({
     where: { id, organizationId: user.organizationId! },
     include: {
@@ -153,15 +159,15 @@ export async function getCustomerDetail(id: string): Promise<CustomerDetailDTO |
   if (!customer) return null;
 
   const bookingCount = customer.bookings.length;
-  const totalSpent = customer.bookings.reduce((sum, b) => sum + decimalToNumber(b.totalAmount), 0);
-  const outstandingBalance = customer.bookings.reduce((sum, b) => sum + decimalToNumber(b.balanceDue), 0);
   const lastBookingDate = customer.bookings.length > 0 ? customer.bookings[0].eventDate.toISOString() : null;
 
   return {
     ...serializeCustomer(customer),
     bookingCount,
-    totalSpent,
-    outstandingBalance,
+    ...(canReadFinance ? {
+      totalSpent: customer.bookings.reduce((sum, booking) => sum + decimalToNumber(booking.totalAmount), 0),
+      outstandingBalance: customer.bookings.reduce((sum, booking) => sum + decimalToNumber(booking.balanceDue), 0),
+    } : {}),
     lastBookingDate,
   };
 }
@@ -171,13 +177,14 @@ export interface CustomerBookingSummary {
   bookingNumber: string;
   eventDate: string;
   status: string;
-  totalAmount: number;
-  balanceDue: number;
+  totalAmount?: number;
+  balanceDue?: number;
   itemCount: number;
 }
 
 export async function getCustomerBookings(id: string): Promise<CustomerBookingSummary[]> {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("customers:read");
+  const canReadFinance = hasPermission(user.role, "finance:read");
   const bookings = await prisma.booking.findMany({
     where: { customerId: id, organizationId: user.organizationId! },
     include: {
@@ -193,14 +200,16 @@ export async function getCustomerBookings(id: string): Promise<CustomerBookingSu
     bookingNumber: b.bookingNumber,
     eventDate: b.eventDate.toISOString(),
     status: b.status,
-    totalAmount: decimalToNumber(b.totalAmount),
-    balanceDue: decimalToNumber(b.balanceDue),
+    ...(canReadFinance ? {
+      totalAmount: decimalToNumber(b.totalAmount),
+      balanceDue: decimalToNumber(b.balanceDue),
+    } : {}),
     itemCount: b.bookingItems.length,
   }));
 }
 
 export async function getCustomerAnalytics(id: string) {
-  const user = await requireOrganizationContext();
+  const user = await requirePermission("finance:read");
   const bookings = await prisma.booking.findMany({
     where: { customerId: id, organizationId: user.organizationId! },
     include: { payments: true },
@@ -209,7 +218,7 @@ export async function getCustomerAnalytics(id: string) {
   const totalBookings = bookings.length;
   const totalRevenue = bookings.reduce((sum, b) => sum + decimalToNumber(b.totalAmount), 0);
   const totalPaid = bookings.reduce((sum, b) => {
-    const paid = b.payments.reduce((s, p) => s + decimalToNumber(p.amount), 0);
+    const paid = b.payments.reduce((s, p) => s + (p.type === "REFUND" ? -1 : 1) * decimalToNumber(p.amount), 0);
     return sum + paid;
   }, 0);
   const totalOutstanding = bookings.reduce((sum, b) => sum + decimalToNumber(b.balanceDue), 0);

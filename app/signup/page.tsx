@@ -5,7 +5,7 @@ import Link from "next/link";
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; invite?: string }>;
 }) {
   const params = await searchParams;
 
@@ -25,7 +25,7 @@ export default async function SignupPage({
         </p>
       }
     >
-        <SignupForm initialError={params.error} />
+        <SignupForm initialError={params.error} invitationToken={params.invite} />
     </AuthShell>
   );
 }

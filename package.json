@@ -12,13 +12,15 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "format": "prettier --write .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "production:verify": "npm run type-check && npm run lint && npm run build"
+    "production:verify": "npm test && npm run type-check && npm run lint && npm run build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
@@ -47,6 +49,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }

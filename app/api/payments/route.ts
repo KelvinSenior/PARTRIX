@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
-import { apiError } from "@/lib/apiErrors";
+import { apiError, apiErrorFromException } from "@/lib/apiErrors";
+import { paymentPayloadSchema } from "@/lib/financeValidation";
+import { hasPermission } from "@/lib/rolePolicy";
 import { recordPayment, listPayments } from "@/services/finance";
 
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view payments.", 403);
 
   const url = new URL(request.url);
   const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;
@@ -21,11 +24,13 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
   if (!body) return apiError("Invalid JSON payload", 400);
+  const parsed = paymentPayloadSchema.safeParse(body);
+  if (!parsed.success) return apiError("Invalid payment data.", 400, { fields: parsed.error.flatten().fieldErrors });
 
   try {
-    const payment = await recordPayment(body, user.id as string);
+    const payment = await recordPayment(parsed.data, user.id);
     return NextResponse.json({ payment }, { status: 201 });
   } catch (err) {
-    return apiError((err as Error).message ?? "Could not record payment.", 400);
+    return apiErrorFromException(err, "Could not record payment.");
   }
 }

@@ -76,7 +76,7 @@ export default function EditCustomerPage({ params }: { params: Promise<{ id: str
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-100">
       <div className="mx-auto grid min-h-screen max-w-450 gap-6 px-4 py-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
-        <Sidebar />
+        <Sidebar role={user.role} />
 
         <section className="space-y-6">
           <TopNav user={user} />

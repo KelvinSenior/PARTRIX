@@ -53,7 +53,7 @@ export default function TopNav({ user }: { user: SessionUser | null }) {
         </Link>
       </div>
 
-      <MobileSidebar open={open} onClose={() => setOpen(false)} />
+      <MobileSidebar open={open} onClose={() => setOpen(false)} role={user?.role ?? "STAFF"} />
     </header>
   );
 }

@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   async headers() {
     const cspHeader =
       env.NODE_ENV === "production"

@@ -23,7 +23,7 @@ export default function AppShell({
   return (
     <main className={`${appShell} overflow-x-clip`}>
       <div className="app-shell-grid mx-auto grid min-h-[100dvh] w-full max-w-[1800px] gap-5 px-0 py-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:py-6">
-        <Sidebar />
+        <Sidebar role={user.role} />
         <section className="min-w-0 overflow-x-clip space-y-5 pb-24 lg:pb-6">
           <TopNav user={user} />
           {children}

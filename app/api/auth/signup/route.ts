@@ -26,10 +26,11 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
   const parsed = signupPayloadSchema.safeParse({
+    organizationName: formData.get("organizationName"),
+    invitationToken: formData.get("invitationToken"),
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),
-    organizationSlug: formData.get("organizationSlug"),
   });
 
   if (!parsed.success) {

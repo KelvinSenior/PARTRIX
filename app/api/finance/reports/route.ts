@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/apiAuth";
 import { apiError } from "@/lib/apiErrors";
+import { hasPermission } from "@/lib/rolePolicy";
 import { getFinanceSummary, getCustomerDebts } from "@/services/finance";
 
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
   if (!user) return apiError("Authentication required.", 401);
+  if (!hasPermission(user.role, "finance:read")) return apiError("You do not have permission to view financial reports.", 403);
 
   const url = new URL(request.url);
   const start = url.searchParams.get("start") ? new Date(url.searchParams.get("start") as string) : undefined;

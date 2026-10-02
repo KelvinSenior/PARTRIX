@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PencilLine, Save } from "lucide-react";
+import { PencilLine, Save, Trash2 } from "lucide-react";
 import type { BookingDTO } from "@/types/booking";
 import type { SettingsDTO } from "@/types/settings";
 import PremiumButton from "@/components/ui/PremiumButton";
@@ -30,6 +30,8 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [eventDate, setEventDate] = useState(booking.eventDate.slice(0, 10));
+  const [returnDate, setReturnDate] = useState(booking.returnDate?.slice(0, 10) ?? "");
 
   const canEdit = !["CONFIRMED", "COMPLETED", "CANCELLED", "NO_SHOW"].includes(booking.status);
 
@@ -45,13 +47,33 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
     }));
   }
 
-  async function saveItem(itemId: string) {
-    const draft = drafts[itemId];
-    if (!draft) {
+  async function saveItems(removedItemId?: string) {
+    if (!eventDate) {
+      setError("Choose an event date.");
+      return;
+    }
+    if (returnDate && returnDate < eventDate) {
+      setError("Return date must be on or after the event date.");
+      return;
+    }
+    const items = booking.bookingItems
+      .filter((item) => item.id !== removedItemId)
+      .map((item) => {
+        const draft = drafts[item.id];
+        return {
+          bookingItemId: item.id,
+          inventoryItemId: item.inventoryItemId,
+          quantity: Math.max(1, Number(draft?.quantity) || 1),
+          discount: Number(draft?.discount) || 0,
+          notes: draft?.notes.trim() || null,
+        };
+      });
+    if (items.length === 0) {
+      setError("A booking must contain at least one item.");
       return;
     }
 
-    setSavingId(itemId);
+    setSavingId(removedItemId ?? "all");
     setError(null);
     setSuccess(null);
 
@@ -60,14 +82,9 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "updateItems",
-        items: [
-          {
-            bookingItemId: itemId,
-            quantity: Math.max(1, Number(draft.quantity) || 1),
-            discount: Number(draft.discount) || 0,
-            notes: draft.notes.trim() || null,
-          },
-        ],
+        items,
+        eventDate: new Date(`${eventDate}T00:00:00.000Z`).toISOString(),
+        returnDate: returnDate ? new Date(`${returnDate}T00:00:00.000Z`).toISOString() : null,
       }),
     });
 
@@ -79,7 +96,7 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
       return;
     }
 
-    setSuccess("Booking item updated successfully.");
+    setSuccess(removedItemId ? "Booking item removed." : "Booking updated successfully.");
     router.refresh();
   }
 
@@ -103,6 +120,17 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
 
       {error ? <div className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-400/25 dark:bg-rose-400/10 dark:text-rose-200">{error}</div> : null}
       {success ? <div className="mt-4 rounded-2xl border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200">{success}</div> : null}
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+          Event date
+          <input type="date" value={eventDate} onChange={(event) => setEventDate(event.target.value)} disabled={!canEdit} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-950 disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+        </label>
+        <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+          Return date
+          <input type="date" value={returnDate} min={eventDate} onChange={(event) => setReturnDate(event.target.value)} disabled={!canEdit} className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-950 disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
+        </label>
+      </div>
 
       <div className="mt-5 space-y-3">
         {booking.bookingItems.map((item) => {
@@ -159,9 +187,14 @@ export default function BookingItemEditor({ booking, settings }: { booking: Book
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-3 dark:border-zinc-800">
                 <p className="text-sm text-slate-600 dark:text-zinc-400">Subtotal impact: {formatAmount(draft.quantity * item.unitPrice - draft.discount, settings)}</p>
-                <PremiumButton type="button" variant="primary" size="md" onClick={() => saveItem(item.id)} isLoading={savingId === item.id} disabled={!canEdit}>
-                  <Save className="h-4 w-4" /> Save
-                </PremiumButton>
+                <div className="flex gap-2">
+                  <PremiumButton type="button" variant="secondary" size="md" onClick={() => saveItems(item.id)} isLoading={savingId === item.id} disabled={!canEdit || booking.bookingItems.length === 1} aria-label={`Remove ${item.inventoryItemName}`}>
+                    <Trash2 className="h-4 w-4" /> Remove
+                  </PremiumButton>
+                  <PremiumButton type="button" variant="primary" size="md" onClick={() => saveItems()} isLoading={savingId === "all"} disabled={!canEdit}>
+                    <Save className="h-4 w-4" /> Save
+                  </PremiumButton>
+                </div>
               </div>
             </div>
           );
