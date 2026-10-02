@@ -13,6 +13,7 @@ import { getFinanceSummary, listPayments, listExpenses, getCustomerDebts } from 
 import { getOrganizationSettings } from "@/services/settings";
 import { appBtnSecondary, appCard, appCardInner } from "@/lib/appStyles";
 import { formatAmount } from "@/lib/branding";
+import { hasPermission } from "@/lib/rolePolicy";
 
 export default async function FinancePage({ searchParams }: { searchParams?: { start?: string; end?: string } }) {
   const user = await getCurrentUserFromToken((await getAuthCookie()) ?? "");
@@ -21,11 +22,18 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
   const start = searchParams?.start ? new Date(searchParams.start) : undefined;
   const end = searchParams?.end ? new Date(searchParams.end) : undefined;
 
-  const summary = await getFinanceSummary(start, end);
-  const payments = await listPayments(start, end);
-  const expenses = await listExpenses(start, end);
-  const debts = await getCustomerDebts();
-  const settings = await getOrganizationSettings();
+  const canReadFinance = hasPermission(user.role, "finance:read");
+  const canReadExpenses = hasPermission(user.role, "expenses:read");
+  const canRecordFinance = hasPermission(user.role, "finance:record");
+  const canRecordExpenses = hasPermission(user.role, "expenses:record");
+
+  const [summary, payments, expenses, debts, settings] = await Promise.all([
+    canReadFinance ? getFinanceSummary(start, end) : Promise.resolve(null),
+    canReadFinance ? listPayments(start, end) : Promise.resolve([]),
+    canReadExpenses ? listExpenses(start, end) : Promise.resolve([]),
+    canReadFinance ? getCustomerDebts() : Promise.resolve([]),
+    getOrganizationSettings(),
+  ]);
 
   const query = searchParams?.start || searchParams?.end
     ? `?${new URLSearchParams({ start: searchParams?.start ?? "", end: searchParams?.end ?? "" }).toString()}`
@@ -36,46 +44,70 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
       <PageHeader
         eyebrow="Finance"
         title="Revenue & expenses"
-        description="Track payments, expenses, profit, and outstanding balances."
+        description={canReadFinance || canReadExpenses
+          ? "Track payments, expenses, profit, and outstanding balances."
+          : "Record payments and expenses for your workspace."}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <DateFilter start={searchParams?.start} end={searchParams?.end} />
-            <a href={`/api/payments/export${query}`} className={appBtnSecondary}>
-              Export payments
-            </a>
-            <a href={`/api/expenses/export${query}`} className={appBtnSecondary}>
-              Export expenses
-            </a>
-            <a href={`/api/finance/report-pdf${query}`} className={appBtnSecondary}>
-              PDF report
-            </a>
-          </div>
+          canReadFinance || canReadExpenses ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <DateFilter start={searchParams?.start} end={searchParams?.end} />
+              {canReadFinance ? <>
+                <a href={`/api/payments/export${query}`} className={appBtnSecondary}>
+                  Export payments
+                </a>
+                <a href={`/api/finance/report-pdf${query}`} className={appBtnSecondary}>
+                  PDF report
+                </a>
+              </> : null}
+              {canReadExpenses ? (
+                <a href={`/api/expenses/export${query}`} className={appBtnSecondary}>
+                  Export expenses
+                </a>
+              ) : null}
+            </div>
+          ) : null
         }
       />
 
-      <FinanceCards totals={summary.totals} settings={settings} />
+      {summary ? <FinanceCards totals={summary.totals} settings={settings} /> : null}
 
-      <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
+      {!canReadFinance && (canRecordFinance || canRecordExpenses) ? (
+        <div className={`${appCard} text-sm text-slate-600 dark:text-zinc-300`}>
+          Financial reports and transaction history are limited to administrators and managers.
+        </div>
+      ) : null}
+
+      {!canReadFinance && !canReadExpenses && !canRecordFinance && !canRecordExpenses ? (
+        <div className={`${appCard} text-sm text-slate-600 dark:text-zinc-300`}>
+          You do not have permission to view or record financial information.
+        </div>
+      ) : null}
+
+      <div className={`grid gap-5 ${canReadFinance || canReadExpenses ? "lg:grid-cols-[1.3fr_0.7fr]" : ""}`}>
         <div className="space-y-5">
-          <FinanceChart monthly={summary.monthly} />
+          {summary ? <FinanceChart monthly={summary.monthly} /> : null}
 
-          <div className={appCard}>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
-            <div className="mt-4">
-              <PaymentForm />
+          {canRecordFinance ? (
+            <div className={appCard}>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record payment</h3>
+              <div className="mt-4">
+                <PaymentForm />
+              </div>
             </div>
-          </div>
+          ) : null}
 
-          <div className={appCard}>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record expense</h3>
-            <div className="mt-4">
-              <ExpenseForm />
+          {canRecordExpenses ? (
+            <div className={appCard}>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Record expense</h3>
+              <div className="mt-4">
+                <ExpenseForm />
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
-        <div className="space-y-5">
-          <div className={appCard}>
+        {canReadFinance || canReadExpenses ? <div className="space-y-5">
+          {canReadFinance ? <div className={appCard}>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent payments</h3>
             <div className="mt-4 space-y-3 text-sm">
               {payments.slice(0, 8).map((p: any) => (
@@ -112,9 +144,9 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                 </div>
               ))}
             </div>
-          </div>
+          </div> : null}
 
-          <div className={appCard}>
+          {canReadExpenses ? <div className={appCard}>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent expenses</h3>
             <div className="mt-4 space-y-3 text-sm">
               {expenses.slice(0, 8).map((e: { id: string; amount: number; category: string; incurredAt: string | Date; vendor?: string | null }) => (
@@ -129,11 +161,11 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+          </div> : null}
+        </div> : null}
       </div>
 
-      <div className={appCard}>
+      {canReadFinance ? <div className={appCard}>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Customer debts</h3>
         <div className="mt-4 text-sm text-zinc-300">
           {debts.length === 0 ? (
@@ -161,7 +193,7 @@ export default async function FinancePage({ searchParams }: { searchParams?: { s
             </div>
           )}
         </div>
-      </div>
+      </div> : null}
     </AppShell>
   );
 }

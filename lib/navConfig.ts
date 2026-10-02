@@ -38,7 +38,7 @@ export const mobileBottomNavItems: NavItem[] = [
   { label: "Bookings", href: "/bookings", icon: CalendarDays },
   { label: "Deliveries", href: "/deliveries", icon: Truck },
   { label: "Stock", href: "/inventory", icon: Package },
-  { label: "Finance", href: "/finance", icon: Wallet },
+  { label: "Finance", href: "/finance", icon: Wallet, permission: "finance:read" },
 ];
 
 export function isNavActive(pathname: string, href: string) {
@@ -50,4 +50,10 @@ export function isNavActive(pathname: string, href: string) {
 
 export function getNavItemsForRole(role: UserRole) {
   return primaryNavItems.filter((item) => !item.permission || hasPermission(role, item.permission));
+}
+
+export function getMobileNavItemsForRole(role?: UserRole) {
+  return mobileBottomNavItems.filter(
+    (item) => !item.permission || (role !== undefined && hasPermission(role, item.permission)),
+  );
 }
