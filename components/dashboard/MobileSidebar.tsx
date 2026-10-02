@@ -34,7 +34,7 @@ export default function MobileSidebar({ open, onClose, role }: { open: boolean; 
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm dark:border-cyan-400/15 dark:bg-cyan-400/10 dark:shadow-none">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-700 dark:text-cyan-200/75">Partrix</p>
+                  <p className="text-[10px] uppercase tracking-[0.32em] text-cyan-800 dark:text-cyan-200/75">Partrix</p>
                   <h3 className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">Navigation</h3>
                 </div>
                 <button

@@ -31,7 +31,7 @@ export default function PartrixLogo({
         />
       </span>
       {showWordmark ? (
-        <span className={`text-sm font-semibold tracking-[0.18em] text-cyan-100 ${textClassName}`}>
+        <span className={`text-sm font-semibold tracking-[0.18em] text-cyan-800 dark:text-cyan-100 ${textClassName}`}>
           Partrix
         </span>
       ) : null}

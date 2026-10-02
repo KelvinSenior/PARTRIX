@@ -17,7 +17,7 @@ export default function Sidebar({ role }: { role: UserRole }) {
       <div className="flex h-full flex-1 flex-col overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/95 p-4 shadow-sm dark:border-cyan-200/10 dark:bg-[#070d1f]/90">
         <div className="mb-5 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-700 dark:text-cyan-200/75">Partrix</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-800 dark:text-cyan-200/75">Partrix</p>
             <h2 className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">Operations</h2>
           </div>
           <motion.div

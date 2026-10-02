@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { Check, Copy } from "lucide-react";
 import { appBtnPrimary, appBtnSecondary, appCardInner, appInput } from "@/lib/appStyles";
 
 type MemberRole = "ADMIN" | "MANAGER" | "STAFF";
@@ -29,8 +30,11 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
   const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteRole>("STAFF");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copiedInviteLink, setCopiedInviteLink] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,6 +84,8 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
     setBusy(true);
     setError(null);
     setNotice(null);
+    setInviteLink(null);
+    setCopiedInviteLink(false);
 
     try {
       const response = await fetch("/api/organization/invitations", {
@@ -99,11 +105,9 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
 
       setInviteEmail("");
       setInviteRole("STAFF");
-      setNotice(
-        inviteLink
-          ? `Invitation sent. Share this link: ${inviteLink}`
-          : "Invitation sent successfully.",
-      );
+      setInviteLink(inviteLink);
+      setCopiedInviteLink(false);
+      setNotice("Invitation created. Share the invite link with your teammate.");
       await loadTeamData();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to send invitation.");
@@ -112,9 +116,21 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
     }
   }
 
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopiedInviteLink(true);
+    } catch {
+      setError("Unable to copy the invitation link. Select and copy it instead.");
+    }
+  }
+
   async function updateRole(memberId: string, role: MemberRole) {
     setError(null);
     setNotice(null);
+    setActionBusy(`role:${memberId}`);
 
     try {
       const response = await fetch(`/api/organization/members/${memberId}`, {
@@ -134,12 +150,18 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
       setNotice("Member role updated.");
     } catch (roleError) {
       setError(roleError instanceof Error ? roleError.message : "Unable to update member role.");
+    } finally {
+      setActionBusy(null);
     }
   }
 
   async function removeMember(memberId: string) {
+    const member = members.find((current) => current.id === memberId);
+    if (!window.confirm(`Remove ${member?.name || member?.email || "this member"} from the workspace?`)) return;
+
     setError(null);
     setNotice(null);
+    setActionBusy(`remove:${memberId}`);
 
     try {
       const response = await fetch(`/api/organization/members/${memberId}`, { method: "DELETE" });
@@ -152,12 +174,18 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
       setNotice("Member removed from the workspace.");
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : "Unable to remove member.");
+    } finally {
+      setActionBusy(null);
     }
   }
 
   async function revokeInvitation(invitationId: string) {
+    const invitation = invitations.find((current) => current.id === invitationId);
+    if (!window.confirm(`Revoke the invitation for ${invitation?.email || "this teammate"}?`)) return;
+
     setError(null);
     setNotice(null);
+    setActionBusy(`revoke:${invitationId}`);
 
     try {
       const response = await fetch(`/api/organization/invitations/${invitationId}`, { method: "DELETE" });
@@ -170,6 +198,8 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
       setNotice("Invitation revoked.");
     } catch (revokeError) {
       setError(revokeError instanceof Error ? revokeError.message : "Unable to revoke invitation.");
+    } finally {
+      setActionBusy(null);
     }
   }
 
@@ -221,14 +251,43 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
         </form>
       </div>
 
+      {inviteLink ? (
+        <div className="rounded-xl border border-cyan-300/50 bg-cyan-50 p-4 dark:border-cyan-300/30 dark:bg-cyan-500/10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-cyan-950 dark:text-cyan-100">Invite link ready</p>
+              <a href={inviteLink} className="mt-1 block break-all text-sm text-cyan-800 underline underline-offset-2 dark:text-cyan-200">
+                {inviteLink}
+              </a>
+            </div>
+            <button
+              type="button"
+              onClick={() => void copyInviteLink()}
+              className={appBtnSecondary + " shrink-0"}
+              aria-label={copiedInviteLink ? "Invitation link copied" : "Copy invitation link"}
+            >
+              {copiedInviteLink ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+              {copiedInviteLink ? "Copied" : "Copy link"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {(error || notice) ? (
-        <div className={`rounded-xl border px-4 py-3 text-sm ${error ? "border-rose-300/50 bg-rose-500/10 text-rose-200" : "border-cyan-300/40 bg-cyan-500/10 text-cyan-100"}`}>
+        <div
+          role={error ? "alert" : "status"}
+          aria-live={error ? "assertive" : "polite"}
+          className={`rounded-xl border px-4 py-3 text-sm ${error ? "border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-400/30 dark:bg-rose-500/10 dark:text-rose-200" : "border-cyan-300 bg-cyan-50 text-cyan-900 dark:border-cyan-300/30 dark:bg-cyan-500/10 dark:text-cyan-100"}`}
+        >
           {error || notice}
         </div>
       ) : null}
 
       <div className={`${appCardInner}`}>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Current team</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Current team</h3>
+          {!loading ? <span className="text-sm text-slate-500 dark:text-zinc-400">{members.length} {members.length === 1 ? "member" : "members"}</span> : null}
+        </div>
 
         {loading ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-zinc-400">Loading team members...</p>
@@ -241,12 +300,15 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                 key={member.id}
                 className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-slate-900/40 lg:flex-row lg:items-center lg:justify-between"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium text-slate-900 dark:text-white">{member.name || "Unnamed member"}</p>
                   <p className="text-sm text-slate-500 dark:text-zinc-400">{member.email}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">
+                    Joined {new Date(member.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {member.role === "ADMIN" ? (
                     <span className="rounded-full border border-amber-300 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-200">
                       Owner
@@ -257,6 +319,7 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                       onChange={(event) => updateRole(member.id, event.target.value as MemberRole)}
                       className={appInput + " w-[140px]"}
                       aria-label={`Role for ${member.name || member.email}`}
+                      disabled={actionBusy !== null}
                     >
                       <option value="MANAGER">Manager</option>
                       <option value="STAFF">Staff</option>
@@ -268,8 +331,9 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                       type="button"
                       onClick={() => removeMember(member.id)}
                       className={appBtnSecondary + " border-rose-300 text-rose-600 dark:border-rose-400/20 dark:text-rose-200"}
+                      disabled={actionBusy !== null}
                     >
-                      Remove
+                      {actionBusy === `remove:${member.id}` ? "Removing..." : "Remove"}
                     </button>
                   ) : null}
                 </div>
@@ -280,7 +344,10 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
       </div>
 
       <div className={`${appCardInner}`}>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Pending invites</h3>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Pending invites</h3>
+          {!loading ? <span className="text-sm text-slate-500 dark:text-zinc-400">{invitations.length} open</span> : null}
+        </div>
 
         {loading ? (
           <p className="mt-3 text-sm text-slate-500 dark:text-zinc-400">Checking open invites...</p>
@@ -296,7 +363,7 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">{invitation.email}</p>
                   <p className="text-sm text-slate-500 dark:text-zinc-400">
-                    {invitation.role} · Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                    {invitation.role === "MANAGER" ? "Manager" : "Staff"} · Expires {new Date(invitation.expiresAt).toLocaleDateString()}
                   </p>
                 </div>
 
@@ -304,8 +371,9 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                   type="button"
                   onClick={() => revokeInvitation(invitation.id)}
                   className={appBtnSecondary + " border-rose-300 text-rose-600 dark:border-rose-400/20 dark:text-rose-200"}
+                  disabled={actionBusy !== null}
                 >
-                  Revoke
+                  {actionBusy === `revoke:${invitation.id}` ? "Revoking..." : "Revoke"}
                 </button>
               </div>
             ))}
