@@ -179,10 +179,10 @@ function ScreenshotPlaceholder({
         <span className="mt-5 block text-base font-semibold text-slate-800">
           {label} screenshot
         </span>
-        <span className="mt-2 block text-sm leading-6 text-slate-500">
+        <span className="mt-2 block text-sm leading-6 text-slate-600">
           Screenshot placeholder — replace with your real Partrix screenshot.
         </span>
-        <code className="mt-3 block text-xs text-slate-400">public{assetPath}</code>
+        <code className="mt-3 block text-xs text-slate-600">public{assetPath}</code>
       </figcaption>
     </figure>
   );
@@ -201,7 +201,7 @@ export default function LandingPage() {
           <Link href="/" aria-label="Partrix home" className="shrink-0">
             <PartrixLogo
               size={40}
-              textClassName="text-slate-900"
+              textClassName="!text-slate-900 dark:!text-slate-900 !text-base !font-bold !tracking-normal"
               className="[&_span:first-child]:shadow-none"
             />
           </Link>
@@ -480,7 +480,11 @@ export default function LandingPage() {
           <div className="grid gap-10 border-b border-slate-200 pb-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
             <div>
               <Link href="/" aria-label="Partrix home">
-                <PartrixLogo size={38} textClassName="text-slate-900" className="[&_span:first-child]:shadow-none" />
+                <PartrixLogo
+                  size={38}
+                  textClassName="!text-slate-900 dark:!text-slate-900"
+                  className="[&_span:first-child]:shadow-none"
+                />
               </Link>
               <p className="mt-4 max-w-xs text-sm leading-6 text-slate-600">
                 Partrix — The Operating System for Rental Businesses.
