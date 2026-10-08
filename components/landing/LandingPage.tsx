@@ -425,8 +425,8 @@ export default function LandingPage() {
             The right plan for how you rent.
           </h2>
           <p className="mt-4 leading-7 text-slate-600">
-            Plan details and pricing are being finalized. No prices or feature limits are published
-            until they are ready.
+            We’re finalizing plans for rental businesses at every stage. Pricing and included
+            features will be published here as soon as they’re confirmed.
           </p>
         </div>
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
