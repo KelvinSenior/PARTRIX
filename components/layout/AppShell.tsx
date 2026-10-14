@@ -11,6 +11,7 @@ type AppShellProps = {
   showFab?: boolean;
   fabHref?: string;
   fabLabel?: string;
+  fabAction?: "add-inventory";
 };
 
 export default function AppShell({
@@ -19,6 +20,7 @@ export default function AppShell({
   showFab = true,
   fabHref,
   fabLabel,
+  fabAction,
 }: AppShellProps) {
   return (
     <main className={`${appShell} overflow-x-clip`}>
@@ -29,7 +31,13 @@ export default function AppShell({
           {children}
         </section>
       </div>
-      {showFab ? <FloatingActionButton href={fabHref} label={fabLabel} /> : null}
+      {showFab ? (
+        <FloatingActionButton
+          href={fabHref}
+          label={fabLabel}
+          action={fabAction}
+        />
+      ) : null}
     </main>
   );
 }

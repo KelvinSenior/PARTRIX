@@ -3,6 +3,7 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { formatAmount } from "@/lib/branding";
+import { INVENTORY_ADD_EVENT } from "@/lib/appEvents";
 import {
   AlertTriangle,
   Boxes,
@@ -254,6 +255,22 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
       .catch(() => undefined);
   }, []);
 
+  const openCreateEditor = useCallback(() => {
+    setEditingItem(null);
+    setForm(emptyForm);
+    setImageFile(null);
+    setImagePreview(null);
+    setFormError(null);
+    setIsEditorOpen(true);
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener(INVENTORY_ADD_EVENT, openCreateEditor);
+    return () => {
+      window.removeEventListener(INVENTORY_ADD_EVENT, openCreateEditor);
+    };
+  }, [openCreateEditor]);
+
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
@@ -278,15 +295,6 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
       }
     };
   }, [imagePreview]);
-
-  function openCreateEditor() {
-    setEditingItem(null);
-    setForm(emptyForm);
-    setImageFile(null);
-    setImagePreview(null);
-    setFormError(null);
-    setIsEditorOpen(true);
-  }
 
   function openEditEditor(item: InventoryItemDTO) {
     setEditingItem(item);

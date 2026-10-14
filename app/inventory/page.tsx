@@ -12,7 +12,12 @@ export default async function InventoryPage() {
   }
 
   return (
-    <AppShell user={user} fabHref="/inventory" fabLabel="Add item">
+    <AppShell
+      user={user}
+      fabHref="/inventory"
+      fabLabel="Add item"
+      fabAction="add-inventory"
+    >
       <InventoryManager user={user} />
     </AppShell>
   );

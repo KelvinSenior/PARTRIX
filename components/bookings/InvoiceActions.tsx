@@ -54,7 +54,11 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
       </div>
 
       <div className="mt-5 grid gap-3 grid-cols-1 sm:grid-cols-2">
-        <a href={`/api/bookings/${bookingId}/invoice`} className={`${appBtnSecondary} w-full`}>
+        <a
+          href={`/api/bookings/${bookingId}/invoice`}
+          download
+          className={`${appBtnSecondary} w-full`}
+        >
           <Download className="h-4 w-4" aria-hidden />
           Download PDF
         </a>
