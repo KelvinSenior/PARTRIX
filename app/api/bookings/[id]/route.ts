@@ -27,7 +27,9 @@ const bookingUpdateSchema = z.object({
         discount: bookingMoneySchema.optional(),
         notes: z.string().max(250).nullable().optional(),
       }),
-    ).min(1, "A booking must include at least one item."),
+    )
+    .min(1, "A booking must include at least one item.")
+    .optional(),
   eventDate: z.string().datetime({ offset: true }).optional(),
   returnDate: z.string().datetime({ offset: true }).nullable().optional(),
   status: z
@@ -101,11 +103,12 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if (payload.data.action === "updateItems") {
-      if (!payload.data.items) {
+      const items = payload.data.items;
+      if (!items?.length) {
         return apiError("Items are required for updateItems action.", 400);
       }
       const booking = await updateBookingItems(parsedId.data, {
-        items: payload.data.items,
+        items,
         eventDate: payload.data.eventDate,
         returnDate: payload.data.returnDate,
       });
