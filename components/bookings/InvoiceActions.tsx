@@ -57,6 +57,8 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
         <a
           href={`/api/bookings/${bookingId}/invoice`}
           download
+          target="_blank"
+          rel="noopener noreferrer"
           className={`${appBtnSecondary} w-full`}
         >
           <Download className="h-4 w-4" aria-hidden />
