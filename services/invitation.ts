@@ -78,7 +78,6 @@ export async function revokeInvitation(id: string) {
       organizationId: user.organizationId!,
       acceptedAt: null,
       revokedAt: null,
-      expiresAt: { gt: new Date() },
     },
     data: { revokedAt: new Date() },
   });

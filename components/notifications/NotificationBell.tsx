@@ -84,7 +84,7 @@ export default function NotificationBell() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-13 z-50 w-[min(92vw,380px)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-cyan-200/10 dark:bg-[#050816]">
+        <div className="fixed inset-x-3 top-[calc(env(safe-area-inset-top)+4.5rem)] z-50 flex max-h-[calc(100dvh-env(safe-area-inset-top)-5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-cyan-200/10 dark:bg-[#050816] sm:absolute sm:left-auto sm:right-0 sm:top-13 sm:max-h-none sm:w-[min(92vw,380px)]">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-white/10">
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</p>
@@ -99,7 +99,7 @@ export default function NotificationBell() {
               Mark all
             </button>
           </div>
-          <div className="max-h-[360px] overflow-y-auto p-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:max-h-[360px] sm:flex-none">
             {notifications.length === 0 ? (
               <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-white/[0.04] dark:text-zinc-400">
                 No unread notifications.

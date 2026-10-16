@@ -363,7 +363,10 @@ export default function TeamMembersPanel({ canManageMembers }: { canManageMember
                 <div>
                   <p className="font-medium text-slate-900 dark:text-white">{invitation.email}</p>
                   <p className="text-sm text-slate-500 dark:text-zinc-400">
-                    {invitation.role === "MANAGER" ? "Manager" : "Staff"} · Expires {new Date(invitation.expiresAt).toLocaleDateString()}
+                    {invitation.role === "MANAGER" ? "Manager" : "Staff"} ·{" "}
+                    {invitation.status === "EXPIRED"
+                      ? "Expired"
+                      : `Expires ${new Date(invitation.expiresAt).toLocaleDateString()}`}
                   </p>
                 </div>
 
