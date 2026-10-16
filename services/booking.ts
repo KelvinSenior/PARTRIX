@@ -269,6 +269,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         organization: { connect: { id: organizationId } },
         bookingNumber: formatBookingNumber(),
         customer: await findOrCreateCustomer(payload.customer, tx, organizationId),
+        createdBy: { connect: { id: user.id } },
         eventDate,
         deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : null,
         returnDate: payload.returnDate ? new Date(payload.returnDate) : null,

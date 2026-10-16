@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { prisma, tx, requirePermission, getOrganizationSettings } = vi.hoisted(() => {
   const tx = {
-    booking: { findFirst: vi.fn(), update: vi.fn() },
+    booking: { findFirst: vi.fn(), update: vi.fn(), create: vi.fn() },
     bookingItem: { findMany: vi.fn(), update: vi.fn(), delete: vi.fn(), create: vi.fn() },
+    customer: { findFirst: vi.fn() },
     inventoryItem: { findMany: vi.fn(), update: vi.fn() },
   };
   return {
@@ -20,7 +21,7 @@ vi.mock("@/services/settings", () => ({ getOrganizationSettings }));
 vi.mock("@/services/audit", () => ({ logActivity: vi.fn() }));
 vi.mock("@/services/notification", () => ({ createNotification: vi.fn() }));
 
-import { updateBookingItems, updateBookingStatus } from "@/services/booking";
+import { createBooking, updateBookingItems, updateBookingStatus } from "@/services/booking";
 import { bookingMoneySchema } from "@/lib/bookingValidation";
 
 const decimal = (value: number) => ({ toString: () => value.toFixed(2), toNumber: () => value });
@@ -80,6 +81,56 @@ describe("booking item reservation edits", () => {
     requirePermission.mockResolvedValue({ id: "user-a", role: "ADMIN", organizationId: "org-a" });
     getOrganizationSettings.mockResolvedValue({ deposit: { requiredDepositPercent: 20 } });
     existingBooking = createBookingFixture(2);
+  });
+
+  it("writes the creating user onto the booking record", async () => {
+    const bookingCreate = {
+      id: "booking-new",
+      bookingNumber: "BKG-NEW",
+      customer: { id: "customer-a", firstName: "Taylor", lastName: "User", email: null, phone: null, company: null, address: null },
+      bookingItems: [],
+      eventDate: new Date("2026-10-09T00:00:00.000Z"),
+      deliveryDate: null,
+      returnDate: null,
+      status: "PENDING",
+      notes: null,
+      deliveryFee: decimal(0),
+      setupFee: decimal(0),
+      discount: decimal(0),
+      totalAmount: decimal(100),
+      depositAmount: decimal(20),
+      depositPaid: decimal(0),
+      depositRefunded: decimal(0),
+      depositStatus: "PENDING",
+      refundStatus: "NONE",
+      balanceDue: decimal(120),
+      createdAt: new Date("2026-10-09T00:00:00.000Z"),
+      updatedAt: new Date("2026-10-09T00:00:00.000Z"),
+    };
+    tx.customer.findFirst.mockResolvedValue(null);
+    tx.inventoryItem.findMany.mockResolvedValue([
+      { id: "item-a", name: "Chair", status: "AVAILABLE", totalQuantity: 10, unitPrice: decimal(10) },
+    ]);
+    tx.booking.create.mockResolvedValue(bookingCreate);
+
+    await createBooking({
+      customer: { firstName: "Taylor", lastName: "User", email: "taylor@example.com" },
+      eventDate: "2026-10-09",
+      status: "PENDING",
+      items: [{ inventoryItemId: "item-a", quantity: 2, discount: "0", notes: null }],
+      deliveryFee: "0",
+      setupFee: "0",
+      discount: "0",
+      notes: null,
+      returnDate: null,
+      deliveryDate: null,
+    });
+
+    expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        createdBy: { connect: { id: "user-a" } },
+      }),
+    }));
   });
 
   it("reserves only the increased quantity", async () => {
