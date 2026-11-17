@@ -25,7 +25,7 @@ import {
 
 const steps = [
   { key: "customer", title: "Customer", description: "Select or add a customer" },
-  { key: "details", title: "Rental details", description: "Pick the rental window" },
+  { key: "details", title: "Rental details", description: "Pick the rental dates and duration" },
   { key: "inventory", title: "Inventory", description: "Choose what to rent" },
   { key: "pricing", title: "Pricing", description: "Review the estimate" },
   { key: "payment", title: "Payment", description: "Confirm deposit and status" },
@@ -39,6 +39,16 @@ const paymentMethodOptions: Array<{ label: string; value: PaymentMethod }> = [
   { label: "Check", value: "CHECK" },
   { label: "Mobile wallet", value: "MOBILE_WALLET" },
 ];
+
+function getRentalDays(eventDate: string, returnDate: string) {
+  if (!eventDate) return 1;
+
+  const start = Date.parse(`${eventDate}T00:00:00Z`);
+  const end = Date.parse(`${returnDate || eventDate}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) return 1;
+
+  return Math.max(1, Math.floor((end - start) / 86_400_000) + 1);
+}
 
 export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const router = useRouter();
@@ -63,6 +73,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [eventDate, setEventDate] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+  const [depositAmount, setDepositAmount] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("0.00");
   const [setupFee, setSetupFee] = useState("0.00");
   const [discount, setDiscount] = useState("0.00");
@@ -77,7 +88,6 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [submitting, setSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const firstNameRef = useRef<HTMLInputElement>(null);
-  const lastNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const customerSearchRef = useRef<HTMLInputElement>(null);
@@ -85,6 +95,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const deliveryDateRef = useRef<HTMLInputElement>(null);
   const returnDateRef = useRef<HTMLInputElement>(null);
   const paymentAmountRef = useRef<HTMLInputElement>(null);
+  const depositAmountRef = useRef<HTMLInputElement>(null);
   const paymentMethodRef = useRef<HTMLSelectElement>(null);
   const paymentReferenceRef = useRef<HTMLInputElement>(null);
   const inventoryPanelRef = useRef<HTMLDivElement>(null);
@@ -120,8 +131,8 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       return;
     }
 
-    const defaultReturnDate = new Date(`${eventDate}T00:00:00`);
-    defaultReturnDate.setDate(defaultReturnDate.getDate() + Math.max(activeSettings.rental.defaultRentalTermDays - 1, 0));
+    const defaultReturnDate = new Date(`${eventDate}T00:00:00Z`);
+    defaultReturnDate.setUTCDate(defaultReturnDate.getUTCDate() + Math.max(activeSettings.rental.defaultRentalTermDays - 1, 0));
     setReturnDate(defaultReturnDate.toISOString().slice(0, 10));
   }, [eventDate, returnDate, activeSettings.rental.defaultRentalTermDays]);
 
@@ -139,6 +150,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       if (draft?.eventDate) setEventDate(draft.eventDate ?? "");
       if (draft?.deliveryDate) setDeliveryDate(draft.deliveryDate ?? "");
       if (draft?.returnDate) setReturnDate(draft.returnDate ?? "");
+      if (draft?.depositAmount !== undefined) setDepositAmount(draft.depositAmount ?? "");
       if (draft?.deliveryFee) setDeliveryFee(draft.deliveryFee ?? "0.00");
       if (draft?.setupFee) setSetupFee(draft.setupFee ?? "0.00");
       if (draft?.discount) setDiscount(draft.discount ?? "0.00");
@@ -179,19 +191,22 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   }, [inventorySearch, inventory]);
 
   const bookingTotals = useMemo(() => {
+    const rentalDays = getRentalDays(eventDate, returnDate);
     const subtotal = items.reduce((sum, item) => {
       const inventoryItem = inventory.find((inventoryRow) => inventoryRow.id === item.inventoryItemId);
       const unitPrice = inventoryItem?.rentalPrice ?? 0;
-      const line = Math.max(unitPrice * item.quantity - item.discount, 0);
+      const line = Math.max(unitPrice * item.quantity * rentalDays - item.discount, 0);
       return sum + line;
     }, 0);
 
     const fees = Number(deliveryFee) + Number(setupFee);
     const total = Math.max(subtotal + fees - Number(discount), 0);
-    const deposit = Number(((total * activeSettings.deposit.requiredDepositPercent) / 100).toFixed(2));
+    const defaultDeposit = Number(((total * activeSettings.deposit.requiredDepositPercent) / 100).toFixed(2));
+    const enteredDeposit = depositAmount.trim() === "" ? defaultDeposit : Number(depositAmount);
+    const deposit = Number.isFinite(enteredDeposit) ? enteredDeposit : 0;
     const balance = Number((total + deposit).toFixed(2));
-    return { subtotal, total, deposit, balance };
-  }, [items, inventory, deliveryFee, setupFee, discount, activeSettings.deposit.requiredDepositPercent]);
+    return { subtotal, total, deposit, defaultDeposit, balance, rentalDays };
+  }, [items, inventory, eventDate, returnDate, deliveryFee, setupFee, discount, depositAmount, activeSettings.deposit.requiredDepositPercent]);
 
   const selectedItems = items.filter((item) => item.inventoryItemId);
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
@@ -234,7 +249,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     const focusTargets: Record<string, () => void> = {
       customer: () => customerSearchRef.current?.focus(),
       firstName: () => firstNameRef.current?.focus(),
-      lastName: () => lastNameRef.current?.focus(),
+      depositAmount: () => depositAmountRef.current?.focus(),
       email: () => emailRef.current?.focus(),
       phone: () => phoneRef.current?.focus(),
       eventDate: () => eventDateRef.current?.focus(),
@@ -261,6 +276,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     if (["customer", "firstName", "lastName", "email", "phone"].includes(field)) return 0;
     if (["eventDate", "deliveryDate", "returnDate"].includes(field)) return 1;
     if (["items"].includes(field)) return 2;
+    if (["depositAmount"].includes(field)) return 3;
     if (["paymentAmount", "paymentMethod", "paymentReference"].includes(field)) return 4;
     return 0;
   }
@@ -277,9 +293,6 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
         } else {
           if (!firstName.trim()) {
             nextErrors.firstName = "Please enter the customer's first name.";
-          }
-          if (!lastName.trim()) {
-            nextErrors.lastName = "Please enter the customer's last name.";
           }
           if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             nextErrors.email = "Enter a valid email address.";
@@ -315,6 +328,20 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
           nextErrors.items = "Choose at least one inventory item before continuing.";
         }
         break;
+      case 3: {
+        if (depositAmount.trim() !== "") {
+          const amount = Number(depositAmount);
+          if (
+            !Number.isFinite(amount) ||
+            amount < 0 ||
+            amount > 9_999_999_999.99 ||
+            !/^\d+(?:\.\d{1,2})?$/.test(depositAmount.trim())
+          ) {
+            nextErrors.depositAmount = "Enter a refundable deposit of zero or more with no more than two decimal places.";
+          }
+        }
+        break;
+      }
       case 4: {
         const hasPaymentAmount = paymentAmount.trim() !== "";
         const amount = Number(paymentAmount);
@@ -363,7 +390,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
 
   function validateBookingBeforeSubmit() {
     const nextErrors: Record<string, string> = {};
-    const stepsToValidate = [0, 1, 2, 4] as const;
+    const stepsToValidate = [0, 1, 2, 3, 4] as const;
 
     stepsToValidate.forEach((stepIndex) => {
       Object.assign(nextErrors, collectValidationErrors(stepIndex));
@@ -407,6 +434,8 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
         ? "firstName"
         : normalizedPath === "lastname"
           ? "lastName"
+          : normalizedPath === "depositamount"
+            ? "depositAmount"
           : normalizedPath === "initialpayment.amount"
             ? "paymentAmount"
             : normalizedPath === "initialpayment.method"
@@ -451,6 +480,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setEventDate("");
     setDeliveryDate("");
     setReturnDate("");
+    setDepositAmount("");
     setDeliveryFee("0.00");
     setSetupFee("0.00");
     setDiscount("0.00");
@@ -480,6 +510,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       eventDate,
       deliveryDate,
       returnDate,
+      depositAmount,
       deliveryFee,
       setupFee,
       discount,
@@ -526,6 +557,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       eventDate,
       deliveryDate: deliveryDate || null,
       returnDate: returnDate || null,
+      ...(depositAmount.trim() !== "" ? { depositAmount: Number(depositAmount) } : {}),
       status,
       ...(paymentAmount.trim() && Number(paymentAmount) > 0
         ? {
@@ -585,6 +617,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setEventDate("");
     setDeliveryDate("");
     setReturnDate("");
+    setDepositAmount("");
     setDeliveryFee("0.00");
     setSetupFee("0.00");
     setDiscount("0.00");
@@ -699,9 +732,8 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                     {validationErrors.firstName ? <p className="mt-2 text-sm text-rose-600">{validationErrors.firstName}</p> : null}
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Last name
-                    <input ref={lastNameRef} value={lastName} onChange={(event) => { setLastName(event.target.value); clearValidationError("lastName"); }} className={`mt-2 w-full rounded-2xl border px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 ${validationErrors.lastName ? "border-rose-400" : "border-zinc-200"}`} aria-invalid={Boolean(validationErrors.lastName)} />
-                    {validationErrors.lastName ? <p className="mt-2 text-sm text-rose-600">{validationErrors.lastName}</p> : null}
+                    Last name (optional)
+                    <input value={lastName} onChange={(event) => setLastName(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100" />
                   </label>
                   <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
                     Email
@@ -768,6 +800,9 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   </select>
                 </label>
               </div>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                Choose an event date and return date for a multi-day rental. Both dates are included ({bookingTotals.rentalDays} rental day{bookingTotals.rentalDays === 1 ? "" : "s"}).
+              </p>
             </div>
             <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Rental notes</p>
@@ -859,7 +894,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
             <div className="space-y-3 rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Items subtotal</p>
+                  <p className="text-xs uppercase tracking-[0.26em] text-zinc-500 dark:text-zinc-400">Items subtotal · {bookingTotals.rentalDays} day{bookingTotals.rentalDays === 1 ? "" : "s"}</p>
                   <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-white">{formatAmount(bookingTotals.subtotal, activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -891,6 +926,27 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   Booking discount
                   <input type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className="mt-2 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100" />
                 </label>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Refundable deposit amount (optional)
+                  <input
+                    ref={depositAmountRef}
+                    type="number"
+                    min="0"
+                    max="9999999999.99"
+                    step="0.01"
+                    value={depositAmount}
+                    onChange={(event) => {
+                      setDepositAmount(event.target.value);
+                      clearValidationError("depositAmount");
+                    }}
+                    className={`mt-2 w-full rounded-2xl border bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:bg-zinc-900 dark:text-zinc-100 ${validationErrors.depositAmount ? "border-rose-400" : "border-zinc-200 dark:border-zinc-800"}`}
+                    aria-invalid={Boolean(validationErrors.depositAmount)}
+                    placeholder={bookingTotals.defaultDeposit.toFixed(2)}
+                  />
+                  {validationErrors.depositAmount
+                    ? <p className="mt-2 text-sm text-rose-600">{validationErrors.depositAmount}</p>
+                    : <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Leave blank to use the default {activeSettings.deposit.requiredDepositPercent}% ({formatAmount(bookingTotals.defaultDeposit, activeSettings)}).</p>}
+                </label>
               </div>
             </div>
           </div>
@@ -903,7 +959,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Refundable deposit</p>
-                  <p className="mt-1">{formatAmount(bookingTotals.deposit, activeSettings)} at {activeSettings.deposit.requiredDepositPercent}%</p>
+                  <p className="mt-1">
+                    {formatAmount(bookingTotals.deposit, activeSettings)}
+                    {depositAmount.trim() ? " (custom amount)" : ` at the default ${activeSettings.deposit.requiredDepositPercent}%`}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Balance before payment</p>

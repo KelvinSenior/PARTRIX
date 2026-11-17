@@ -30,14 +30,8 @@ export const bookingCustomerSchema = z.object({
   }
 
   const firstName = customer.firstName?.trim();
-  const lastName = customer.lastName?.trim();
-
   if (!firstName) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["firstName"], message: "First name is required when creating a new customer." });
-  }
-
-  if (!lastName) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["lastName"], message: "Last name is required when creating a new customer." });
   }
 });
 
@@ -51,6 +45,7 @@ export const bookingPayloadSchema = z
       (value) => value === null || value === undefined || !Number.isNaN(Date.parse(value)),
       { message: "Delivery date must be a valid date." },
     ),
+    depositAmount: bookingMoneySchema.optional(),
     returnDate: z.string().nullable().optional().refine(
       (value) => value === null || value === undefined || !Number.isNaN(Date.parse(value)),
       { message: "Return date must be a valid date." },

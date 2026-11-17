@@ -30,6 +30,7 @@ export interface BookingPayload {
   eventDate: string;
   deliveryDate?: string | null;
   returnDate?: string | null;
+  depositAmount?: number;
   status: BookingStatus;
   deliveryFee: number;
   setupFee: number;

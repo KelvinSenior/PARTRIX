@@ -42,6 +42,13 @@ function toCents(value: number | string | { toString: () => string }): number {
   return match[1] ? -cents : cents;
 }
 
+function getRentalDays(eventDate: Date, returnDate: Date | null): number {
+  const endDate = returnDate ?? eventDate;
+  const startUtc = Date.UTC(eventDate.getUTCFullYear(), eventDate.getUTCMonth(), eventDate.getUTCDate());
+  const endUtc = Date.UTC(endDate.getUTCFullYear(), endDate.getUTCMonth(), endDate.getUTCDate());
+  return Math.max(1, Math.floor((endUtc - startUtc) / 86_400_000) + 1);
+}
+
 function serializeBookingItem(item: any): BookingDTO["bookingItems"][number] {
   return {
     id: item.id,
@@ -181,6 +188,10 @@ async function computeBookingTotals(
   inventoryData: Array<{ id: string; unitPrice: string }>,
   depositPercent: number,
 ) {
+  const rentalDays = getRentalDays(
+    new Date(payload.eventDate),
+    payload.returnDate ? new Date(payload.returnDate) : null,
+  );
   const itemTotals = payload.items.map((item) => {
     const inventory = inventoryData.find((record) => record.id === item.inventoryItemId);
     const unitPriceCents = inventory ? toCents(inventory.unitPrice) : 0;
@@ -189,7 +200,7 @@ async function computeBookingTotals(
     return {
       ...item,
       unitPrice,
-      totalPrice: Math.max(unitPriceCents * item.quantity - discountCents, 0) / 100,
+      totalPrice: Math.max(unitPriceCents * item.quantity * rentalDays - discountCents, 0) / 100,
     };
   });
 
@@ -197,7 +208,9 @@ async function computeBookingTotals(
   const totalCents = Math.max(0,
     itemSumCents + toCents(payload.deliveryFee) + toCents(payload.setupFee) - toCents(payload.discount),
   );
-  const depositCents = Math.round((totalCents * depositPercent) / 100);
+  const depositCents = payload.depositAmount === undefined
+    ? Math.round((totalCents * depositPercent) / 100)
+    : toCents(payload.depositAmount);
 
   return {
     itemTotals,
@@ -226,6 +239,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
   const createdBooking = await runSerializable(async (tx) => {
     const eventDate = new Date(payload.eventDate);
     const returnDate = payload.returnDate ? new Date(payload.returnDate) : eventDate;
+    const rentalDays = getRentalDays(eventDate, returnDate);
     const itemIds = payload.items.map((item) => item.inventoryItemId);
 
     const inventoryItems = await tx.inventoryItem.findMany({
@@ -263,7 +277,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         quantity: item.quantity,
         unitPrice: inventoryItem.unitPrice.toString(),
         discount: item.discount.toString(),
-        totalPrice: Math.max(toCents(inventoryItem.unitPrice) * item.quantity - toCents(item.discount), 0) / 100,
+        totalPrice: Math.max(toCents(inventoryItem.unitPrice) * item.quantity * rentalDays - toCents(item.discount), 0) / 100,
         notes: item.notes ?? null,
       };
     });
@@ -664,6 +678,7 @@ export async function updateBookingItems(
       throw new Error("Return date must be on or after the event date.");
     }
     const reservationEnd = updatedReturnDate ?? updatedEventDate;
+    const rentalDays = getRentalDays(updatedEventDate, updatedReturnDate);
 
     const inventoryIds = [...new Set([
       ...submittedItemIds,
@@ -709,7 +724,7 @@ export async function updateBookingItems(
       const unitPriceCents = Math.round(unitPrice * 100);
       const discount = change.discount ?? (existing ? Number(existing.discount.toString()) : 0);
       const discountCents = Math.round(discount * 100);
-      const subtotalCents = unitPriceCents * change.quantity;
+      const subtotalCents = unitPriceCents * change.quantity * rentalDays;
       if (discountCents > subtotalCents) throw new Error("Item discount cannot exceed its subtotal.");
 
       return {
@@ -774,8 +789,12 @@ export async function updateBookingItems(
     const setupFeeCents = Math.round(Number(booking.setupFee.toString()) * 100);
     const bookingDiscountCents = Math.round(Number(booking.discount.toString()) * 100);
     const totalCents = Math.max(0, itemTotalCents + deliveryFeeCents + setupFeeCents - bookingDiscountCents);
-    const depositCents = Math.round(totalCents * settings.deposit.requiredDepositPercent / 100);
     const oldDepositCents = Math.round(Number(booking.depositAmount.toString()) * 100);
+    const oldTotalCents = Math.round(Number(booking.totalAmount.toString()) * 100);
+    const defaultOldDepositCents = Math.round(oldTotalCents * settings.deposit.requiredDepositPercent / 100);
+    const depositCents = oldDepositCents === defaultOldDepositCents
+      ? Math.round(totalCents * settings.deposit.requiredDepositPercent / 100)
+      : oldDepositCents;
     const depositPaidCents = Math.round(Number(booking.depositPaid.toString()) * 100);
     const oldDepositOutstandingCents = Math.max(0, oldDepositCents - depositPaidCents);
     const oldRentalOutstandingCents = Math.max(0, Math.round(Number(booking.balanceDue.toString()) * 100) - oldDepositOutstandingCents);

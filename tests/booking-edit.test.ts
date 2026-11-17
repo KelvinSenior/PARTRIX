@@ -38,7 +38,7 @@ function createBookingFixture(quantity: number) {
     customer: { id: "customer-a", firstName: "Taylor", lastName: "User", email: null, phone: null, company: null, address: null },
     eventDate: now,
     deliveryDate: null,
-    returnDate: new Date("2026-10-01T00:00:00.000Z"),
+    returnDate: now,
     status: "PENDING",
     notes: null,
     deliveryFee: decimal(0),
@@ -87,7 +87,7 @@ describe("booking item reservation edits", () => {
     existingBooking = createBookingFixture(2);
   });
 
-  it("writes the creating user onto the booking record", async () => {
+  it("uses the default deposit when no override is provided and records the creator", async () => {
     const bookingCreate = {
       id: "booking-new",
       bookingNumber: "BKG-NEW",
@@ -101,13 +101,13 @@ describe("booking item reservation edits", () => {
       deliveryFee: decimal(0),
       setupFee: decimal(0),
       discount: decimal(0),
-      totalAmount: decimal(100),
-      depositAmount: decimal(20),
+      totalAmount: decimal(20),
+      depositAmount: decimal(4),
       depositPaid: decimal(0),
       depositRefunded: decimal(0),
       depositStatus: "PENDING",
       refundStatus: "NONE",
-      balanceDue: decimal(120),
+      balanceDue: decimal(24),
       createdAt: new Date("2026-10-09T00:00:00.000Z"),
       updatedAt: new Date("2026-10-09T00:00:00.000Z"),
     };
@@ -132,6 +132,9 @@ describe("booking item reservation edits", () => {
     expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         createdBy: { connect: { id: "user-a" } },
+        totalAmount: "20",
+        depositAmount: "4",
+        balanceDue: "24",
       }),
     }));
   });
@@ -152,6 +155,73 @@ describe("booking item reservation edits", () => {
       ...basePayload,
       initialPayment: { amount: 10, method: "CASH", type: "RENTAL" },
     }).success).toBe(true);
+  });
+
+  it("allows a new customer without a last name", () => {
+    const result = bookingPayloadSchema.safeParse({
+      customer: { firstName: "Taylor" },
+      eventDate: "2026-10-09",
+      status: "PENDING",
+      items: [{ inventoryItemId: "123e4567-e89b-12d3-a456-426614174000", quantity: 1, discount: 0 }],
+      deliveryFee: 0,
+      setupFee: 0,
+      discount: 0,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("prices each inclusive rental day and uses a custom refundable deposit", async () => {
+    tx.customer.findFirst.mockResolvedValue(null);
+    tx.inventoryItem.findMany.mockResolvedValue([
+      { id: "item-a", name: "Chair", status: "AVAILABLE", totalQuantity: 10, unitPrice: decimal(10) },
+    ]);
+    tx.booking.create.mockResolvedValue({
+      id: "booking-multiday",
+      bookingNumber: "BKG-MULTIDAY",
+      customer: { id: "customer-a", firstName: "Taylor", lastName: "", email: null, phone: null, company: null, address: null },
+      bookingItems: [],
+      eventDate: new Date("2026-10-09T00:00:00.000Z"),
+      deliveryDate: null,
+      returnDate: new Date("2026-10-11T00:00:00.000Z"),
+      status: "PENDING",
+      notes: null,
+      deliveryFee: decimal(0),
+      setupFee: decimal(0),
+      discount: decimal(0),
+      totalAmount: decimal(60),
+      depositAmount: decimal(7.5),
+      depositPaid: decimal(0),
+      depositRefunded: decimal(0),
+      depositStatus: "PENDING",
+      refundStatus: "NONE",
+      balanceDue: decimal(67.5),
+      createdAt: new Date("2026-10-09T00:00:00.000Z"),
+      updatedAt: new Date("2026-10-09T00:00:00.000Z"),
+    });
+
+    await createBooking({
+      customer: { firstName: "Taylor" },
+      eventDate: "2026-10-09",
+      returnDate: "2026-10-11",
+      status: "PENDING",
+      items: [{ inventoryItemId: "item-a", quantity: 2, discount: 0 }],
+      deliveryFee: 0,
+      setupFee: 0,
+      discount: 0,
+      depositAmount: 7.5,
+    });
+
+    expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        totalAmount: "60",
+        depositAmount: "7.5",
+        balanceDue: "67.5",
+        bookingItems: {
+          create: [expect.objectContaining({ unitPrice: "10.00", totalPrice: 60 })],
+        },
+      }),
+    }));
   });
 
   it("records the initial payment and applies it to the booking balance atomically", async () => {
