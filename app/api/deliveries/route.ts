@@ -28,6 +28,6 @@ export async function POST(request: Request) {
     const created = await createDelivery(parsed.data);
     return NextResponse.json({ delivery: created }, { status: 201 });
   } catch (err: any) {
-    return apiError(err.message ?? "Failed to create delivery.", 500);
+    return apiError(err.message ?? "Failed to create delivery.", 400);
   }
 }

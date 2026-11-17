@@ -104,5 +104,6 @@ export interface BookingReturnPayload {
   returnItems: Array<{
     bookingItemId: string;
     quantity: number;
+    damagedQuantity?: number;
   }>;
 }

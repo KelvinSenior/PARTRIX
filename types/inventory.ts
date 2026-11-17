@@ -48,6 +48,8 @@ export interface InventoryItemDTO {
   imageUrl: string | null;
   totalQuantity: number;
   availableQuantity: number;
+  periodAvailableQuantity: number;
+  periodCommittedQuantity: number;
   rentedQuantity: number;
   damagedQuantity: number;
   minimumThreshold: number;
@@ -62,6 +64,7 @@ export interface InventorySummary {
   totalItems: number;
   totalOwned: number;
   totalAvailable: number;
+  totalCommitted: number;
   totalRented: number;
   totalDamaged: number;
   lowStockItems: number;
@@ -79,5 +82,8 @@ export interface InventoryListFilters {
   status: "all" | InventoryStatus;
   availability: InventoryAvailabilityFilter;
   sort: InventorySortOption;
+  eventDate?: string;
+  deliveryDate?: string;
+  returnDate?: string;
 }
 

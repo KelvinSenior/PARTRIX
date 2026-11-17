@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { BookingDTO } from "@/types/booking";
 import { appCard } from "@/lib/appStyles";
 import { CheckCircle2, Clock, PlayCircle, XCircle, AlertCircle, RefreshCcw } from "lucide-react";
@@ -66,14 +67,7 @@ const STATUS_FLOW: Record<string, { label: string; target: string; style: string
         "bg-cyan-500 hover:bg-cyan-600 text-white shadow-[0_4px_16px_rgba(34,211,238,0.28)]",
     },
   ],
-  IN_PROGRESS: [
-    {
-      label: "Complete rental (Items returned)",
-      target: "COMPLETED",
-      style:
-        "bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_16px_rgba(16,185,129,0.28)]",
-    },
-  ],
+  IN_PROGRESS: [],
   COMPLETED: [],
   CANCELLED: [],
   NO_SHOW: [],
@@ -116,7 +110,7 @@ export default function BookingStatusControls({
   }
 
   async function handleCancel() {
-    if (!confirm("Are you sure you want to cancel this booking? This will restore inventory.")) return;
+    if (!confirm("Cancel this booking? Its scheduled inventory will be released. Items already out must be returned first.")) return;
     await transitionTo("CANCELLED");
   }
 
@@ -150,7 +144,7 @@ export default function BookingStatusControls({
             <option value="PENDING">Pending (Draft / Quote)</option>
             <option value="CONFIRMED">Confirmed (Items Reserved)</option>
             <option value="IN_PROGRESS">In Progress (Customer Received Items)</option>
-            <option value="COMPLETED">Completed (Items Returned)</option>
+            <option value="COMPLETED">Completed (after returns are recorded)</option>
             <option value="CANCELLED">Cancelled</option>
             <option value="NO_SHOW">No Show</option>
           </select>
@@ -178,6 +172,15 @@ export default function BookingStatusControls({
             ))}
           </div>
         </div>
+      )}
+
+      {booking.status === "IN_PROGRESS" && (
+        <Link
+          href={`/bookings/${booking.id}#returns`}
+          className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+        >
+          Record returned items
+        </Link>
       )}
 
       {/* Cancel — always shown unless already final */}

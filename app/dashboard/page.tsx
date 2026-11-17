@@ -30,14 +30,14 @@ export default async function DashboardPage() {
     hasPermission(user.role, "finance:read")
       ? getFinanceSummary()
       : Promise.resolve({ totals: { revenue: 0, expenses: 0, profit: 0, outstanding: 0 }, monthly: [] }),
-    listInventoryItems({ search: "", category: "", status: "all", availability: "all", sort: "name" }),
+    listInventoryItems({ search: "", category: "all", status: "all", availability: "all", sort: "name" }),
     getOrganizationSettings(),
   ]);
 
   const canReadFinance = hasPermission(user.role, "finance:read");
   const totalRevenue = financeSummary.totals.revenue;
   const inventoryAlerts = inventoryResult.items.filter(
-    (item) => item.availableQuantity <= item.minimumThreshold,
+    (item) => item.periodAvailableQuantity <= item.minimumThreshold,
   ).length;
   const pendingDeliveries = deliveriesResult.filter((d: { status: string }) =>
     ["SCHEDULED", "IN_TRANSIT"].includes(d.status),

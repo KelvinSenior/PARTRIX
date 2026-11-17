@@ -4,6 +4,7 @@ const { prisma, requirePermission, getOrganizationSettings } = vi.hoisted(() => 
   prisma: {
     booking: { count: vi.fn() },
     inventoryItem: { findMany: vi.fn() },
+    bookingItem: { findMany: vi.fn() },
     delivery: { count: vi.fn() },
   },
   requirePermission: vi.fn(),
@@ -23,9 +24,35 @@ describe("live dashboard alerts", () => {
     getOrganizationSettings.mockResolvedValue({ localization: { timeZone: "UTC" } });
     prisma.booking.count.mockResolvedValue(2);
     prisma.inventoryItem.findMany.mockResolvedValue([
-      { availableQuantity: 0, minimumThreshold: 0 },
-      { availableQuantity: 1, minimumThreshold: 1 },
-      { availableQuantity: 4, minimumThreshold: 2 },
+      { id: "item-a", totalQuantity: 4, rentedQuantity: 0, damagedQuantity: 0, minimumThreshold: 0, status: "AVAILABLE" },
+      { id: "item-b", totalQuantity: 4, rentedQuantity: 0, damagedQuantity: 0, minimumThreshold: 1, status: "AVAILABLE" },
+      { id: "item-c", totalQuantity: 4, rentedQuantity: 0, damagedQuantity: 0, minimumThreshold: 2, status: "AVAILABLE" },
+    ]);
+    prisma.bookingItem.findMany.mockResolvedValue([
+      {
+        inventoryItemId: "item-a",
+        quantity: 4,
+        returnedQuantity: 0,
+        booking: {
+          eventDate: new Date("2026-10-28T00:00:00.000Z"),
+          deliveryDate: null,
+          returnDate: new Date("2026-10-28T00:00:00.000Z"),
+          status: "CONFIRMED",
+          delivery: null,
+        },
+      },
+      {
+        inventoryItemId: "item-b",
+        quantity: 3,
+        returnedQuantity: 0,
+        booking: {
+          eventDate: new Date("2026-10-28T00:00:00.000Z"),
+          deliveryDate: null,
+          returnDate: new Date("2026-10-28T00:00:00.000Z"),
+          status: "CONFIRMED",
+          delivery: null,
+        },
+      },
     ]);
     prisma.delivery.count.mockResolvedValue(3);
   });
@@ -43,7 +70,14 @@ describe("live dashboard alerts", () => {
     });
     expect(prisma.inventoryItem.findMany).toHaveBeenCalledWith({
       where: { organizationId: "org-a" },
-      select: { availableQuantity: true, minimumThreshold: true },
+      select: {
+        id: true,
+        totalQuantity: true,
+        rentedQuantity: true,
+        damagedQuantity: true,
+        minimumThreshold: true,
+        status: true,
+      },
     });
     expect(prisma.delivery.count).toHaveBeenCalledWith({
       where: {

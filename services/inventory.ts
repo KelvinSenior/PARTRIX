@@ -2,6 +2,13 @@ import type { InventoryItem, Prisma } from "@/app/generated/prisma";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { createNotification } from "@/services/notification";
+import { getOrganizationSettings } from "@/services/settings";
+import {
+  getCalendarDateStart,
+  getInventoryAvailability,
+  type InventoryAvailability,
+  type RentalAvailabilityWindow,
+} from "@/services/inventoryAvailability";
 import type { InventoryItemPayload } from "@/lib/inventoryValidation";
 import type {
   InventoryItemDTO,
@@ -19,22 +26,22 @@ function decimalString(value: number) {
   return value.toFixed(2);
 }
 
-function getStockState(item: InventoryItem): StockState {
+function getStockState(item: InventoryItem, periodAvailableQuantity = item.availableQuantity): StockState {
   if (item.status === "RETIRED") {
     return "retired";
   }
   if (item.status === "MAINTENANCE") {
     return "maintenance";
   }
-  if (item.availableQuantity === 0 && item.damagedQuantity > 0) {
+  if (item.totalQuantity - item.damagedQuantity <= 0 && item.damagedQuantity > 0) {
     return "damaged";
   }
-  if (item.availableQuantity === 0 || item.status === "OUT_OF_STOCK") {
+  if (periodAvailableQuantity === 0 || item.status === "OUT_OF_STOCK") {
     return "out_of_stock";
   }
   if (
     item.minimumThreshold > 0 &&
-    item.availableQuantity <= item.minimumThreshold
+    periodAvailableQuantity <= item.minimumThreshold
   ) {
     return "low_stock";
   }
@@ -59,6 +66,8 @@ function serializeInventoryItem(item: InventoryItem): InventoryItemDTO {
     imageUrl: item.imageUrl,
     totalQuantity: item.totalQuantity,
     availableQuantity: item.availableQuantity,
+    periodAvailableQuantity: item.availableQuantity,
+    periodCommittedQuantity: item.rentedQuantity,
     rentedQuantity: item.rentedQuantity,
     damagedQuantity: item.damagedQuantity,
     minimumThreshold: item.minimumThreshold,
@@ -78,7 +87,7 @@ function matchesAvailability(
     return true;
   }
   if (availability === "available") {
-    return item.availableQuantity > 0 && item.status === "AVAILABLE";
+    return item.periodAvailableQuantity > 0 && item.status === "AVAILABLE";
   }
   if (availability === "rented") {
     return item.rentedQuantity > 0;
@@ -89,7 +98,7 @@ function matchesAvailability(
   if (availability === "low_stock") {
     return item.stockState === "low_stock";
   }
-  return item.availableQuantity === 0 || item.status === "OUT_OF_STOCK";
+  return item.periodAvailableQuantity === 0 || item.status === "OUT_OF_STOCK";
 }
 
 function buildWhere(filters: InventoryListFilters): Prisma.InventoryItemWhereInput {
@@ -121,16 +130,6 @@ function buildWhere(filters: InventoryListFilters): Prisma.InventoryItemWhereInp
     and.push({ damagedQuantity: { gt: 0 } });
   }
 
-  if (filters.availability === "out_of_stock") {
-    and.push({
-      OR: [{ availableQuantity: 0 }, { status: "OUT_OF_STOCK" }],
-    });
-  }
-
-  if (filters.availability === "available") {
-    and.push({ availableQuantity: { gt: 0 }, status: "AVAILABLE" });
-  }
-
   return and.length ? { AND: and } : {};
 }
 
@@ -141,7 +140,7 @@ function getOrderBy(
     return { name: "asc" };
   }
   if (sort === "available") {
-    return { availableQuantity: "asc" };
+    return { name: "asc" };
   }
   if (sort === "category") {
     return { category: "asc" };
@@ -154,7 +153,8 @@ function summarize(items: InventoryItemDTO[]): InventorySummary {
     (summary, item) => ({
       totalItems: summary.totalItems + 1,
       totalOwned: summary.totalOwned + item.totalQuantity,
-      totalAvailable: summary.totalAvailable + item.availableQuantity,
+      totalAvailable: summary.totalAvailable + item.periodAvailableQuantity,
+      totalCommitted: summary.totalCommitted + item.periodCommittedQuantity,
       totalRented: summary.totalRented + item.rentedQuantity,
       totalDamaged: summary.totalDamaged + item.damagedQuantity,
       lowStockItems:
@@ -164,11 +164,49 @@ function summarize(items: InventoryItemDTO[]): InventorySummary {
       totalItems: 0,
       totalOwned: 0,
       totalAvailable: 0,
+      totalCommitted: 0,
       totalRented: 0,
       totalDamaged: 0,
       lowStockItems: 0,
     },
   );
+}
+
+function dateOnly(value: string | undefined, fallback: Date): Date {
+  if (!value) return fallback;
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function getAvailabilityWindow(
+  filters: Pick<InventoryListFilters, "eventDate" | "deliveryDate" | "returnDate">,
+  today: Date,
+): RentalAvailabilityWindow {
+  const eventDate = dateOnly(filters.eventDate, today);
+  return {
+    eventDate,
+    deliveryDate: filters.deliveryDate ? dateOnly(filters.deliveryDate, today) : null,
+    returnDate: filters.returnDate ? dateOnly(filters.returnDate, today) : eventDate,
+  };
+}
+
+async function serializeWithAvailability(
+  item: InventoryItem,
+  organizationId: string,
+  window: RentalAvailabilityWindow,
+  availability?: Map<string, InventoryAvailability>,
+  now?: Date,
+  timeZone = "UTC",
+): Promise<InventoryItemDTO> {
+  const periodAvailability = availability?.get(item.id) ??
+    (await getInventoryAvailability(organizationId, [item], window, { now, timeZone })).get(item.id)!;
+  const serialized = serializeInventoryItem(item);
+
+  return {
+    ...serialized,
+    periodAvailableQuantity: periodAvailability.availableQuantity,
+    periodCommittedQuantity: periodAvailability.committedQuantity,
+    stockState: getStockState(item, periodAvailability.availableQuantity),
+  };
 }
 
 function toPrismaData(data: InventoryItemPayload) {
@@ -194,49 +232,89 @@ export async function listInventoryItems(
   filters: InventoryListFilters,
 ): Promise<InventoryListResponse> {
   const user = await requirePermission("inventory:read");
-  const tenantWhere = { organizationId: user.organizationId!, ...buildWhere(filters) };
-
-  const [records, categoryRows] = await Promise.all([
+  const organizationId = user.organizationId!;
+  const tenantWhere = { organizationId, ...buildWhere(filters) };
+  const [records, categoryRows, settings] = await Promise.all([
     prisma.inventoryItem.findMany({
       where: tenantWhere,
-      orderBy: getOrderBy(filters.sort),
+      orderBy: filters.sort === "available" ? { name: "asc" } : getOrderBy(filters.sort),
     }),
     prisma.inventoryItem.findMany({
       distinct: ["category"],
-      where: { organizationId: user.organizationId!, category: { not: null } },
+      where: { organizationId, category: { not: null } },
       select: { category: true },
       orderBy: { category: "asc" },
     }),
+    getOrganizationSettings(),
   ]);
+  const now = new Date();
+  const timeZone = settings.localization.timeZone;
+  const today = getCalendarDateStart(now, timeZone);
+  const window = getAvailabilityWindow(filters, today);
 
-  const items = records
-    .map(serializeInventoryItem)
+  const periodAvailability = await getInventoryAvailability(
+    organizationId,
+    records,
+    window,
+    { now, timeZone },
+  );
+  const serializedItems = await Promise.all(records.map((item) =>
+    serializeWithAvailability(item, organizationId, window, periodAvailability, now, timeZone),
+  ));
+  const filteredItems = serializedItems
     .filter((item) => matchesAvailability(item, filters.availability));
+  if (filters.sort === "available") {
+    filteredItems.sort((left, right) => left.periodAvailableQuantity - right.periodAvailableQuantity);
+  }
 
   return {
-    items,
+    items: filteredItems,
     categories: categoryRows
       .map((row) => row.category)
       .filter((category): category is string => Boolean(category)),
-    summary: summarize(items),
+    summary: summarize(filteredItems),
   };
 }
 
 export async function getInventoryItem(id: string) {
   const user = await requirePermission("inventory:read");
-  const item = await prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } });
-  return item ? serializeInventoryItem(item) : null;
+  const [item, settings] = await Promise.all([
+    prisma.inventoryItem.findFirst({ where: { id, organizationId: user.organizationId! } }),
+    getOrganizationSettings(),
+  ]);
+  const now = new Date();
+  return item
+    ? serializeWithAvailability(
+        item,
+        user.organizationId!,
+        getAvailabilityWindow({}, getCalendarDateStart(now, settings.localization.timeZone)),
+        undefined,
+        now,
+        settings.localization.timeZone,
+      )
+    : null;
 }
 
 export async function createInventoryItem(data: InventoryItemPayload) {
   const user = await requirePermission("inventory:write");
+  const organizationId = user.organizationId!;
+  const settings = await getOrganizationSettings();
   const item = await prisma.inventoryItem.create({
-    data: { organizationId: user.organizationId!, ...toPrismaData(data) },
+    data: { organizationId, ...toPrismaData(data) },
   });
+  const now = new Date();
+  const serialized = await serializeWithAvailability(
+    item,
+    organizationId,
+    getAvailabilityWindow({}, getCalendarDateStart(now, settings.localization.timeZone)),
+    undefined,
+    now,
+    settings.localization.timeZone,
+  );
 
-  if (item.minimumThreshold > 0 && item.availableQuantity <= item.minimumThreshold) {
+  if (item.minimumThreshold > 0 && serialized.periodAvailableQuantity <= item.minimumThreshold) {
     await createNotification({
-      organizationId: user.organizationId!,
+      organizationId,
       userId: user.id,
       type: "INVENTORY",
       priority: "WARNING",
@@ -245,11 +323,11 @@ export async function createInventoryItem(data: InventoryItemPayload) {
       href: "/inventory",
       entity: "InventoryItem",
       entityId: item.id,
-      metadata: { sku: item.sku, availableQuantity: item.availableQuantity },
+      metadata: { sku: item.sku, availableQuantity: serialized.periodAvailableQuantity },
     });
   }
 
-  return serializeInventoryItem(item);
+  return serialized;
 }
 
 export async function updateInventoryItem(
@@ -262,27 +340,37 @@ export async function updateInventoryItem(
     throw new Error("Inventory item not found in this workspace.");
   }
 
+  const settings = await getOrganizationSettings();
   const item = await prisma.inventoryItem.update({
     where: { id, organizationId: user.organizationId! },
     data: toPrismaData(data),
   });
+  const now = new Date();
+  const serialized = await serializeWithAvailability(
+    item,
+    user.organizationId!,
+    getAvailabilityWindow({}, getCalendarDateStart(now, settings.localization.timeZone)),
+    undefined,
+    now,
+    settings.localization.timeZone,
+  );
 
-  if (item.availableQuantity === 0 || (item.minimumThreshold > 0 && item.availableQuantity <= item.minimumThreshold)) {
+  if (serialized.periodAvailableQuantity === 0 || (item.minimumThreshold > 0 && serialized.periodAvailableQuantity <= item.minimumThreshold)) {
     await createNotification({
       organizationId: user.organizationId!,
       userId: user.id,
       type: "INVENTORY",
-      priority: item.availableQuantity === 0 ? "CRITICAL" : "WARNING",
-      title: item.availableQuantity === 0 ? "Item unavailable" : "Low stock warning",
-      message: `${item.name} has ${item.availableQuantity} available.`,
+      priority: serialized.periodAvailableQuantity === 0 ? "CRITICAL" : "WARNING",
+      title: serialized.periodAvailableQuantity === 0 ? "Item unavailable" : "Low stock warning",
+      message: `${item.name} has ${serialized.periodAvailableQuantity} available today.`,
       href: "/inventory",
       entity: "InventoryItem",
       entityId: item.id,
-      metadata: { sku: item.sku, availableQuantity: item.availableQuantity },
+      metadata: { sku: item.sku, availableQuantity: serialized.periodAvailableQuantity },
     });
   }
 
-  return serializeInventoryItem(item);
+  return serialized;
 }
 
 export async function deleteInventoryItem(id: string) {

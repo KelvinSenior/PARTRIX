@@ -15,6 +15,15 @@ const bookingUpdateSchema = z.object({
           .number({ message: "Quantity must be a number." })
           .int({ message: "Quantity must be a whole number." })
           .positive({ message: "Return quantity must be at least 1." }),
+        damagedQuantity: z.number().int().min(0).optional().default(0),
+      }).superRefine((item, context) => {
+        if (item.damagedQuantity > item.quantity) {
+          context.addIssue({
+            code: "custom",
+            path: ["damagedQuantity"],
+            message: "Damaged quantity cannot exceed the return quantity.",
+          });
+        }
       }),
     )
     .optional(),

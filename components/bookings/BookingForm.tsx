@@ -53,6 +53,7 @@ function getRentalDays(eventDate: string, returnDate: string) {
 export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const router = useRouter();
   const [inventory, setInventory] = useState<InventoryItemDTO[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(true);
   const [customers, setCustomers] = useState<any[]>([]);
   const [items, setItems] = useState<BookingItemPayload[]>([]);
   const [activeSettings, setActiveSettings] = useState(settings);
@@ -101,11 +102,6 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const inventoryPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/inventory?availability=available&sort=name")
-      .then((response) => response.json())
-      .then((data) => setInventory(data.items ?? []))
-      .catch(() => setInventory([]));
-
     fetch("/api/customers?limit=100")
       .then((response) => response.json())
       .then((data) => setCustomers(data.customers ?? []))
@@ -125,6 +121,39 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      status: "AVAILABLE",
+      availability: "all",
+      sort: "name",
+    });
+    if (eventDate) params.set("eventDate", eventDate);
+    if (deliveryDate) params.set("deliveryDate", deliveryDate);
+    if (returnDate) params.set("returnDate", returnDate);
+
+    setInventoryLoading(true);
+    fetch(`/api/inventory?${params.toString()}`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Inventory availability could not be loaded.");
+        }
+        return response.json();
+      })
+      .then((data) => setInventory(data.items ?? []))
+      .catch((caught) => {
+        if (!controller.signal.aborted) {
+          setInventory([]);
+          setError((caught as Error).message);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setInventoryLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [eventDate, deliveryDate, returnDate]);
 
   useEffect(() => {
     if (!eventDate || returnDate) {
@@ -224,7 +253,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
 
   function addItemToPlan(inventoryItem: InventoryItemDTO) {
     const existing = items.find((item) => item.inventoryItemId === inventoryItem.id);
+    if (inventoryItem.periodAvailableQuantity < 1) return;
     if (existing) {
+      if (existing.quantity >= inventoryItem.periodAvailableQuantity) {
+        setError(`Only ${inventoryItem.periodAvailableQuantity} unit(s) are available for this period.`);
+        return;
+      }
       setItems((current) => current.map((item) => item.inventoryItemId === inventoryItem.id ? { ...item, quantity: item.quantity + 1 } : item));
       return;
     }
@@ -326,6 +360,16 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       case 2:
         if (selectedItems.length === 0) {
           nextErrors.items = "Choose at least one inventory item before continuing.";
+        } else {
+          for (const selectedItem of selectedItems) {
+            const inventoryItem = inventory.find((item) => item.id === selectedItem.inventoryItemId);
+            if (!inventoryItem || selectedItem.quantity > inventoryItem.periodAvailableQuantity) {
+              nextErrors.items = inventoryItem
+                ? `Only ${inventoryItem.periodAvailableQuantity} unit(s) of ${inventoryItem.name} are available for these dates.`
+                : "Refresh the inventory list before continuing.";
+              break;
+            }
+          }
         }
         break;
       case 3: {
@@ -824,13 +868,15 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   aria-invalid={Boolean(validationErrors.items)}
                 />
               </label>
-              {inventory.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Inventory is loading…</div>
+              {inventoryLoading ? (
+                <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">Checking availability for the selected dates…</div>
+              ) : inventory.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No inventory items are available in this workspace.</div>
               ) : filteredInventory.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950/40 dark:text-zinc-400">No inventory matches that search.</div>
               ) : (
                 filteredInventory.map((item) => (
-                  <button key={item.id} type="button" onClick={() => addItemToPlan(item)} className="flex w-full items-start justify-between rounded-3xl border border-zinc-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950">
+                  <button key={item.id} type="button" onClick={() => addItemToPlan(item)} disabled={item.periodAvailableQuantity < 1} className="flex w-full items-start justify-between rounded-3xl border border-zinc-200 bg-white p-4 text-left shadow-sm transition hover:border-cyan-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-slate-900 dark:text-white">{item.name}</span>
@@ -838,7 +884,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                       </div>
                       <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">{item.category ?? "Inventory item"}</p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-zinc-500">
-                        <span className="rounded-full bg-cyan-50 px-2 py-1 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">{item.availableQuantity} available</span>
+                        <span className="rounded-full bg-cyan-50 px-2 py-1 text-cyan-700 dark:bg-cyan-400/10 dark:text-cyan-200">{item.periodAvailableQuantity} available for selected dates</span>
                         <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">{formatAmount(item.rentalPrice, activeSettings)}</span>
                       </div>
                     </div>

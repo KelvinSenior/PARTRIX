@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/permissions";
 import { getOrganizationSettings } from "@/services/settings";
+import { getInventoryAvailability } from "@/services/inventoryAvailability";
 
 export type LiveAlertCounts = {
   pendingBookings: number;
@@ -88,6 +89,8 @@ export async function getLiveAlertCounts(now = new Date()): Promise<LiveAlertCou
   const inventoryOrganizationId = inventoryUser.organizationId!;
   const deliveryOrganizationId = deliveryUser.organizationId!;
   const deliveryRange = getTodayRange(settings.localization.timeZone, now);
+  const todayParts = getZonedParts(now, settings.localization.timeZone);
+  const today = new Date(Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day));
 
   const [pendingBookings, inventoryItems, deliveriesToday] = await Promise.all([
     prisma.booking.count({
@@ -95,7 +98,14 @@ export async function getLiveAlertCounts(now = new Date()): Promise<LiveAlertCou
     }),
     prisma.inventoryItem.findMany({
       where: { organizationId: inventoryOrganizationId },
-      select: { availableQuantity: true, minimumThreshold: true },
+      select: {
+        id: true,
+        totalQuantity: true,
+        rentedQuantity: true,
+        damagedQuantity: true,
+        minimumThreshold: true,
+        status: true,
+      },
     }),
     prisma.delivery.count({
       where: {
@@ -105,11 +115,17 @@ export async function getLiveAlertCounts(now = new Date()): Promise<LiveAlertCou
       },
     }),
   ]);
+  const availability = await getInventoryAvailability(
+    inventoryOrganizationId,
+    inventoryItems,
+    { eventDate: today, returnDate: today },
+    { now, timeZone: settings.localization.timeZone },
+  );
 
   return {
     pendingBookings,
     lowStockItems: inventoryItems.filter(
-      (item) => item.availableQuantity <= item.minimumThreshold,
+      (item) => (availability.get(item.id)?.availableQuantity ?? 0) <= item.minimumThreshold,
     ).length,
     deliveriesToday,
   };

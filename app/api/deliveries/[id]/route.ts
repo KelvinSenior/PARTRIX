@@ -39,6 +39,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     const updated = await updateDelivery(parsedId.data, parsed.data as any);
     return NextResponse.json({ delivery: updated });
   } catch (err: any) {
-    return apiError(err.message ?? "Failed to update delivery.", 500);
+    return apiError(err.message ?? "Failed to update delivery.", 400);
   }
 }

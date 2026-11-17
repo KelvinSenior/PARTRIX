@@ -14,6 +14,12 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
       return acc;
     }, {} as Record<string, number>),
   );
+  const [damagedQuantities, setDamagedQuantities] = useState<Record<string, number>>(
+    booking.bookingItems.reduce((acc, item) => {
+      acc[item.id] = 0;
+      return acc;
+    }, {} as Record<string, number>),
+  );
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,18 +30,34 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
         .map((item) => ({
           bookingItemId: item.id,
           quantity: returnQuantities[item.id] ?? 0,
+          damagedQuantity: damagedQuantities[item.id] ?? 0,
           available: item.quantity - item.returnedQuantity,
         }))
         .filter((entry) => entry.quantity > 0),
-    [booking.bookingItems, returnQuantities],
+    [booking.bookingItems, returnQuantities, damagedQuantities],
   );
 
   const canReturn = returnItems.length > 0;
 
   function updateQuantity(bookingItemId: string, value: number) {
+    const quantity = Math.max(0, value);
     setReturnQuantities((current) => ({
       ...current,
-      [bookingItemId]: Math.max(0, value),
+      [bookingItemId]: quantity,
+    }));
+    setDamagedQuantities((current) => ({
+      ...current,
+      [bookingItemId]: Math.min(current[bookingItemId] ?? 0, quantity),
+    }));
+  }
+
+  function updateDamagedQuantity(bookingItemId: string, value: number) {
+    setDamagedQuantities((current) => ({
+      ...current,
+      [bookingItemId]: Math.min(
+        returnQuantities[bookingItemId] ?? 0,
+        Math.max(0, value),
+      ),
     }));
   }
 
@@ -65,6 +87,12 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
           return acc;
         }, {} as Record<string, number>),
       );
+      setDamagedQuantities(
+        booking.bookingItems.reduce((acc, item) => {
+          acc[item.id] = 0;
+          return acc;
+        }, {} as Record<string, number>),
+      );
       router.refresh();
     } catch (err: any) {
       setError(err.message ?? "Failed to process return.");
@@ -76,7 +104,7 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
   const allReturned = booking.bookingItems.every(i => i.returnedQuantity >= i.quantity);
 
   return (
-    <section className={`${appCard} border border-slate-200/80 dark:border-cyan-200/10`}>
+    <section id="returns" className={`${appCard} border border-slate-200/80 dark:border-cyan-200/10`}>
       <div className="mb-6">
         <p className={appEyebrow}>Returns Management</p>
         <h3 className="mt-1 text-xl font-semibold text-slate-900 dark:text-white">Return items for this booking</h3>
@@ -95,7 +123,7 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
                   Booked: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.quantity}</span> &middot; Returned: <span className="font-medium text-slate-800 dark:text-zinc-200">{item.returnedQuantity}</span>
                 </p>
               </div>
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-500">
                     Return quantity
@@ -106,6 +134,19 @@ export default function BookingReturnForm({ booking }: { booking: BookingDTO }) 
                     max={availableToReturn}
                     value={returnQuantities[item.id] ?? 0}
                     onChange={(event) => updateQuantity(item.id, Number(event.target.value))}
+                    className={`${appInput} py-1.5 px-3 text-sm`}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-500">
+                    Damaged quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={returnQuantities[item.id] ?? 0}
+                    value={damagedQuantities[item.id] ?? 0}
+                    onChange={(event) => updateDamagedQuantity(item.id, Number(event.target.value))}
                     className={`${appInput} py-1.5 px-3 text-sm`}
                   />
                 </div>

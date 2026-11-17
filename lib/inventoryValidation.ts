@@ -18,6 +18,13 @@ const optionalText = (max: number) =>
     .transform((value) => value || null);
 
 const optionalImageUrl = optionalText(5_000_000);
+const dateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  }, "Enter a valid calendar date.");
 
 export const inventoryItemPayloadSchema = z
   .object({
@@ -64,6 +71,42 @@ export const inventoryFiltersSchema = z
       .optional()
       .default("all"),
     sort: z.enum(inventorySortOptions).optional().default("newest"),
+    eventDate: dateOnly.optional(),
+    deliveryDate: dateOnly.optional(),
+    returnDate: dateOnly.optional(),
+  })
+  .superRefine((value, context) => {
+    if (!value.eventDate && (value.deliveryDate || value.returnDate)) {
+      context.addIssue({
+        code: "custom",
+        path: ["eventDate"],
+        message: "Choose an event date before setting a rental period.",
+      });
+    }
+
+    if (value.eventDate && value.returnDate && value.returnDate < value.eventDate) {
+      context.addIssue({
+        code: "custom",
+        path: ["returnDate"],
+        message: "Return date must be on or after the event date.",
+      });
+    }
+
+    if (value.eventDate && value.deliveryDate && value.deliveryDate > value.eventDate) {
+      context.addIssue({
+        code: "custom",
+        path: ["deliveryDate"],
+        message: "Delivery date must be on or before the event date.",
+      });
+    }
+
+    if (value.returnDate && value.deliveryDate && value.returnDate < value.deliveryDate) {
+      context.addIssue({
+        code: "custom",
+        path: ["returnDate"],
+        message: "Return date must be on or after the delivery date.",
+      });
+    }
   })
   .transform((value) => ({
     ...value,

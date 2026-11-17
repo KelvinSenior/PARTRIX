@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { DeliveryDTO, DeliveryStatus } from "@/types/delivery";
 import { Truck, CheckCircle2, Clock, XCircle, MapPin, RefreshCcw } from "lucide-react";
 
@@ -53,13 +54,7 @@ const NEXT_STEPS: Record<DeliveryStatus, { label: string; target: DeliveryStatus
       style: "bg-emerald-500 hover:bg-emerald-600 text-white",
     },
   ],
-  DELIVERED: [
-    {
-      label: "Mark completed (items returned)",
-      target: "COMPLETED",
-      style: "bg-emerald-600 hover:bg-emerald-700 text-white",
-    },
-  ],
+  DELIVERED: [],
   COMPLETED: [],
   CANCELLED: [],
 };
@@ -124,7 +119,16 @@ export default function DeliveryStatusControls({ delivery }: { delivery: Deliver
         </div>
       )}
 
-      {!isFinal && (
+      {delivery.status === "DELIVERED" && (
+        <Link
+          href={`/bookings/${delivery.bookingId}#returns`}
+          className="inline-flex h-10 items-center rounded-xl border border-emerald-300/70 bg-emerald-50 px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200"
+        >
+          Record returned items
+        </Link>
+      )}
+
+      {!isFinal && delivery.status === "SCHEDULED" && (
         <button
           type="button"
           onClick={handleCancel}

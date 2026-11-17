@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { getOrganizationSettings } from "@/services/settings";
 import { logActivity } from "@/services/audit";
 import { createNotification } from "@/services/notification";
+import { getInventoryAvailability } from "@/services/inventoryAvailability";
 
 const activeBookingStatuses: BookingStatus[] = ["PENDING", "CONFIRMED", "IN_PROGRESS"];
 
@@ -129,42 +130,6 @@ async function findOrCreateCustomer(customer: BookingPayload["customer"], tx: an
   };
 }
 
-async function getOverlappingReservedQuantities(
-  itemIds: string[],
-  organizationId: string,
-  eventDate: Date,
-  returnDate: Date,
-  tx: any,
-  excludeBookingId?: string,
-) {
-  const bookings = await tx.bookingItem.findMany({
-    where: {
-      organizationId,
-      inventoryItemId: { in: itemIds },
-      booking: {
-        organizationId,
-        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-        status: { in: activeBookingStatuses as string[] },
-        eventDate: { lte: returnDate },
-        OR: [
-          { returnDate: { gte: eventDate } },
-          { returnDate: null, eventDate: { gte: eventDate } },
-        ],
-      },
-    },
-    select: {
-      inventoryItemId: true,
-      quantity: true,
-      returnedQuantity: true,
-    },
-  });
-
-  return bookings.reduce((acc: Record<string, number>, item: { inventoryItemId: string; quantity: number; returnedQuantity: number }) => {
-    acc[item.inventoryItemId] = (acc[item.inventoryItemId] ?? 0) + Math.max(0, item.quantity - item.returnedQuantity);
-    return acc;
-  }, {} as Record<string, number>);
-}
-
 async function runSerializable<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
@@ -240,6 +205,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
     const eventDate = new Date(payload.eventDate);
     const returnDate = payload.returnDate ? new Date(payload.returnDate) : eventDate;
     const rentalDays = getRentalDays(eventDate, returnDate);
+    const deliveryDate = payload.deliveryDate ? new Date(payload.deliveryDate) : null;
     const itemIds = payload.items.map((item) => item.inventoryItemId);
 
     const inventoryItems = await tx.inventoryItem.findMany({
@@ -250,7 +216,12 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       throw new Error("One or more inventory items are invalid.");
     }
 
-    const reservedAmounts = await getOverlappingReservedQuantities(itemIds, organizationId, eventDate, returnDate, tx);
+    const availability = await getInventoryAvailability(
+      organizationId,
+      inventoryItems,
+      { eventDate, deliveryDate, returnDate },
+      { client: tx, timeZone: settings.localization.timeZone },
+    );
 
     const itemsData = payload.items.map((item) => {
       const inventoryItem = inventoryItems.find((record) => record.id === item.inventoryItemId);
@@ -262,8 +233,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         throw new Error(`"${inventoryItem.name}" is not available for booking.`);
       }
 
-      const reservedQuantity = reservedAmounts[inventoryItem.id] ?? 0;
-      const availableForPeriod = inventoryItem.totalQuantity - reservedQuantity;
+      const availableForPeriod = availability.get(inventoryItem.id)?.availableQuantity ?? 0;
 
       if (item.quantity > availableForPeriod) {
         throw new Error(
@@ -295,7 +265,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         customer: await findOrCreateCustomer(payload.customer, tx, organizationId),
         createdBy: { connect: { id: user.id } },
         eventDate,
-        deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : null,
+        deliveryDate,
         returnDate: payload.returnDate ? new Date(payload.returnDate) : null,
         status: payload.status,
         notes: payload.notes ?? null,
@@ -382,17 +352,17 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       });
     }
 
-    await Promise.all(
-      payload.items.map((item) =>
-        tx.inventoryItem.update({
+    if (payload.status === "IN_PROGRESS") {
+      for (const item of payload.items) {
+        await tx.inventoryItem.update({
           where: { id: item.inventoryItemId, organizationId },
           data: {
             availableQuantity: { decrement: item.quantity },
             rentedQuantity: { increment: item.quantity },
           },
-        }),
-      ),
-    );
+        });
+      }
+    }
 
     return {
       booking: booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>,
@@ -504,7 +474,10 @@ export async function returnBookingItems(
   const result = await runSerializable(async (tx) => {
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, organizationId: user.organizationId! },
-      include: { bookingItems: true },
+      include: {
+        bookingItems: true,
+        delivery: { select: { status: true } },
+      },
     });
 
     if (!booking) {
@@ -534,10 +507,14 @@ export async function returnBookingItems(
           `Cannot return more than ${remainingQuantity} unit(s) for this booking item.`,
         );
       }
+      if ((returnItem.damagedQuantity ?? 0) > returnItem.quantity) {
+        throw new Error("Damaged quantity cannot exceed the return quantity.");
+      }
 
       return {
         bookingItem,
         quantity: returnItem.quantity,
+        damagedQuantity: returnItem.damagedQuantity ?? 0,
       };
     });
 
@@ -566,17 +543,38 @@ export async function returnBookingItems(
       ),
     );
 
-    await Promise.all(
-      updates.map((update) =>
-        tx.inventoryItem.update({
-          where: { id: update.bookingItem.inventoryItemId, organizationId: user.organizationId! },
+    const physicallyOut = booking.status === "IN_PROGRESS" ||
+      ["IN_TRANSIT", "DELIVERED"].includes(booking.delivery?.status ?? "");
+    for (const update of updates) {
+      const goodQuantity = update.quantity - update.damagedQuantity;
+      await tx.inventoryItem.update({
+        where: { id: update.bookingItem.inventoryItemId, organizationId: user.organizationId! },
+        data: physicallyOut
+          ? {
+              availableQuantity: { increment: goodQuantity },
+              rentedQuantity: { decrement: update.quantity },
+              damagedQuantity: { increment: update.damagedQuantity },
+            }
+          : {
+              availableQuantity: { decrement: update.damagedQuantity },
+              damagedQuantity: { increment: update.damagedQuantity },
+            },
+      });
+
+      if (update.damagedQuantity > 0) {
+        await tx.damageReport.create({
           data: {
-            availableQuantity: { increment: update.quantity },
-            rentedQuantity: { decrement: update.quantity },
+            organizationId: user.organizationId!,
+            bookingId,
+            inventoryItemId: update.bookingItem.inventoryItemId,
+            reportedById: user.id,
+            quantity: update.damagedQuantity,
+            severity: "MINOR",
+            notes: "Recorded during booking return.",
           },
-        }),
-      ),
-    );
+        });
+      }
+    }
 
     const updatedBookingItems = await tx.bookingItem.findMany({
       where: { bookingId, organizationId: user.organizationId! },
@@ -588,6 +586,17 @@ export async function returnBookingItems(
     );
 
     const finalStatus = allReturned ? "COMPLETED" : booking.status;
+
+    if (allReturned && booking.delivery && physicallyOut) {
+      await tx.delivery.updateMany({
+        where: {
+          bookingId,
+          organizationId: user.organizationId!,
+          status: { in: ["IN_TRANSIT", "DELIVERED"] },
+        },
+        data: { status: "COMPLETED", pickupAt: new Date() },
+      });
+    }
 
     const updatedBooking = await tx.booking.update({
       where: { id: bookingId, organizationId: user.organizationId! },
@@ -612,6 +621,7 @@ export async function returnBookingItems(
         returnItems: updates.map((update) => ({
           bookingItemId: update.bookingItem.id,
           returnedQuantity: update.quantity,
+          damagedQuantity: update.damagedQuantity,
         })),
       },
       level: "INFO",
@@ -677,7 +687,6 @@ export async function updateBookingItems(
     if (updatedReturnDate && updatedReturnDate < updatedEventDate) {
       throw new Error("Return date must be on or after the event date.");
     }
-    const reservationEnd = updatedReturnDate ?? updatedEventDate;
     const rentalDays = getRentalDays(updatedEventDate, updatedReturnDate);
 
     const inventoryIds = [...new Set([
@@ -691,13 +700,19 @@ export async function updateBookingItems(
       throw new Error("One or more inventory items are invalid.");
     }
     const inventoryById = new Map(inventoryItems.map((item: any) => [item.id, item]));
-    const reservedAmounts = await getOverlappingReservedQuantities(
-      submittedItemIds,
+    const availability = await getInventoryAvailability(
       organizationId,
-      updatedEventDate,
-      reservationEnd,
-      tx,
-      bookingId,
+      inventoryItems,
+      {
+        eventDate: updatedEventDate,
+        deliveryDate: booking.deliveryDate,
+        returnDate: updatedReturnDate,
+      },
+      {
+        client: tx,
+        excludeBookingId: bookingId,
+        timeZone: settings.localization.timeZone,
+      },
     );
 
     const itemChanges = changes.items.map((change) => {
@@ -712,8 +727,7 @@ export async function updateBookingItems(
         throw new Error(`"${inventoryItem.name}" is not available for booking.`);
       }
 
-      const reservedQuantity = reservedAmounts[change.inventoryItemId] ?? 0;
-      const availableForPeriod = inventoryItem.totalQuantity - reservedQuantity;
+      const availableForPeriod = availability.get(change.inventoryItemId)?.availableQuantity ?? 0;
       if (change.quantity > availableForPeriod) {
         throw new Error(`Insufficient availability for ${inventoryItem.name}. Only ${availableForPeriod} unit(s) are available for these dates.`);
       }
@@ -738,27 +752,6 @@ export async function updateBookingItems(
         notes: change.notes === undefined ? existing?.notes ?? null : change.notes,
       };
     });
-
-    const requestedByInventory = new Map<string, number>();
-    for (const item of itemChanges) requestedByInventory.set(item.inventoryItemId, item.quantity);
-    const quantityDeltas = new Map<string, number>();
-    for (const item of booking.bookingItems as any[]) {
-      quantityDeltas.set(item.inventoryItemId, (quantityDeltas.get(item.inventoryItemId) ?? 0) - item.quantity);
-    }
-    for (const item of itemChanges) {
-      quantityDeltas.set(item.inventoryItemId, (quantityDeltas.get(item.inventoryItemId) ?? 0) + item.quantity);
-    }
-
-    for (const [inventoryItemId, delta] of quantityDeltas) {
-      if (!delta) continue;
-      await tx.inventoryItem.update({
-        where: { id: inventoryItemId, organizationId },
-        data: {
-          availableQuantity: { decrement: delta },
-          rentedQuantity: { increment: delta },
-        },
-      });
-    }
 
     const retainedBookingItemIds = new Set(itemChanges.flatMap((item) => item.existing ? [item.existing.id] : []));
     for (const oldItem of booking.bookingItems as any[]) {
@@ -829,7 +822,10 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
   const result = await runSerializable(async (tx) => {
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, organizationId: user.organizationId! },
-      include: { bookingItems: true },
+      include: {
+        bookingItems: true,
+        delivery: { select: { status: true } },
+      },
     });
 
     if (!booking) {
@@ -840,22 +836,18 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
       throw new Error("Booking is already cancelled.");
     }
 
-    const restoreActions = (booking.bookingItems as any[]).map((item: any) => {
-      const outstanding = item.quantity - item.returnedQuantity;
-      if (outstanding <= 0) {
-        return null;
-      }
+    const physicallyOut = booking.status === "IN_PROGRESS" ||
+      ["IN_TRANSIT", "DELIVERED"].includes(booking.delivery?.status ?? "");
+    if (physicallyOut && booking.bookingItems.some((item) => item.quantity > item.returnedQuantity)) {
+      throw new Error("Record the actual return before cancelling a booking with items physically out.");
+    }
 
-      return tx.inventoryItem.update({
-        where: { id: item.inventoryItemId, organizationId: user.organizationId! },
-        data: {
-          availableQuantity: { increment: outstanding },
-          rentedQuantity: { decrement: outstanding },
-        },
+    if (booking.delivery?.status === "SCHEDULED") {
+      await tx.delivery.updateMany({
+        where: { bookingId, organizationId: user.organizationId!, status: "SCHEDULED" },
+        data: { status: "CANCELLED" },
       });
-    });
-
-    await Promise.all(restoreActions.filter(Boolean));
+    }
 
     const updatedBooking = await tx.booking.update({
       where: { id: bookingId, organizationId: user.organizationId! },
@@ -887,7 +879,7 @@ export async function cancelBooking(bookingId: string): Promise<BookingDTO> {
     type: "BOOKING",
     priority: "WARNING",
     title: "Booking cancelled",
-    message: `${result.bookingNumber} was cancelled and outstanding inventory was released.`,
+    message: `${result.bookingNumber} was cancelled and its scheduled inventory was released.`,
     href: `/bookings/${bookingId}`,
     entity: "Booking",
     entityId: bookingId,
@@ -901,78 +893,105 @@ export async function updateBookingStatus(
   newStatus: BookingStatus,
 ): Promise<BookingDTO> {
   const user = await requirePermission("bookings:status");
+  const settings = await getOrganizationSettings();
 
   const transactionResult = await runSerializable(async (tx) => {
     const booking = await tx.booking.findFirst({
       where: { id: bookingId, organizationId: user.organizationId! },
-      include: { bookingItems: true },
+      include: {
+        bookingItems: true,
+        delivery: { select: { status: true } },
+      },
     });
     if (!booking) throw new Error("Booking not found.");
     if (booking.status === newStatus) {
       return { booking: serializeBooking(booking as Awaited<ReturnType<typeof prisma.booking.findUnique>>), changed: false };
     }
 
-    const wasActive = activeBookingStatuses.includes(booking.status);
-    if (newStatus === "COMPLETED" || newStatus === "CANCELLED") {
-      for (const item of booking.bookingItems) {
-        const outstanding = item.quantity - item.returnedQuantity;
-        if (outstanding > 0) {
-          if (newStatus === "COMPLETED") {
-            await tx.bookingItem.update({
-              where: { id: item.id, organizationId: user.organizationId! },
-              data: { returnedQuantity: item.quantity },
-            });
-          }
+    const organizationId = user.organizationId!;
+    const physicallyOut = booking.status === "IN_PROGRESS" ||
+      ["IN_TRANSIT", "DELIVERED"].includes(booking.delivery?.status ?? "");
+    const outstandingItems = booking.bookingItems.map((item) => ({
+      item,
+      quantity: booking.status === "COMPLETED"
+        ? item.quantity
+        : item.quantity - item.returnedQuantity,
+    })).filter(({ quantity }) => quantity > 0);
 
-          if (wasActive) {
-            await tx.inventoryItem.update({
-              where: { id: item.inventoryItemId, organizationId: user.organizationId! },
-              data: {
-                availableQuantity: { increment: outstanding },
-                rentedQuantity: { decrement: outstanding },
-              },
-            });
-          }
+    if (
+      physicallyOut &&
+      outstandingItems.length > 0 &&
+      ["PENDING", "CONFIRMED", "CANCELLED", "NO_SHOW"].includes(newStatus)
+    ) {
+      throw new Error("Record the actual return before changing the status of a booking with items physically out.");
+    }
+
+    if (newStatus === "COMPLETED") {
+      if (outstandingItems.length > 0) {
+        throw new Error("Record all item returns before completing this booking.");
+      }
+    }
+
+    if (
+      (newStatus === "CANCELLED" || newStatus === "NO_SHOW") &&
+      booking.delivery?.status === "SCHEDULED"
+    ) {
+      await tx.delivery.updateMany({
+        where: { bookingId, organizationId, status: "SCHEDULED" },
+        data: { status: "CANCELLED" },
+      });
+    }
+
+    const reactivating = !activeBookingStatuses.includes(booking.status) &&
+      activeBookingStatuses.includes(newStatus);
+    const startingPhysicalRental = newStatus === "IN_PROGRESS" && !physicallyOut;
+    if (reactivating || startingPhysicalRental) {
+      const itemIds = booking.bookingItems.map((item) => item.inventoryItemId);
+      const inventoryItems = await tx.inventoryItem.findMany({
+        where: { id: { in: itemIds }, organizationId },
+      });
+      const availability = await getInventoryAvailability(
+        organizationId,
+        inventoryItems,
+        {
+          eventDate: booking.eventDate,
+          deliveryDate: booking.deliveryDate,
+          returnDate: booking.returnDate,
+        },
+        {
+          client: tx,
+          excludeBookingId: bookingId,
+          timeZone: settings.localization.timeZone,
+        },
+      );
+
+      for (const { item, quantity } of outstandingItems) {
+        const inventoryItem = inventoryItems.find((row) => row.id === item.inventoryItemId);
+        const available = availability.get(item.inventoryItemId)?.availableQuantity ?? 0;
+        if (!inventoryItem || inventoryItem.status !== "AVAILABLE" || quantity > available) {
+          throw new Error(`Insufficient availability for ${inventoryItem?.name ?? "one or more items"}.`);
         }
       }
-    } else if (
-      (booking.status === "COMPLETED" || booking.status === "CANCELLED") &&
-      activeBookingStatuses.includes(newStatus)
-    ) {
-      const itemIds = booking.bookingItems.map((item) => item.inventoryItemId);
-      const reservationEnd = booking.returnDate ?? booking.eventDate;
-      const reservedAmounts = await getOverlappingReservedQuantities(itemIds, user.organizationId!, booking.eventDate, reservationEnd, tx, bookingId);
-      const inventoryItems = await tx.inventoryItem.findMany({
-        where: { id: { in: itemIds }, organizationId: user.organizationId! },
-      });
-      const inventoryById = new Map(inventoryItems.map((item) => [item.id, item]));
 
-      for (const item of booking.bookingItems) {
-        const outstanding = booking.status === "COMPLETED" ? item.quantity : item.quantity - item.returnedQuantity;
-        if (outstanding <= 0) continue;
-        const inventoryItem = inventoryById.get(item.inventoryItemId);
-        if (!inventoryItem || inventoryItem.status !== "AVAILABLE") {
-          throw new Error("One or more inventory items are no longer available.");
-        }
-        const reserved = reservedAmounts[item.inventoryItemId] ?? 0;
-        if (outstanding > inventoryItem.totalQuantity - reserved) {
-          throw new Error(`Insufficient availability for ${inventoryItem.name}.`);
-        }
-
-        if (booking.status === "COMPLETED") {
+      if (booking.status === "COMPLETED") {
+        for (const item of booking.bookingItems) {
           await tx.bookingItem.update({
-            where: { id: item.id, organizationId: user.organizationId! },
+            where: { id: item.id, organizationId },
             data: { returnedQuantity: 0 },
           });
         }
+      }
 
-        await tx.inventoryItem.update({
-          where: { id: item.inventoryItemId, organizationId: user.organizationId! },
-          data: {
-            availableQuantity: { decrement: outstanding },
-            rentedQuantity: { increment: outstanding },
-          },
-        });
+      if (newStatus === "IN_PROGRESS") {
+        for (const { item, quantity } of outstandingItems) {
+          await tx.inventoryItem.update({
+            where: { id: item.inventoryItemId, organizationId },
+            data: {
+              availableQuantity: { decrement: quantity },
+              rentedQuantity: { increment: quantity },
+            },
+          });
+        }
       }
     }
 

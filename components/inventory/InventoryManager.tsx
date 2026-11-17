@@ -50,6 +50,9 @@ type Filters = {
   status: "all" | InventoryStatus;
   availability: InventoryAvailabilityFilter;
   sort: "newest" | "name" | "available" | "category";
+  eventDate: string;
+  deliveryDate: string;
+  returnDate: string;
 };
 
 const emptyForm: FormState = {
@@ -179,6 +182,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
       totalItems: 0,
       totalOwned: 0,
       totalAvailable: 0,
+      totalCommitted: 0,
       totalRented: 0,
       totalDamaged: 0,
       lowStockItems: 0,
@@ -190,6 +194,9 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
     status: "all",
     availability: "all",
     sort: "newest",
+    eventDate: "",
+    deliveryDate: "",
+    returnDate: "",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -460,7 +467,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         </button>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {[
           {
             label: "Items",
@@ -473,12 +480,17 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
             icon: Boxes,
           },
           {
-            label: "Available",
+            label: filters.eventDate ? "Available for period" : "Available today",
             value: data.summary.totalAvailable,
             icon: CheckCircle2,
           },
           {
-            label: "Rented out",
+            label: filters.eventDate ? "Committed for period" : "Committed today",
+            value: data.summary.totalCommitted,
+            icon: Filter,
+          },
+          {
+            label: "Physically out",
             value: data.summary.totalRented,
             icon: Filter,
           },
@@ -584,6 +596,31 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
           </label>
         </div>
 
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {([
+            ["eventDate", "Event date"],
+            ["deliveryDate", "Delivery date"],
+            ["returnDate", "Return date"],
+          ] as const).map(([field, label]) => (
+            <label key={field}>
+              <span className="mb-1 block text-xs font-medium text-zinc-500">{label}</span>
+              <input
+                type="date"
+                value={filters[field]}
+                min={field === "returnDate" ? filters.eventDate || undefined : undefined}
+                max={field === "deliveryDate" ? filters.eventDate || undefined : undefined}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, [field]: event.target.value }))
+                }
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              />
+            </label>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          Leave dates blank to see today&apos;s availability. Selected dates account for overlapping bookings, delivery schedules, and unreturned overdue items.
+        </p>
+
         <div className="mt-4 flex flex-wrap gap-2">
           {availabilityOptions.map((option) => (
             <button
@@ -682,10 +719,11 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
                     {[
                       ["Owned", item.totalQuantity],
-                      ["Avail", item.availableQuantity],
+                      [filters.eventDate ? "Available (period)" : "Available (today)", item.periodAvailableQuantity],
+                      [filters.eventDate ? "Committed (period)" : "Committed (today)", item.periodCommittedQuantity],
                       ["Rented", item.rentedQuantity],
                       ["Damaged", item.damagedQuantity],
                     ].map(([label, value]) => (

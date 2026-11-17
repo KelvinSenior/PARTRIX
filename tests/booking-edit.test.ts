@@ -7,6 +7,8 @@ const { prisma, tx, requirePermission, getOrganizationSettings } = vi.hoisted(()
     customer: { findFirst: vi.fn() },
     inventoryItem: { findMany: vi.fn(), update: vi.fn() },
     payment: { create: vi.fn() },
+    damageReport: { create: vi.fn() },
+    delivery: { updateMany: vi.fn() },
   };
   return {
     prisma: { $transaction: vi.fn() },
@@ -22,7 +24,7 @@ vi.mock("@/services/settings", () => ({ getOrganizationSettings }));
 vi.mock("@/services/audit", () => ({ logActivity: vi.fn() }));
 vi.mock("@/services/notification", () => ({ createNotification: vi.fn() }));
 
-import { createBooking, updateBookingItems, updateBookingStatus } from "@/services/booking";
+import { createBooking, returnBookingItems, updateBookingItems, updateBookingStatus } from "@/services/booking";
 import { bookingMoneySchema, bookingPayloadSchema } from "@/lib/bookingValidation";
 
 const decimal = (value: number) => ({ toString: () => value.toFixed(2), toNumber: () => value });
@@ -83,6 +85,8 @@ describe("booking item reservation edits", () => {
     getOrganizationSettings.mockResolvedValue({
       deposit: { requiredDepositPercent: 20 },
       payment: { acceptedMethods: ["CASH", "CREDIT_CARD"], requireTransactionReference: false },
+      rental: { allowPartialReturns: true },
+      localization: { timeZone: "UTC" },
     });
     existingBooking = createBookingFixture(2);
   });
@@ -155,6 +159,38 @@ describe("booking item reservation edits", () => {
       ...basePayload,
       initialPayment: { amount: 10, method: "CASH", type: "RENTAL" },
     }).success).toBe(true);
+  });
+
+  it("rejects a booking when the selected dates overlap another tenant booking allocation", async () => {
+    tx.customer.findFirst.mockResolvedValue(null);
+    tx.inventoryItem.findMany.mockResolvedValue([
+      { id: "item-a", name: "Chair", status: "AVAILABLE", totalQuantity: 2, unitPrice: decimal(10) },
+    ]);
+    tx.bookingItem.findMany.mockResolvedValue([{
+      inventoryItemId: "item-a",
+      quantity: 2,
+      returnedQuantity: 0,
+      booking: {
+        eventDate: new Date("2026-10-09T00:00:00.000Z"),
+        deliveryDate: null,
+        returnDate: new Date("2026-10-09T00:00:00.000Z"),
+        status: "CONFIRMED",
+        delivery: null,
+      },
+    }]);
+
+    await expect(createBooking({
+      customer: { firstName: "Taylor" },
+      eventDate: "2026-10-09",
+      returnDate: "2026-10-09",
+      status: "PENDING",
+      items: [{ inventoryItemId: "item-a", quantity: 1, discount: 0 }],
+      deliveryFee: 0,
+      setupFee: 0,
+      discount: 0,
+    })).rejects.toThrow("Only 0 unit(s) are available");
+
+    expect(tx.booking.create).not.toHaveBeenCalled();
   });
 
   it("allows a new customer without a last name", () => {
@@ -286,7 +322,7 @@ describe("booking item reservation edits", () => {
     }));
   });
 
-  it("reserves only the increased quantity", async () => {
+  it("validates the full requested quantity for an edited date range without changing physical stock", async () => {
     await updateBookingItems("booking-a", {
       items: [{ bookingItemId: "booking-item-a", inventoryItemId: "item-a", quantity: 4 }],
     });
@@ -296,10 +332,7 @@ describe("booking item reservation edits", () => {
         booking: expect.objectContaining({ organizationId: "org-a" }),
       }),
     }));
-    expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: "item-a", organizationId: "org-a" },
-      data: { availableQuantity: { decrement: 2 }, rentedQuantity: { increment: 2 } },
-    });
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled();
     expect(tx.booking.update).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ totalAmount: "40.00", depositAmount: "8.00", balanceDue: "48.00" }),
     }));
@@ -311,17 +344,14 @@ describe("booking item reservation edits", () => {
     expect(bookingMoneySchema.safeParse(1.239).success).toBe(false);
   });
 
-  it("releases stock when quantity decreases", async () => {
+  it("does not change physical stock when a scheduled reservation quantity decreases", async () => {
     await updateBookingItems("booking-a", {
       items: [{ bookingItemId: "booking-item-a", inventoryItemId: "item-a", quantity: 1 }],
     });
-    expect(tx.inventoryItem.update).toHaveBeenCalledWith({
-      where: { id: "item-a", organizationId: "org-a" },
-      data: { availableQuantity: { decrement: -1 }, rentedQuantity: { increment: -1 } },
-    });
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled();
   });
 
-  it("releases the old item and reserves the replacement item", async () => {
+  it("releases the old scheduled item and reserves the replacement without changing physical stock", async () => {
     tx.inventoryItem.findMany.mockResolvedValue([
       { id: "item-a", name: "Chair", status: "AVAILABLE", totalQuantity: 10, unitPrice: decimal(10) },
       { id: "item-b", name: "Table", status: "AVAILABLE", totalQuantity: 8, unitPrice: decimal(20) },
@@ -331,14 +361,7 @@ describe("booking item reservation edits", () => {
       items: [{ bookingItemId: "booking-item-a", inventoryItemId: "item-b", quantity: 3 }],
     });
 
-    expect(tx.inventoryItem.update).toHaveBeenNthCalledWith(1, {
-      where: { id: "item-a", organizationId: "org-a" },
-      data: { availableQuantity: { decrement: -2 }, rentedQuantity: { increment: -2 } },
-    });
-    expect(tx.inventoryItem.update).toHaveBeenNthCalledWith(2, {
-      where: { id: "item-b", organizationId: "org-a" },
-      data: { availableQuantity: { decrement: 3 }, rentedQuantity: { increment: 3 } },
-    });
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled();
     expect(tx.bookingItem.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: "booking-item-a", organizationId: "org-a" },
       data: expect.objectContaining({ inventoryItemId: "item-b", unitPrice: "20.00", totalPrice: "60.00" }),
@@ -381,9 +404,71 @@ describe("booking item reservation edits", () => {
       where: { id: "booking-item-a", organizationId: "org-a" },
       data: { returnedQuantity: 0 },
     });
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled();
+  });
+
+  it("records damaged quantities as damage reports when returned from physical rental", async () => {
+    const inProgressBooking = {
+      ...existingBooking,
+      status: "IN_PROGRESS",
+      bookingItems: [{
+        id: "booking-item-a",
+        inventoryItemId: "item-a",
+        quantity: 2,
+        returnedQuantity: 0,
+      }],
+      delivery: null,
+    };
+    tx.booking.findFirst.mockResolvedValue(inProgressBooking);
+    tx.bookingItem.findMany.mockResolvedValue([{
+      ...inProgressBooking.bookingItems[0],
+      returnedQuantity: 1,
+      inventoryItem: { name: "Chair" },
+    }]);
+
+    await returnBookingItems("booking-a", {
+      returnItems: [{ bookingItemId: "booking-item-a", quantity: 1, damagedQuantity: 1 }],
+    });
+
     expect(tx.inventoryItem.update).toHaveBeenCalledWith({
       where: { id: "item-a", organizationId: "org-a" },
-      data: { availableQuantity: { decrement: 2 }, rentedQuantity: { increment: 2 } },
+      data: {
+        availableQuantity: { increment: 0 },
+        rentedQuantity: { decrement: 1 },
+        damagedQuantity: { increment: 1 },
+      },
     });
+    expect(tx.damageReport.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: "org-a",
+        bookingId: "booking-a",
+        inventoryItemId: "item-a",
+        quantity: 1,
+        severity: "MINOR",
+      }),
+    });
+  });
+
+  it("does not complete or cancel a booking while physical items remain unreturned", async () => {
+    const inProgressBooking = {
+      ...existingBooking,
+      status: "IN_PROGRESS",
+      bookingItems: [{
+        id: "booking-item-a",
+        inventoryItemId: "item-a",
+        quantity: 2,
+        returnedQuantity: 0,
+      }],
+      delivery: null,
+    };
+    tx.booking.findFirst.mockResolvedValue(inProgressBooking);
+
+    await expect(updateBookingStatus("booking-a", "COMPLETED"))
+      .rejects.toThrow("Record all item returns");
+    await expect(updateBookingStatus("booking-a", "CANCELLED"))
+      .rejects.toThrow("Record the actual return");
+
+    expect(tx.booking.update).not.toHaveBeenCalled();
+    expect(tx.inventoryItem.update).not.toHaveBeenCalled();
   });
 });

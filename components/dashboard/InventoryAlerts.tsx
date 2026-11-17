@@ -17,7 +17,7 @@ function getSeverityLabel(available: number, minimum: number) {
 }
 
 export default function InventoryAlerts({ items }: { items: InventoryItemDTO[] }) {
-  const alerts = items.filter((item) => item.availableQuantity <= item.minimumThreshold).slice(0, 6);
+  const alerts = items.filter((item) => item.periodAvailableQuantity <= item.minimumThreshold).slice(0, 6);
 
   return (
     <div id="inventory" className={appCard}>
@@ -43,13 +43,13 @@ export default function InventoryAlerts({ items }: { items: InventoryItemDTO[] }
                   <p className="text-xs text-slate-500 dark:text-zinc-500">{item.sku}</p>
                 </div>
                 <span
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${getSeverityClass(item.availableQuantity, item.minimumThreshold)}`}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${getSeverityClass(item.periodAvailableQuantity, item.minimumThreshold)}`}
                 >
-                  {getSeverityLabel(item.availableQuantity, item.minimumThreshold)}
+                  {getSeverityLabel(item.periodAvailableQuantity, item.minimumThreshold)}
                 </span>
               </div>
               <p className="mt-2 text-xs text-slate-600 dark:text-zinc-400">
-                {item.availableQuantity} available · threshold {item.minimumThreshold}
+                {item.periodAvailableQuantity} available today · threshold {item.minimumThreshold}
               </p>
             </div>
           ))
