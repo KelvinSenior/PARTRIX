@@ -55,7 +55,13 @@ export const bookingPayloadSchema = z
       (value) => value === null || value === undefined || !Number.isNaN(Date.parse(value)),
       { message: "Return date must be a valid date." },
     ),
-    status: z.literal("PENDING").default("PENDING"),
+    status: z.enum(["PENDING", "CONFIRMED", "IN_PROGRESS"]).default("PENDING"),
+    initialPayment: z.object({
+      amount: bookingMoneySchema.positive("Payment amount must be greater than zero."),
+      method: z.enum(["CASH", "CREDIT_CARD", "BANK_TRANSFER", "CHECK", "MOBILE_WALLET"]),
+      type: z.enum(["RENTAL", "SECURITY_DEPOSIT"]).default("RENTAL"),
+      transactionReference: z.string().trim().max(160).optional(),
+    }).optional(),
     deliveryFee: bookingMoneySchema.default(0),
     setupFee: bookingMoneySchema.default(0),
     discount: bookingMoneySchema.default(0),
@@ -63,6 +69,14 @@ export const bookingPayloadSchema = z
     items: z.array(bookingItemSchema).min(1, "Add at least one inventory item to the booking."),
   })
   .superRefine((booking, ctx) => {
+    if (booking.status === "CONFIRMED" && !booking.initialPayment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["initialPayment", "amount"],
+        message: "Record a payment during booking to confirm it.",
+      });
+    }
+
     const eventDate = new Date(booking.eventDate);
     const returnDate = booking.returnDate ? new Date(booking.returnDate) : null;
     const deliveryDate = booking.deliveryDate ? new Date(booking.deliveryDate) : null;

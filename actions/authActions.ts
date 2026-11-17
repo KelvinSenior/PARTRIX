@@ -21,6 +21,8 @@ function getFirstValidationMessage(error: unknown) {
 
 export async function signupAction(formData: FormData): Promise<AuthActionResult> {
   const parsed = signupPayloadSchema.safeParse({
+    organizationName: formData.get("organizationName"),
+    invitationToken: formData.get("invitationToken"),
     name: formData.get("name"),
     email: formData.get("email"),
     password: formData.get("password"),

@@ -1,3 +1,5 @@
+import type { PaymentMethod } from "@/types/finance";
+
 export type BookingStatus =
   | "PENDING"
   | "CONFIRMED"
@@ -32,6 +34,12 @@ export interface BookingPayload {
   deliveryFee: number;
   setupFee: number;
   discount: number;
+  initialPayment?: {
+    amount: number;
+    method: PaymentMethod;
+    type?: "RENTAL" | "SECURITY_DEPOSIT";
+    transactionReference?: string;
+  };
   notes?: string;
   items: BookingItemPayload[];
 }

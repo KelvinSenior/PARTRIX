@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { BookingItemPayload } from "@/types/booking";
 import type { InventoryItemDTO } from "@/types/inventory";
 import type { SettingsDTO } from "@/types/settings";
+import type { PaymentMethod } from "@/types/finance";
 import PremiumButton from "@/components/ui/PremiumButton";
 import PremiumCard from "@/components/ui/PremiumCard";
 import { formatAmount } from "@/lib/branding";
@@ -30,6 +31,14 @@ const steps = [
   { key: "payment", title: "Payment", description: "Confirm deposit and status" },
   { key: "review", title: "Review", description: "Confirm everything" },
 ] as const;
+
+const paymentMethodOptions: Array<{ label: string; value: PaymentMethod }> = [
+  { label: "Cash", value: "CASH" },
+  { label: "Credit card", value: "CREDIT_CARD" },
+  { label: "Bank transfer", value: "BANK_TRANSFER" },
+  { label: "Check", value: "CHECK" },
+  { label: "Mobile wallet", value: "MOBILE_WALLET" },
+];
 
 export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const router = useRouter();
@@ -58,6 +67,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const [setupFee, setSetupFee] = useState("0.00");
   const [discount, setDiscount] = useState("0.00");
   const [status, setStatus] = useState("PENDING");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentType, setPaymentType] = useState<"RENTAL" | "SECURITY_DEPOSIT">("RENTAL");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(settings.payment.acceptedMethods[0] ?? "CASH");
+  const [paymentReference, setPaymentReference] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -71,6 +84,9 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   const eventDateRef = useRef<HTMLInputElement>(null);
   const deliveryDateRef = useRef<HTMLInputElement>(null);
   const returnDateRef = useRef<HTMLInputElement>(null);
+  const paymentAmountRef = useRef<HTMLInputElement>(null);
+  const paymentMethodRef = useRef<HTMLSelectElement>(null);
+  const paymentReferenceRef = useRef<HTMLInputElement>(null);
   const inventoryPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -89,6 +105,11 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       .then((data) => {
         if (data?.settings) {
           setActiveSettings(data.settings);
+          setPaymentMethod((current) =>
+            data.settings.payment.acceptedMethods.includes(current)
+              ? current
+              : data.settings.payment.acceptedMethods[0] ?? "CASH",
+          );
         }
       })
       .catch(() => undefined);
@@ -123,6 +144,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       if (draft?.discount) setDiscount(draft.discount ?? "0.00");
       if (draft?.notes) setNotes(draft.notes ?? "");
       if (draft?.status) setStatus(draft.status ?? "PENDING");
+      if (draft?.paymentAmount) setPaymentAmount(draft.paymentAmount ?? "");
+      if (draft?.paymentType) setPaymentType(draft.paymentType ?? "RENTAL");
+      if (draft?.paymentMethod) setPaymentMethod(draft.paymentMethod);
+      if (draft?.paymentReference) setPaymentReference(draft.paymentReference ?? "");
       if (draft?.selectedCustomerId) setSelectedCustomerId(draft.selectedCustomerId ?? "");
       if (draft?.customerMode) setCustomerMode(draft.customerMode ?? "new");
       if (draft?.customerSearch) setCustomerSearch(draft.customerSearch ?? "");
@@ -170,6 +195,11 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
 
   const selectedItems = items.filter((item) => item.inventoryItemId);
   const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId);
+  const paymentAmountValue = Number(paymentAmount) || 0;
+  const appliedInitialPayment = paymentType === "SECURITY_DEPOSIT"
+    ? Math.min(paymentAmountValue, bookingTotals.deposit)
+    : Math.min(paymentAmountValue, bookingTotals.balance);
+  const balanceAfterPayment = Math.max(bookingTotals.balance - appliedInitialPayment, 0);
 
   function updateItem(index: number, updated: Partial<BookingItemPayload>) {
     setItems((current) =>
@@ -210,6 +240,9 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       eventDate: () => eventDateRef.current?.focus(),
       deliveryDate: () => deliveryDateRef.current?.focus(),
       returnDate: () => returnDateRef.current?.focus(),
+      paymentAmount: () => paymentAmountRef.current?.focus(),
+      paymentMethod: () => paymentMethodRef.current?.focus(),
+      paymentReference: () => paymentReferenceRef.current?.focus(),
       items: () => inventoryPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
     };
 
@@ -228,6 +261,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     if (["customer", "firstName", "lastName", "email", "phone"].includes(field)) return 0;
     if (["eventDate", "deliveryDate", "returnDate"].includes(field)) return 1;
     if (["items"].includes(field)) return 2;
+    if (["paymentAmount", "paymentMethod", "paymentReference"].includes(field)) return 4;
     return 0;
   }
 
@@ -281,6 +315,30 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
           nextErrors.items = "Choose at least one inventory item before continuing.";
         }
         break;
+      case 4: {
+        const hasPaymentAmount = paymentAmount.trim() !== "";
+        const amount = Number(paymentAmount);
+        const hasPayment = hasPaymentAmount && Number.isFinite(amount) && amount > 0;
+
+        if (hasPaymentAmount && (
+          !Number.isFinite(amount) ||
+          amount <= 0 ||
+          amount > 9_999_999_999.99 ||
+          !/^\d+(?:\.\d{1,2})?$/.test(paymentAmount.trim())
+        )) {
+          nextErrors.paymentAmount = "Enter a payment amount greater than zero with no more than two decimal places.";
+        } else if (status === "CONFIRMED" && !hasPayment) {
+          nextErrors.paymentAmount = "Record a payment during booking to confirm it.";
+        }
+
+        if (hasPayment && !activeSettings.payment.acceptedMethods.includes(paymentMethod)) {
+          nextErrors.paymentMethod = "Select a payment method enabled in workspace settings.";
+        }
+        if (hasPayment && activeSettings.payment.requireTransactionReference && !paymentReference.trim()) {
+          nextErrors.paymentReference = "Transaction reference is required by workspace settings.";
+        }
+        break;
+      }
       default:
         break;
     }
@@ -305,7 +363,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
 
   function validateBookingBeforeSubmit() {
     const nextErrors: Record<string, string> = {};
-    const stepsToValidate = [0, 1, 2] as const;
+    const stepsToValidate = [0, 1, 2, 4] as const;
 
     stepsToValidate.forEach((stepIndex) => {
       Object.assign(nextErrors, collectValidationErrors(stepIndex));
@@ -349,6 +407,12 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
         ? "firstName"
         : normalizedPath === "lastname"
           ? "lastName"
+          : normalizedPath === "initialpayment.amount"
+            ? "paymentAmount"
+            : normalizedPath === "initialpayment.method"
+              ? "paymentMethod"
+              : normalizedPath === "initialpayment.transactionreference"
+                ? "paymentReference"
           : normalizedPath === "eventdate"
             ? "eventDate"
             : normalizedPath === "deliverydate"
@@ -391,6 +455,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setSetupFee("0.00");
     setDiscount("0.00");
     setStatus("PENDING");
+    setPaymentAmount("");
+    setPaymentType("RENTAL");
+    setPaymentMethod(activeSettings.payment.acceptedMethods[0] ?? "CASH");
+    setPaymentReference("");
     setNotes("");
     setError(null);
     setValidationErrors({});
@@ -416,6 +484,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       setupFee,
       discount,
       status,
+      paymentAmount,
+      paymentType,
+      paymentMethod,
+      paymentReference,
       notes,
       items,
     };
@@ -427,6 +499,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
   function handleNext() {
     if (!validateStep(activeStep)) return;
     setActiveStep((current) => Math.min(current + 1, steps.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handlePrevious() {
@@ -454,6 +527,16 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
       deliveryDate: deliveryDate || null,
       returnDate: returnDate || null,
       status,
+      ...(paymentAmount.trim() && Number(paymentAmount) > 0
+        ? {
+            initialPayment: {
+              amount: Number(paymentAmount),
+              method: paymentMethod,
+              type: paymentType,
+              transactionReference: paymentReference,
+            },
+          }
+        : {}),
       deliveryFee: Number(deliveryFee),
       setupFee: Number(setupFee),
       discount: Number(discount),
@@ -505,6 +588,10 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
     setDeliveryFee("0.00");
     setSetupFee("0.00");
     setDiscount("0.00");
+    setPaymentAmount("");
+    setPaymentType("RENTAL");
+    setPaymentMethod(activeSettings.payment.acceptedMethods[0] ?? "CASH");
+    setPaymentReference("");
     setNotes("");
     setActiveStep(0);
     window.localStorage.removeItem("partrix-booking-draft");
@@ -819,7 +906,7 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                   <p className="mt-1">{formatAmount(bookingTotals.deposit, activeSettings)} at {activeSettings.deposit.requiredDepositPercent}%</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="font-semibold text-slate-900 dark:text-white">Amount due now</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">Balance before payment</p>
                   <p className="mt-1">{formatAmount(bookingTotals.balance, activeSettings)}</p>
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
@@ -828,12 +915,92 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 </div>
               </div>
             </div>
-            <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Next steps</p>
-              <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Payment collection can be logged after the booking is created from the booking detail view.</div>
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Refundable deposit expectations stay linked to the existing business rules and are calculated automatically.</div>
+            <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">Record a payment now</p>
+                <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">
+                  Leave the amount blank if no payment has been received yet.
+                </p>
               </div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Amount received
+                <input
+                  ref={paymentAmountRef}
+                  type="number"
+                  min="0.01"
+                  max="9999999999.99"
+                  step="0.01"
+                  value={paymentAmount}
+                  onChange={(event) => {
+                    setPaymentAmount(event.target.value);
+                    clearValidationError("paymentAmount");
+                  }}
+                  className={`mt-2 w-full rounded-2xl border bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:bg-zinc-900 dark:text-zinc-100 ${validationErrors.paymentAmount ? "border-rose-400" : "border-zinc-200 dark:border-zinc-800"}`}
+                  aria-invalid={Boolean(validationErrors.paymentAmount)}
+                  aria-describedby={validationErrors.paymentAmount ? "booking-payment-amount-error" : undefined}
+                />
+                {validationErrors.paymentAmount ? <p id="booking-payment-amount-error" className="mt-2 text-sm text-rose-600">{validationErrors.paymentAmount}</p> : null}
+              </label>
+
+              {paymentAmount.trim() ? (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Payment type
+                    <select
+                      value={paymentType}
+                      onChange={(event) => setPaymentType(event.target.value as "RENTAL" | "SECURITY_DEPOSIT")}
+                      className="mt-2 w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="RENTAL">Rental payment</option>
+                      <option value="SECURITY_DEPOSIT">Refundable deposit payment</option>
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Payment method
+                    <select
+                      ref={paymentMethodRef}
+                      value={paymentMethod}
+                      onChange={(event) => {
+                        setPaymentMethod(event.target.value as PaymentMethod);
+                        clearValidationError("paymentMethod");
+                      }}
+                      className={`mt-2 w-full rounded-2xl border bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:bg-zinc-900 dark:text-zinc-100 ${validationErrors.paymentMethod ? "border-rose-400" : "border-zinc-200 dark:border-zinc-800"}`}
+                      aria-invalid={Boolean(validationErrors.paymentMethod)}
+                    >
+                      {paymentMethodOptions
+                        .filter((method) => activeSettings.payment.acceptedMethods.includes(method.value))
+                        .map((method) => <option key={method.value} value={method.value}>{method.label}</option>)}
+                    </select>
+                    {validationErrors.paymentMethod ? <p className="mt-2 text-sm text-rose-600">{validationErrors.paymentMethod}</p> : null}
+                  </label>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Transaction reference{activeSettings.payment.requireTransactionReference ? " (required)" : " (optional)"}
+                    <input
+                      ref={paymentReferenceRef}
+                      value={paymentReference}
+                      onChange={(event) => {
+                        setPaymentReference(event.target.value);
+                        clearValidationError("paymentReference");
+                      }}
+                      maxLength={160}
+                      className={`mt-2 w-full rounded-2xl border bg-zinc-50 px-4 py-3 text-sm text-zinc-950 outline-none transition focus:border-cyan-500 dark:bg-zinc-900 dark:text-zinc-100 ${validationErrors.paymentReference ? "border-rose-400" : "border-zinc-200 dark:border-zinc-800"}`}
+                      aria-invalid={Boolean(validationErrors.paymentReference)}
+                      aria-describedby={validationErrors.paymentReference ? "booking-payment-reference-error" : undefined}
+                    />
+                    {validationErrors.paymentReference ? <p id="booking-payment-reference-error" className="mt-2 text-sm text-rose-600">{validationErrors.paymentReference}</p> : null}
+                  </label>
+                </div>
+              ) : null}
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-slate-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                <p className="font-semibold text-slate-900 dark:text-white">Balance after this payment</p>
+                <p className="mt-1">{formatAmount(balanceAfterPayment, activeSettings)}</p>
+              </div>
+              {status === "CONFIRMED" ? (
+                <p className="rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+                  A payment must be recorded before this booking can be confirmed.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -857,14 +1024,19 @@ export default function BookingForm({ settings }: { settings: SettingsDTO }) {
                 </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="font-semibold text-slate-900 dark:text-white">Pricing</p>
-                  <p className="mt-1">Subtotal {formatAmount(bookingTotals.subtotal, activeSettings)} · Refundable deposit {formatAmount(bookingTotals.deposit, activeSettings)} · Amount due now {formatAmount(bookingTotals.balance, activeSettings)}</p>
+                  <p className="mt-1">
+                    Subtotal {formatAmount(bookingTotals.subtotal, activeSettings)} · Refundable deposit {formatAmount(bookingTotals.deposit, activeSettings)} · Payment received {paymentAmountValue > 0 ? formatAmount(paymentAmountValue, activeSettings) : "None"} · Balance after payment {formatAmount(balanceAfterPayment, activeSettings)}
+                  </p>
+                  <p className="mt-1">Status {status}</p>
                 </div>
               </div>
             </div>
             <div className="rounded-3xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
               <p className="text-sm font-semibold text-slate-900 dark:text-white">Ready to create</p>
               <div className="mt-4 space-y-3 text-sm text-slate-600 dark:text-zinc-400">
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">Your booking will be created with the same pricing, refundable deposit, and inventory rules already used by the app.</div>
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                  Your booking and any payment recorded above will be saved together.
+                </div>
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">You can still adjust quantities or fees from the previous steps before confirming.</div>
               </div>
             </div>

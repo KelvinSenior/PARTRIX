@@ -6,6 +6,7 @@ const { prisma, tx, requirePermission, getOrganizationSettings } = vi.hoisted(()
     bookingItem: { findMany: vi.fn(), update: vi.fn(), delete: vi.fn(), create: vi.fn() },
     customer: { findFirst: vi.fn() },
     inventoryItem: { findMany: vi.fn(), update: vi.fn() },
+    payment: { create: vi.fn() },
   };
   return {
     prisma: { $transaction: vi.fn() },
@@ -22,7 +23,7 @@ vi.mock("@/services/audit", () => ({ logActivity: vi.fn() }));
 vi.mock("@/services/notification", () => ({ createNotification: vi.fn() }));
 
 import { createBooking, updateBookingItems, updateBookingStatus } from "@/services/booking";
-import { bookingMoneySchema } from "@/lib/bookingValidation";
+import { bookingMoneySchema, bookingPayloadSchema } from "@/lib/bookingValidation";
 
 const decimal = (value: number) => ({ toString: () => value.toFixed(2), toNumber: () => value });
 let existingBooking: ReturnType<typeof createBookingFixture>;
@@ -79,7 +80,10 @@ describe("booking item reservation edits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     requirePermission.mockResolvedValue({ id: "user-a", role: "ADMIN", organizationId: "org-a" });
-    getOrganizationSettings.mockResolvedValue({ deposit: { requiredDepositPercent: 20 } });
+    getOrganizationSettings.mockResolvedValue({
+      deposit: { requiredDepositPercent: 20 },
+      payment: { acceptedMethods: ["CASH", "CREDIT_CARD"], requireTransactionReference: false },
+    });
     existingBooking = createBookingFixture(2);
   });
 
@@ -128,6 +132,86 @@ describe("booking item reservation edits", () => {
     expect(tx.booking.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         createdBy: { connect: { id: "user-a" } },
+      }),
+    }));
+  });
+
+  it("creates a confirmed booking only when an initial payment is recorded", () => {
+    const basePayload = {
+      customer: { firstName: "Taylor", lastName: "User" },
+      eventDate: "2026-10-09",
+      status: "CONFIRMED" as const,
+      items: [{ inventoryItemId: "123e4567-e89b-12d3-a456-426614174000", quantity: 1, discount: 0 }],
+      deliveryFee: 0,
+      setupFee: 0,
+      discount: 0,
+    };
+
+    expect(bookingPayloadSchema.safeParse(basePayload).success).toBe(false);
+    expect(bookingPayloadSchema.safeParse({
+      ...basePayload,
+      initialPayment: { amount: 10, method: "CASH", type: "RENTAL" },
+    }).success).toBe(true);
+  });
+
+  it("records the initial payment and applies it to the booking balance atomically", async () => {
+    const bookingCreate = {
+      id: "booking-paid",
+      bookingNumber: "BKG-PAID",
+      customer: { id: "customer-a", firstName: "Taylor", lastName: "User", email: null, phone: null, company: null, address: null },
+      bookingItems: [],
+      eventDate: new Date("2026-10-09T00:00:00.000Z"),
+      deliveryDate: null,
+      returnDate: null,
+      status: "CONFIRMED",
+      notes: null,
+      deliveryFee: decimal(0),
+      setupFee: decimal(0),
+      discount: decimal(0),
+      totalAmount: decimal(20),
+      depositAmount: decimal(4),
+      depositPaid: decimal(0),
+      depositRefunded: decimal(0),
+      depositStatus: "PENDING",
+      refundStatus: "NONE",
+      balanceDue: decimal(24),
+      createdAt: new Date("2026-10-09T00:00:00.000Z"),
+      updatedAt: new Date("2026-10-09T00:00:00.000Z"),
+    };
+    tx.customer.findFirst.mockResolvedValue(null);
+    tx.inventoryItem.findMany.mockResolvedValue([
+      { id: "item-a", name: "Chair", status: "AVAILABLE", totalQuantity: 10, unitPrice: decimal(10) },
+    ]);
+    tx.booking.create.mockResolvedValue(bookingCreate);
+    tx.payment.create.mockResolvedValue({ id: "payment-a" });
+
+    await createBooking({
+      customer: { firstName: "Taylor", lastName: "User" },
+      eventDate: "2026-10-09",
+      status: "CONFIRMED",
+      items: [{ inventoryItemId: "item-a", quantity: 2, discount: 0 }],
+      deliveryFee: 0,
+      setupFee: 0,
+      discount: 0,
+      initialPayment: { amount: 10, method: "CASH", type: "RENTAL" },
+    });
+
+    expect(tx.payment.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: "org-a",
+        bookingId: "booking-paid",
+        amount: "10.00",
+        method: "CASH",
+        type: "RENTAL",
+        status: "COMPLETED",
+        processedById: "user-a",
+      }),
+    });
+    expect(tx.booking.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        depositPaid: "0.00",
+        depositStatus: "PENDING",
+        balanceDue: "14.00",
       }),
     }));
   });

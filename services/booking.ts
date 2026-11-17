@@ -213,6 +213,16 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
   const depositPercent = settings.deposit.requiredDepositPercent;
   const organizationId = user.organizationId!;
 
+  if (payload.status === "CONFIRMED" && !payload.initialPayment) {
+    throw new Error("Record a payment during booking to confirm it.");
+  }
+  if (payload.initialPayment && !settings.payment.acceptedMethods.includes(payload.initialPayment.method)) {
+    throw new Error("This payment method is not enabled in workspace settings.");
+  }
+  if (payload.initialPayment && settings.payment.requireTransactionReference && !payload.initialPayment.transactionReference?.trim()) {
+    throw new Error("Transaction reference is required by workspace settings.");
+  }
+
   const createdBooking = await runSerializable(async (tx) => {
     const eventDate = new Date(payload.eventDate);
     const returnDate = payload.returnDate ? new Date(payload.returnDate) : eventDate;
@@ -264,7 +274,7 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
       depositPercent,
     );
 
-    const booking = await tx.booking.create({
+    let booking = await tx.booking.create({
       data: {
         organization: { connect: { id: organizationId } },
         bookingNumber: formatBookingNumber(),
@@ -296,6 +306,67 @@ export async function createBooking(payload: BookingPayload): Promise<BookingDTO
         },
       },
     });
+
+    if (payload.initialPayment) {
+      const initialPaymentType = payload.initialPayment.type ?? "RENTAL";
+      const paymentAmountCents = toCents(payload.initialPayment.amount);
+      const totalAmountCents = toCents(totals.total);
+      const depositAmountCents = toCents(totals.deposit);
+      const rentalPaidCents = initialPaymentType === "RENTAL"
+        ? Math.min(paymentAmountCents, totalAmountCents)
+        : 0;
+      const depositPaidCents = initialPaymentType === "SECURITY_DEPOSIT"
+        ? Math.min(paymentAmountCents, depositAmountCents)
+        : Math.min(Math.max(paymentAmountCents - rentalPaidCents, 0), depositAmountCents);
+      const balanceDueCents =
+        Math.max(totalAmountCents - rentalPaidCents, 0) +
+        Math.max(depositAmountCents - depositPaidCents, 0);
+      const processedAt = new Date();
+
+      const payment = await tx.payment.create({
+        data: {
+          organizationId,
+          bookingId: booking.id,
+          amount: payload.initialPayment.amount.toFixed(2),
+          method: payload.initialPayment.method,
+          type: initialPaymentType,
+          status: "COMPLETED",
+          transactionReference: payload.initialPayment.transactionReference?.trim() || null,
+          processedById: user.id,
+          processedAt,
+        } as any,
+      });
+
+      booking = await tx.booking.update({
+        where: { id: booking.id, organizationId },
+        data: {
+          depositPaid: (depositPaidCents / 100).toFixed(2),
+          depositStatus: depositPaidCents >= depositAmountCents ? "PAID" : "PENDING",
+          balanceDue: (balanceDueCents / 100).toFixed(2),
+        } as any,
+        include: {
+          customer: true,
+          bookingItems: { include: { inventoryItem: true } },
+        },
+      });
+
+      await logActivity({
+        tx,
+        organizationId,
+        userId: user.id,
+        bookingId: booking.id,
+        action: "Record payment",
+        entity: "Payment",
+        entityId: payment.id,
+        details: {
+          amount: payload.initialPayment.amount,
+          type: initialPaymentType,
+          method: payload.initialPayment.method,
+          bookingId: booking.id,
+        },
+        level: "INFO",
+      });
+    }
 
     await Promise.all(
       payload.items.map((item) =>
