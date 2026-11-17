@@ -467,7 +467,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         </button>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+      <section className={`grid gap-4 md:grid-cols-2 ${filters.eventDate ? "xl:grid-cols-6" : "xl:grid-cols-5"}`}>
         {[
           {
             label: "Items",
@@ -480,15 +480,15 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
             icon: Boxes,
           },
           {
-            label: filters.eventDate ? "Available for period" : "Available today",
+            label: filters.eventDate ? "Available for period" : "Physically available",
             value: data.summary.totalAvailable,
             icon: CheckCircle2,
           },
-          {
-            label: filters.eventDate ? "Committed for period" : "Committed today",
+          ...(filters.eventDate ? [{
+            label: "Committed for period",
             value: data.summary.totalCommitted,
             icon: Filter,
-          },
+          }] : []),
           {
             label: "Physically out",
             value: data.summary.totalRented,
@@ -618,7 +618,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
           ))}
         </div>
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Leave dates blank to see today&apos;s availability. Selected dates account for overlapping bookings, delivery schedules, and unreturned overdue items.
+          Leave dates blank to see physical stock. Select an event date to include overlapping bookings and delivery schedules.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
@@ -722,9 +722,9 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                   <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-3 lg:grid-cols-5">
                     {[
                       ["Owned", item.totalQuantity],
-                      [filters.eventDate ? "Available (period)" : "Available (today)", item.periodAvailableQuantity],
-                      [filters.eventDate ? "Committed (period)" : "Committed (today)", item.periodCommittedQuantity],
-                      ["Rented", item.rentedQuantity],
+                      [filters.eventDate ? "Available (period)" : "Physically available", item.periodAvailableQuantity],
+                      ...(filters.eventDate ? [["Committed (period)", item.periodCommittedQuantity]] : []),
+                      ["Rented (in progress)", item.rentedQuantity],
                       ["Damaged", item.damagedQuantity],
                     ].map(([label, value]) => (
                       <div
@@ -992,7 +992,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                       className="field-input"
                     />
                   </Field>
-                  <Field label="Rented out">
+                  <Field label="Rented (in progress)">
                     <input
                       title="Rented out"
                       value={form.rentedQuantity}

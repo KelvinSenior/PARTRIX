@@ -119,7 +119,7 @@ export async function getLiveAlertCounts(now = new Date()): Promise<LiveAlertCou
     inventoryOrganizationId,
     inventoryItems,
     { eventDate: today, returnDate: today },
-    { now, timeZone: settings.localization.timeZone },
+    { now, timeZone: settings.localization.timeZone, includeReservations: false },
   );
 
   return {

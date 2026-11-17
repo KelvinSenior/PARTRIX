@@ -79,23 +79,29 @@ export async function getInventoryAvailability(
   organizationId: string,
   stockItems: StockItem[],
   requestedWindow: RentalAvailabilityWindow,
-  options: { excludeBookingId?: string; now?: Date; timeZone?: string; client?: AvailabilityClient } = {},
+  options: {
+    excludeBookingId?: string;
+    now?: Date;
+    timeZone?: string;
+    client?: AvailabilityClient;
+    includeReservations?: boolean;
+  } = {},
 ): Promise<Map<string, InventoryAvailability>> {
   const inventoryIds = [...new Set(stockItems.map((item) => item.id))];
   const result = new Map<string, InventoryAvailability>();
-  const physicalBookingQuantities = new Map<string, number>();
 
   for (const item of stockItems) {
     const usableQuantity = item.status === "AVAILABLE"
       ? Math.max(0, item.totalQuantity - (item.damagedQuantity ?? 0))
       : 0;
+    const physicallyOut = Math.max(0, item.rentedQuantity ?? 0);
     result.set(item.id, {
-      availableQuantity: usableQuantity,
-      committedQuantity: 0,
+      availableQuantity: Math.max(0, usableQuantity - physicallyOut),
+      committedQuantity: physicallyOut,
     });
   }
 
-  if (!inventoryIds.length) return result;
+  if (!inventoryIds.length || options.includeReservations === false) return result;
 
   const client = options.client ?? prisma;
   const requested = getWindow(requestedWindow);
@@ -128,31 +134,6 @@ export async function getInventoryAvailability(
       },
     },
   });
-
-  for (const reservation of reservations) {
-    if (
-      reservation.booking.status === "IN_PROGRESS" ||
-      ["IN_TRANSIT", "DELIVERED"].includes(reservation.booking.delivery?.status ?? "")
-    ) {
-      const outstanding = Math.max(0, reservation.quantity - reservation.returnedQuantity);
-      physicalBookingQuantities.set(
-        reservation.inventoryItemId,
-        (physicalBookingQuantities.get(reservation.inventoryItemId) ?? 0) + outstanding,
-      );
-    }
-  }
-
-  for (const item of stockItems) {
-    const availability = result.get(item.id)!;
-    const physicalBookingQuantity = physicalBookingQuantities.get(item.id) ?? 0;
-    const manuallyRentedQuantity = Math.max(0, (item.rentedQuantity ?? 0) - physicalBookingQuantity);
-    const unavailableOutsideSchedule = physicalBookingQuantity + manuallyRentedQuantity;
-    availability.committedQuantity = unavailableOutsideSchedule;
-    availability.availableQuantity = Math.max(
-      0,
-      availability.availableQuantity - unavailableOutsideSchedule,
-    );
-  }
 
   for (const reservation of reservations) {
     const outstanding = Math.max(0, reservation.quantity - reservation.returnedQuantity);

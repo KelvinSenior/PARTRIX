@@ -102,6 +102,35 @@ describe("scheduled inventory availability", () => {
     expect(overlappingReturnDay.get("item-a")).toEqual({ availableQuantity: 6, committedQuantity: 4 });
   });
 
+  it("keeps future reservations out of physical stock but checks overlaps for selected booking dates", async () => {
+    prisma.bookingItem.findMany.mockResolvedValue([
+      reservation({ eventDate: "2026-10-10", returnDate: "2026-10-10", quantity: 70 }),
+      reservation({ eventDate: "2026-10-10", returnDate: "2026-10-10", quantity: 70 }),
+    ]);
+
+    const physicalStock = await getInventoryAvailability(
+      "org-a",
+      [{ ...stock, totalQuantity: 140 }],
+      { eventDate: date("2026-10-01"), returnDate: date("2026-10-01") },
+      { now: date("2026-10-01"), includeReservations: false },
+    );
+    const selectedEventDate = await getInventoryAvailability(
+      "org-a",
+      [{ ...stock, totalQuantity: 140 }],
+      { eventDate: date("2026-10-10"), returnDate: date("2026-10-10") },
+      { now: date("2026-10-01") },
+    );
+
+    expect(physicalStock.get("item-a")).toEqual({
+      availableQuantity: 140,
+      committedQuantity: 0,
+    });
+    expect(selectedEventDate.get("item-a")).toEqual({
+      availableQuantity: 0,
+      committedQuantity: 140,
+    });
+  });
+
   it("uses the earlier delivery schedule and keeps overdue outstanding units committed", async () => {
     prisma.bookingItem.findMany
       .mockResolvedValueOnce([reservation({

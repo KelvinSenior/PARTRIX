@@ -57,12 +57,12 @@ describe("live dashboard alerts", () => {
     prisma.delivery.count.mockResolvedValue(3);
   });
 
-  it("counts pending bookings, low-stock inventory, and today's open deliveries by organization", async () => {
+  it("counts physical low-stock inventory separately from same-day reservations", async () => {
     const alerts = await getLiveAlertCounts(new Date("2026-10-28T14:30:00.000Z"));
 
     expect(alerts).toEqual({
       pendingBookings: 2,
-      lowStockItems: 2,
+      lowStockItems: 0,
       deliveriesToday: 3,
     });
     expect(prisma.booking.count).toHaveBeenCalledWith({
@@ -79,6 +79,7 @@ describe("live dashboard alerts", () => {
         status: true,
       },
     });
+    expect(prisma.bookingItem.findMany).not.toHaveBeenCalled();
     expect(prisma.delivery.count).toHaveBeenCalledWith({
       where: {
         organizationId: "org-a",

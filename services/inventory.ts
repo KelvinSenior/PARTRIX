@@ -196,9 +196,14 @@ async function serializeWithAvailability(
   availability?: Map<string, InventoryAvailability>,
   now?: Date,
   timeZone = "UTC",
+  includeReservations = false,
 ): Promise<InventoryItemDTO> {
   const periodAvailability = availability?.get(item.id) ??
-    (await getInventoryAvailability(organizationId, [item], window, { now, timeZone })).get(item.id)!;
+    (await getInventoryAvailability(organizationId, [item], window, {
+      now,
+      timeZone,
+      includeReservations,
+    })).get(item.id)!;
   const serialized = serializeInventoryItem(item);
 
   return {
@@ -256,10 +261,18 @@ export async function listInventoryItems(
     organizationId,
     records,
     window,
-    { now, timeZone },
+    { now, timeZone, includeReservations: Boolean(filters.eventDate) },
   );
   const serializedItems = await Promise.all(records.map((item) =>
-    serializeWithAvailability(item, organizationId, window, periodAvailability, now, timeZone),
+    serializeWithAvailability(
+      item,
+      organizationId,
+      window,
+      periodAvailability,
+      now,
+      timeZone,
+      Boolean(filters.eventDate),
+    ),
   ));
   const filteredItems = serializedItems
     .filter((item) => matchesAvailability(item, filters.availability));
