@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Boxes,
   CheckCircle2,
+  ChevronDown,
   Filter,
   ImageIcon,
   Loader2,
@@ -200,6 +201,7 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItemDTO | null>(null);
@@ -517,10 +519,10 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
         ))}
       </section>
 
-      <section className="sticky top-4 z-20 rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-5 backdrop-blur-xl sm:rounded-3xl">
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_190px_170px]">
-          <label className="relative block">
-            <span className="sr-only">Search inventory</span>
+      <section className="rounded-2xl border border-cyan-200/10 bg-white/[0.04] p-4 backdrop-blur-xl sm:rounded-3xl sm:p-5">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <label className="relative block min-w-0 flex-1">
+            <span className="sr-only">Search by name, SKU, or category</span>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
             <input
               value={filters.search}
@@ -530,117 +532,139 @@ export default function InventoryManager({ user }: { user: SessionUser }) {
                   search: event.target.value,
                 }))
               }
-              placeholder="Search by name, SKU, or category"
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              placeholder="Search inventory"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
             />
           </label>
-
-          <label>
-            <span className="sr-only">Category</span>
-            <select
-              value={filters.category}
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  category: event.target.value,
-                }))
-              }
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <option value="all">All categories</option>
-              {data.categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span className="sr-only">Status</span>
-            <select
-              value={filters.status}
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  status: event.target.value as Filters["status"],
-                }))
-              }
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span className="sr-only">Sort inventory</span>
-            <select
-              value={filters.sort}
-              onChange={(event) =>
-                setFilters((current) => ({
-                  ...current,
-                  sort: event.target.value as Filters["sort"],
-                }))
-              }
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <option value="newest">Newest</option>
-              <option value="name">Name</option>
-              <option value="available">Available</option>
-              <option value="category">Category</option>
-            </select>
-          </label>
+          <button
+            type="button"
+            aria-expanded={filtersOpen}
+            aria-controls="inventory-filter-panel"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-200/20 bg-white/70 px-3 text-sm font-semibold text-slate-800 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 sm:px-4 dark:border-cyan-200/15 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            <Filter className="h-4 w-4" aria-hidden />
+            Filters
+            <ChevronDown
+              className={`h-4 w-4 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          </button>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          {([
-            ["eventDate", "Event date"],
-            ["deliveryDate", "Delivery date"],
-            ["returnDate", "Return date"],
-          ] as const).map(([field, label]) => (
-            <label key={field}>
-              <span className="mb-1 block text-xs font-medium text-zinc-500">{label}</span>
-              <input
-                type="date"
-                value={filters[field]}
-                min={field === "returnDate" ? filters.eventDate || undefined : undefined}
-                max={field === "deliveryDate" ? filters.eventDate || undefined : undefined}
+        <div
+          id="inventory-filter-panel"
+          hidden={!filtersOpen}
+          className="mt-4 border-t border-cyan-200/10 pt-4"
+        >
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.4fr)_220px_190px_170px]">
+            <label>
+              <span className="sr-only">Category</span>
+              <select
+                value={filters.category}
                 onChange={(event) =>
-                  setFilters((current) => ({ ...current, [field]: event.target.value }))
+                  setFilters((current) => ({
+                    ...current,
+                    category: event.target.value,
+                  }))
                 }
-                className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
-              />
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <option value="all">All categories</option>
+                {data.categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
             </label>
-          ))}
-        </div>
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Leave dates blank to see physical stock. Select an event date to include overlapping bookings and delivery schedules.
-        </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {availabilityOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() =>
-                setFilters((current) => ({
-                  ...current,
-                  availability: option.value,
-                }))
-              }
-              className={`h-9 rounded-lg px-3 text-sm font-medium transition ${
-                filters.availability === option.value
-                  ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
-                  : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+            <label>
+              <span className="sr-only">Status</span>
+              <select
+                value={filters.status}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    status: event.target.value as Filters["status"],
+                  }))
+                }
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              <span className="sr-only">Sort inventory</span>
+              <select
+                value={filters.sort}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    sort: event.target.value as Filters["sort"],
+                  }))
+                }
+                className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <option value="newest">Newest</option>
+                <option value="name">Name</option>
+                <option value="available">Available</option>
+                <option value="category">Category</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {([
+              ["eventDate", "Event date"],
+              ["deliveryDate", "Delivery date"],
+              ["returnDate", "Return date"],
+            ] as const).map(([field, label]) => (
+              <label key={field}>
+                <span className="mb-1 block text-xs font-medium text-zinc-500">{label}</span>
+                <input
+                  type="date"
+                  value={filters[field]}
+                  min={field === "returnDate" ? filters.eventDate || undefined : undefined}
+                  max={field === "deliveryDate" ? filters.eventDate || undefined : undefined}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, [field]: event.target.value }))
+                  }
+                  className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                />
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+            Leave dates blank to see physical stock. Select an event date to include overlapping bookings and delivery schedules.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {availabilityOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() =>
+                  setFilters((current) => ({
+                    ...current,
+                    availability: option.value,
+                  }))
+                }
+                className={`h-9 rounded-lg px-3 text-sm font-medium transition ${
+                  filters.availability === option.value
+                    ? "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
+                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 

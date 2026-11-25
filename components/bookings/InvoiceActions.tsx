@@ -71,7 +71,7 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
       </div>
 
       {open ? (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-90 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl dark:border-cyan-200/15 dark:bg-[#050816]">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -104,7 +104,7 @@ export default function InvoiceActions({ bookingId, customerEmail }: InvoiceActi
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}
                   rows={4}
-                  className={`${appInput} mt-2 h-auto min-h-[120px] resize-none py-3`}
+                  className={`${appInput} mt-2 h-auto min-h-30 resize-none py-3`}
                   placeholder="Optional message to include in the email."
                 />
               </label>
