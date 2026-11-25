@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import sharp from "sharp";
 import { defaultSettings } from "@/lib/settingsValidation";
 import type { BookingDTO } from "@/types/booking";
 import type { SettingsDTO } from "@/types/settings";
@@ -69,7 +70,7 @@ const booking: BookingDTO = {
 };
 
 describe("booking invoice PDF", () => {
-  it("shows the gross item subtotal and combined item and booking discounts", () => {
+  it("shows the gross item subtotal and combined item and booking discounts", async () => {
     const invoice: InvoiceData = {
       booking,
       payments: [],
@@ -78,7 +79,7 @@ describe("booking invoice PDF", () => {
       issuedAt: new Date("2026-11-24T00:00:00.000Z"),
     };
 
-    const pdfText = generateInvoicePdfFromData(invoice).toString("latin1");
+    const pdfText = (await generateInvoicePdfFromData(invoice)).toString("latin1");
 
     expect(pdfText).toContain("(Items subtotal)");
     expect(pdfText).toContain("($200.00)");
@@ -86,5 +87,60 @@ describe("booking invoice PDF", () => {
     expect(pdfText).toContain("(-$35.00)");
     expect(pdfText).toContain("(Total)");
     expect(pdfText).toContain("($165.00)");
+  });
+
+  it("embeds an uploaded logo in the PDF instead of showing the placeholder", async () => {
+    const logo = await sharp({
+      create: {
+        width: 2,
+        height: 2,
+        channels: 3,
+        background: { r: 20, g: 120, b: 200 },
+      },
+    }).png().toBuffer();
+    const invoice: InvoiceData = {
+      booking,
+      payments: [],
+      settings: {
+        ...defaultSettings,
+        business: {
+          ...defaultSettings.business,
+          logoData: `data:image/png;base64,${logo.toString("base64")}`,
+        },
+      } as unknown as SettingsDTO,
+      invoiceNumber: "INV-1",
+      issuedAt: new Date("2026-11-24T00:00:00.000Z"),
+    };
+
+    const pdfText = (await generateInvoicePdfFromData(invoice)).toString("latin1");
+
+    expect(pdfText).toContain("/Subtype /Image");
+    expect(pdfText).toContain("/DCTDecode");
+    expect(pdfText).toContain("/Logo Do");
+    expect(pdfText).not.toContain("(LOGO)");
+  });
+
+  it("supports SVG logos uploaded through workspace settings", async () => {
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="#1478c8"/></svg>',
+    );
+    const invoice: InvoiceData = {
+      booking,
+      payments: [],
+      settings: {
+        ...defaultSettings,
+        business: {
+          ...defaultSettings.business,
+          logoData: `data:image/svg+xml;base64,${svg.toString("base64")}`,
+        },
+      } as unknown as SettingsDTO,
+      invoiceNumber: "INV-1",
+      issuedAt: new Date("2026-11-24T00:00:00.000Z"),
+    };
+
+    const pdfText = (await generateInvoicePdfFromData(invoice)).toString("latin1");
+
+    expect(pdfText).toContain("/Subtype /Image");
+    expect(pdfText).not.toContain("(LOGO)");
   });
 });

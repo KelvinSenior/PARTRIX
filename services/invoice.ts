@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { getBooking } from "@/services/booking";
 import { listPayments } from "@/services/finance";
 import { getOrganizationSettings } from "@/services/settings";
@@ -20,6 +21,14 @@ export type InvoiceData = {
 const pageWidth = 595;
 const pageHeight = 842;
 const margin = 42;
+const maxLogoBytes = 5 * 1024 * 1024;
+const maxLogoPixels = 25_000_000;
+
+type InvoiceLogo = {
+  data: Buffer;
+  width: number;
+  height: number;
+};
 
 function money(value: number, settings: SettingsDTO) {
   return formatAmount(value, settings);
@@ -43,6 +52,50 @@ function hexToRgb(hex: string) {
     g: parseInt(normalized.slice(2, 4), 16) / 255,
     b: parseInt(normalized.slice(4, 6), 16) / 255,
   };
+}
+
+async function prepareInvoiceLogo(settings: SettingsDTO): Promise<InvoiceLogo | null> {
+  const source = settings.business.logoData || settings.business.logoUrl || "";
+  const match = /^data:image\/(?:png|jpe?g|svg\+xml);base64,([A-Za-z0-9+/=\r\n]+)$/i.exec(source);
+  if (!match) return null;
+
+  const input = Buffer.from(match[1], "base64");
+  if (input.length === 0 || input.length > maxLogoBytes) {
+    throw new Error("The business logo is empty or exceeds the supported size.");
+  }
+
+  try {
+    const image = await sharp(input, { limitInputPixels: maxLogoPixels })
+      .rotate()
+      .flatten({ background: "#ffffff" })
+      .resize({ width: 512, height: 512, fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: 90 })
+      .toBuffer({ resolveWithObject: true });
+
+    return {
+      data: image.data,
+      width: image.info.width,
+      height: image.info.height,
+    };
+  } catch (error) {
+    throw new Error("The business logo could not be processed for the invoice.", { cause: error });
+  }
+}
+
+function drawImage(
+  name: string,
+  image: Pick<InvoiceLogo, "width" | "height">,
+  x: number,
+  y: number,
+  maxWidth: number,
+  maxHeight: number,
+) {
+  const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  const imageX = x + (maxWidth - width) / 2;
+  const imageY = y + (maxHeight - height) / 2;
+  return `q ${width} 0 0 ${height} ${imageX} ${imageY} cm /${name} Do Q\n`;
 }
 
 function text(x: number, y: number, value: unknown, size = 10, font = "F1", color = "0 0 0") {
@@ -91,7 +144,7 @@ function addFooter(content: string, settings: SettingsDTO, invoiceNumber: string
   );
 }
 
-function buildInvoicePages(data: InvoiceData) {
+function buildInvoicePages(data: InvoiceData, logo: InvoiceLogo | null) {
   const { booking, payments, settings, invoiceNumber, issuedAt } = data;
   const brand = hexToRgb(settings.appearance.brandColor);
   const brandColor = `${brand.r.toFixed(3)} ${brand.g.toFixed(3)} ${brand.b.toFixed(3)}`;
@@ -129,8 +182,12 @@ function buildInvoicePages(data: InvoiceData) {
   content += text(margin, y, settings.business.name, 18, "F2", ink);
   content += rect(margin, y - 12, 58, 3, brandColor);
   content += text(pageWidth - 148, y + 2, "INVOICE", 24, "F2", ink);
-  content += rect(pageWidth - 94, y - 46, 52, 52, soft);
-  content += text(pageWidth - 85, y - 17, "LOGO", 9, "F2", muted);
+  if (logo) {
+    content += drawImage("Logo", logo, pageWidth - 94, y - 46, 52, 52);
+  } else {
+    content += rect(pageWidth - 94, y - 46, 52, 52, soft);
+    content += text(pageWidth - 85, y - 17, "LOGO", 9, "F2", muted);
+  }
   content += text(margin, y - 32, businessAddress, 8, "F1", muted);
   content += text(margin, y - 46, businessPhone, 8, "F1", muted);
   content += text(margin + 138, y - 46, businessEmail, 8, "F1", muted);
@@ -234,21 +291,28 @@ function buildInvoicePages(data: InvoiceData) {
   return pages;
 }
 
-function buildPdf(pages: string[]) {
+function buildPdf(pages: string[], logo: InvoiceLogo | null) {
   const objects: string[] = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
   ];
+  const logoObjectId = logo ? objects.length + 1 : null;
+  if (logo) {
+    objects.push(
+      `<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${logo.data.length} >>\nstream\n${logo.data.toString("latin1")}\nendstream`,
+    );
+  }
   const pageObjectIds: number[] = [];
 
   pages.forEach((content) => {
     const contentId = objects.length + 2;
     const pageId = objects.length + 1;
     pageObjectIds.push(pageId);
+    const imageResource = logoObjectId ? ` /XObject << /Logo ${logoObjectId} 0 R >>` : "";
     objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentId} 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${imageResource} >> /Contents ${contentId} 0 R >>`,
     );
     objects.push(`<< /Length ${Buffer.byteLength(content, "latin1")} >>\nstream\n${content}endstream`);
   });
@@ -291,8 +355,9 @@ export async function getInvoiceData(bookingId: string): Promise<InvoiceData | n
   };
 }
 
-export function generateInvoicePdfFromData(data: InvoiceData) {
-  return buildPdf(buildInvoicePages(data));
+export async function generateInvoicePdfFromData(data: InvoiceData) {
+  const logo = await prepareInvoiceLogo(data.settings);
+  return buildPdf(buildInvoicePages(data, logo), logo);
 }
 
 export async function generateInvoicePdf(bookingId: string, options?: { notify?: boolean }) {
@@ -317,7 +382,7 @@ export async function generateInvoicePdf(bookingId: string, options?: { notify?:
 
   return {
     data,
-    pdf: generateInvoicePdfFromData(data),
+    pdf: await generateInvoicePdfFromData(data),
     filename: `${data.invoiceNumber}.pdf`,
   };
 }
