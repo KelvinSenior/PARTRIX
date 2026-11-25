@@ -9,7 +9,7 @@ import type { BookingDTO } from "@/types/booking";
 import type { PaymentDTO } from "@/types/finance";
 import type { SettingsDTO } from "@/types/settings";
 
-type InvoiceData = {
+export type InvoiceData = {
   booking: BookingDTO;
   payments: PaymentDTO[];
   settings: SettingsDTO;
@@ -102,6 +102,12 @@ function buildInvoicePages(data: InvoiceData) {
   const paid = payments
     .filter((payment) => payment.status === "COMPLETED")
     .reduce((sum, payment) => sum + payment.amount, 0);
+  const itemDiscounts = booking.bookingItems.reduce((sum, item) => sum + item.discount, 0);
+  const itemsSubtotal = booking.bookingItems.reduce(
+    (sum, item) => sum + item.totalPrice + item.discount,
+    0,
+  );
+  const totalDiscount = itemDiscounts + booking.discount;
   const customerName = `${booking.customer.firstName} ${booking.customer.lastName}`.trim();
   const dueDate = booking.returnDate || booking.eventDate;
   const rentalPeriod = `${formatDate(booking.eventDate, settings)} - ${booking.returnDate ? formatDate(booking.returnDate, settings) : "Open"}`;
@@ -185,17 +191,17 @@ function buildInvoicePages(data: InvoiceData) {
     if (item.notes) content += text(margin + 12, y - 14, item.notes, 8, "F1", muted);
     content += text(326, y, item.quantity, 9, "F1", ink);
     content += text(378, y, money(item.unitPrice, settings), 9, "F1", ink);
-    content += text(466, y, money(item.totalPrice, settings), 9, "F2", ink);
+    content += text(466, y, money(item.totalPrice + item.discount, settings), 9, "F2", ink);
     y -= rowHeight;
   });
 
   y -= 8;
   const totalsX = 344;
   const totals = [
-    ["Items subtotal", booking.bookingItems.reduce((sum, item) => sum + item.totalPrice, 0)],
+    ["Items subtotal", itemsSubtotal],
     ["Delivery fee", booking.deliveryFee],
     ["Setup fee", booking.setupFee],
-    ["Discount", -booking.discount],
+    ["Discount", -totalDiscount],
     ["Total", booking.totalAmount],
     ["Paid", paid],
     ["Balance due", booking.balanceDue],

@@ -1,0 +1,90 @@
+import { describe, expect, it, vi } from "vitest";
+import { defaultSettings } from "@/lib/settingsValidation";
+import type { BookingDTO } from "@/types/booking";
+import type { SettingsDTO } from "@/types/settings";
+
+vi.mock("@/services/booking", () => ({ getBooking: vi.fn() }));
+vi.mock("@/services/finance", () => ({ listPayments: vi.fn() }));
+vi.mock("@/services/settings", () => ({ getOrganizationSettings: vi.fn() }));
+vi.mock("@/services/audit", () => ({ logActivity: vi.fn() }));
+vi.mock("@/lib/permissions", () => ({ requirePermission: vi.fn() }));
+vi.mock("@/services/notification", () => ({ createNotification: vi.fn() }));
+
+import { generateInvoicePdfFromData, type InvoiceData } from "@/services/invoice";
+
+const booking: BookingDTO = {
+  id: "booking-id",
+  bookingNumber: "BKG-1",
+  customer: {
+    id: "customer-id",
+    firstName: "Taylor",
+    lastName: "User",
+    email: null,
+    phone: null,
+    company: null,
+    address: null,
+  },
+  eventDate: "2026-12-01T00:00:00.000Z",
+  deliveryDate: null,
+  returnDate: "2026-12-01T00:00:00.000Z",
+  status: "CONFIRMED",
+  notes: null,
+  deliveryFee: 0,
+  setupFee: 0,
+  discount: 15,
+  totalAmount: 165,
+  depositAmount: 0,
+  depositPaid: 0,
+  depositRefunded: 0,
+  depositOutstanding: 0,
+  depositStatus: "PENDING",
+  refundStatus: "NONE",
+  balanceDue: 165,
+  bookingItems: [
+    {
+      id: "booking-item-a",
+      inventoryItemId: "item-a",
+      inventoryItemName: "Chair",
+      quantity: 1,
+      unitPrice: 100,
+      discount: 10,
+      totalPrice: 90,
+      returnedQuantity: 0,
+      notes: null,
+    },
+    {
+      id: "booking-item-b",
+      inventoryItemId: "item-b",
+      inventoryItemName: "Table",
+      quantity: 1,
+      unitPrice: 100,
+      discount: 10,
+      totalPrice: 90,
+      returnedQuantity: 0,
+      notes: null,
+    },
+  ],
+  createdAt: "2026-11-24T00:00:00.000Z",
+  updatedAt: "2026-11-24T00:00:00.000Z",
+};
+
+describe("booking invoice PDF", () => {
+  it("shows the gross item subtotal and combined item and booking discounts", () => {
+    const invoice: InvoiceData = {
+      booking,
+      payments: [],
+      settings: defaultSettings as unknown as SettingsDTO,
+      invoiceNumber: "INV-1",
+      issuedAt: new Date("2026-11-24T00:00:00.000Z"),
+    };
+
+    const pdfText = generateInvoicePdfFromData(invoice).toString("latin1");
+
+    expect(pdfText).toContain("(Items subtotal)");
+    expect(pdfText).toContain("($200.00)");
+    expect(pdfText).toContain("(Discount)");
+    expect(pdfText).toContain("(-$35.00)");
+    expect(pdfText).toContain("(Total)");
+    expect(pdfText).toContain("($165.00)");
+  });
+});
